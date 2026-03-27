@@ -11,7 +11,8 @@ impl Plugin for DreamCraftPlugin {
             .init_resource::<ObstacleGrid>()
             .init_resource::<VisibilityGrid>()
             .init_resource::<FogWaypoints>()
-            .insert_resource(ClearColor(Color::srgb(0.05, 0.08, 0.05)))
+            .init_resource::<MinimapConfig>()
+            .insert_resource(ClearColor(Color::srgb(0.02, 0.04, 0.02)))
             .add_systems(Startup, setup_tutorial_level)
             .add_systems(
                 Update,
@@ -25,6 +26,7 @@ impl Plugin for DreamCraftPlugin {
                     update_fog,
                     draw_waypoints,
                     check_waypoint_reached,
+                    update_minimap,
                 ),
             );
     }
@@ -48,9 +50,9 @@ impl Default for GridConfig {
     fn default() -> Self {
         Self {
             cell_size: 32.0,
-            grid_width: 40,
-            grid_height: 30,
-            offset: Vec2::new(-640.0, -480.0),
+            grid_width: 80,
+            grid_height: 50,
+            offset: Vec2::new(-1280.0, -800.0),
         }
     }
 }
@@ -70,7 +72,7 @@ impl Default for VisibilityGrid {
     fn default() -> Self {
         Self {
             revealed: Vec::new(),
-            view_radius: 4,
+            view_radius: 5,
         }
     }
 }
@@ -81,10 +83,36 @@ pub struct FogWaypoints {
     pub current_target: usize,
 }
 
+#[derive(Resource)]
+pub struct MinimapConfig {
+    pub width: f32,
+    pub height: f32,
+    pub position: Vec2,
+}
+
+impl Default for MinimapConfig {
+    fn default() -> Self {
+        Self {
+            width: 200.0,
+            height: 125.0,
+            position: Vec2::new(-600.0, -350.0),
+        }
+    }
+}
+
 impl Default for FogWaypoints {
     fn default() -> Self {
         Self {
-            waypoints: vec![(8, 15), (15, 15), (22, 15), (28, 12), (34, 15), (37, 15)],
+            waypoints: vec![
+                (10, 25),
+                (20, 25),
+                (30, 25),
+                (40, 20),
+                (50, 25),
+                (60, 25),
+                (70, 25),
+                (77, 25),
+            ],
             current_target: 0,
         }
     }
@@ -124,19 +152,40 @@ pub struct WaypointMarker {
     pub reached: bool,
 }
 
-const TREE_CLUSTERS: [[(i32, i32); 5]; 12] = [
-    [(8, 10), (9, 10), (8, 11), (9, 11), (10, 10)],
-    [(15, 5), (16, 5), (15, 6), (16, 6), (0, 0)],
-    [(20, 8), (21, 8), (20, 9), (21, 9), (22, 8)],
-    [(20, 20), (21, 20), (20, 21), (21, 21), (22, 20)],
-    [(25, 12), (26, 12), (25, 13), (26, 13), (27, 12)],
-    [(30, 5), (31, 5), (30, 6), (31, 6), (32, 5)],
-    [(12, 25), (13, 25), (12, 26), (13, 26), (14, 25)],
-    [(5, 5), (6, 5), (5, 6), (6, 6), (0, 0)],
-    [(35, 20), (36, 20), (35, 21), (36, 21), (37, 20)],
-    [(28, 25), (29, 25), (28, 26), (29, 26), (30, 25)],
-    [(16, 18), (17, 18), (16, 19), (0, 0), (0, 0)],
-    [(10, 4), (11, 4), (10, 5), (0, 0), (0, 0)],
+#[derive(Component)]
+pub struct MinimapMarker;
+
+const TREE_CLUSTERS: [[(i32, i32); 6]; 30] = [
+    [(8, 20), (9, 20), (8, 21), (9, 21), (10, 20), (10, 21)],
+    [(15, 10), (16, 10), (15, 11), (16, 11), (0, 0), (0, 0)],
+    [(15, 40), (16, 40), (15, 41), (16, 41), (0, 0), (0, 0)],
+    [(22, 15), (23, 15), (22, 16), (23, 16), (24, 15), (0, 0)],
+    [(22, 35), (23, 35), (22, 36), (23, 36), (24, 35), (0, 0)],
+    [(30, 8), (31, 8), (30, 9), (31, 9), (32, 8), (0, 0)],
+    [(30, 42), (31, 42), (30, 43), (31, 43), (32, 42), (0, 0)],
+    [(38, 20), (39, 20), (38, 21), (39, 21), (40, 20), (40, 21)],
+    [(38, 30), (39, 30), (38, 31), (39, 31), (40, 30), (40, 31)],
+    [(45, 12), (46, 12), (45, 13), (46, 13), (0, 0), (0, 0)],
+    [(45, 38), (46, 38), (45, 39), (46, 39), (0, 0), (0, 0)],
+    [(52, 22), (53, 22), (52, 23), (53, 23), (54, 22), (0, 0)],
+    [(52, 28), (53, 28), (52, 29), (53, 29), (54, 28), (0, 0)],
+    [(58, 10), (59, 10), (58, 11), (59, 11), (60, 10), (0, 0)],
+    [(58, 40), (59, 40), (58, 41), (59, 41), (60, 40), (0, 0)],
+    [(65, 18), (66, 18), (65, 19), (66, 19), (0, 0), (0, 0)],
+    [(65, 32), (66, 32), (65, 33), (66, 33), (0, 0), (0, 0)],
+    [(72, 8), (73, 8), (72, 9), (73, 9), (0, 0), (0, 0)],
+    [(72, 42), (73, 42), (72, 43), (73, 43), (0, 0), (0, 0)],
+    [(25, 25), (26, 25), (25, 26), (26, 26), (0, 0), (0, 0)],
+    [(35, 25), (36, 25), (35, 26), (36, 26), (0, 0), (0, 0)],
+    [(48, 25), (49, 25), (48, 26), (49, 26), (0, 0), (0, 0)],
+    [(55, 15), (56, 15), (55, 16), (0, 0), (0, 0), (0, 0)],
+    [(55, 35), (56, 35), (55, 36), (0, 0), (0, 0), (0, 0)],
+    [(62, 25), (63, 25), (62, 26), (63, 26), (0, 0), (0, 0)],
+    [(18, 30), (19, 30), (18, 31), (19, 31), (0, 0), (0, 0)],
+    [(42, 12), (43, 12), (42, 13), (43, 13), (0, 0), (0, 0)],
+    [(42, 38), (43, 38), (42, 39), (43, 39), (0, 0), (0, 0)],
+    [(68, 25), (69, 25), (68, 26), (69, 26), (0, 0), (0, 0)],
+    [(12, 35), (13, 35), (12, 36), (13, 36), (0, 0), (0, 0)],
 ];
 
 fn setup_tutorial_level(
@@ -147,12 +196,13 @@ fn setup_tutorial_level(
     mut visibility_grid: ResMut<VisibilityGrid>,
     fog_waypoints: ResMut<FogWaypoints>,
     grid: Res<GridConfig>,
+    minimap_config: Res<MinimapConfig>,
 ) {
     commands.spawn(Camera2d);
 
     obstacle_grid.cells = vec![vec![false; grid.grid_height]; grid.grid_width];
 
-    let ground_color = materials.add(Color::srgb(0.15, 0.25, 0.15));
+    let ground_color = materials.add(Color::srgb(0.12, 0.2, 0.12));
     let ground = meshes.add(Rectangle::new(
         grid.cell_size * grid.grid_width as f32,
         grid.cell_size * grid.grid_height as f32,
@@ -164,7 +214,7 @@ fn setup_tutorial_level(
     ));
 
     visibility_grid.revealed = vec![vec![false; grid.grid_height]; grid.grid_width];
-    visibility_grid.view_radius = 5;
+    visibility_grid.view_radius = 6;
 
     let start_x = 2;
     let start_y = grid.grid_height / 2;
@@ -191,11 +241,11 @@ fn setup_tutorial_level(
         if i > 0 {
             let world_pos = grid_to_world(wp_x, wp_y, &grid);
             let waypoint_color = if i == fog_waypoints.current_target {
-                materials.add(Color::srgba(1.0, 0.8, 0.2, 0.8))
+                materials.add(Color::srgba(1.0, 0.85, 0.2, 0.9))
             } else {
                 materials.add(Color::srgba(0.6, 0.5, 0.1, 0.4))
             };
-            let waypoint_mesh = meshes.add(Circle::new(16.0));
+            let waypoint_mesh = meshes.add(Circle::new(18.0));
             commands.spawn((
                 Mesh2d(waypoint_mesh),
                 MeshMaterial2d(waypoint_color),
@@ -239,7 +289,7 @@ fn setup_tutorial_level(
         }
     }
 
-    let goal_color = materials.add(Color::srgb(0.8, 0.7, 0.2));
+    let goal_color = materials.add(Color::srgb(0.9, 0.8, 0.2));
     let goal_mesh = meshes.add(Rectangle::new(
         grid.cell_size * 3.0,
         grid.cell_size * grid.grid_height as f32,
@@ -274,6 +324,130 @@ fn setup_tutorial_level(
         },
         PlayerUnit,
         Selected,
+    ));
+
+    setup_minimap(
+        &mut commands,
+        &grid,
+        &obstacle_grid,
+        &visibility_grid,
+        &fog_waypoints,
+        &minimap_config,
+        &mut meshes,
+        &mut materials,
+    );
+}
+
+fn setup_minimap(
+    commands: &mut Commands,
+    grid: &GridConfig,
+    obstacle_grid: &ObstacleGrid,
+    visibility: &VisibilityGrid,
+    fog_waypoints: &FogWaypoints,
+    minimap_config: &MinimapConfig,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+) {
+    let bg_mesh = meshes.add(Rectangle::new(minimap_config.width, minimap_config.height));
+    let bg_color = materials.add(Color::srgba(0.05, 0.1, 0.05, 0.95));
+    commands.spawn((
+        Mesh2d(bg_mesh),
+        MeshMaterial2d(bg_color),
+        Transform::from_xyz(minimap_config.position.x, minimap_config.position.y, 100.0),
+        MinimapMarker,
+    ));
+
+    let border_mesh = meshes.add(Rectangle::new(
+        minimap_config.width + 4.0,
+        minimap_config.height + 4.0,
+    ));
+    let border_color = materials.add(Color::srgba(0.3, 0.5, 0.3, 0.8));
+    commands.spawn((
+        Mesh2d(border_mesh),
+        MeshMaterial2d(border_color),
+        Transform::from_xyz(minimap_config.position.x, minimap_config.position.y, 99.0),
+        MinimapMarker,
+    ));
+
+    let cell_width = minimap_config.width / grid.grid_width as f32;
+    let cell_height = minimap_config.height / grid.grid_height as f32;
+    let cell_mesh = meshes.add(Rectangle::new(cell_width.max(1.0), cell_height.max(1.0)));
+
+    for gx in 0..grid.grid_width {
+        for gy in 0..grid.grid_height {
+            let mx = minimap_config.position.x - minimap_config.width / 2.0
+                + (gx as f32 + 0.5) * cell_width;
+            let my = minimap_config.position.y - minimap_config.height / 2.0
+                + (gy as f32 + 0.5) * cell_height;
+
+            let color = if obstacle_grid.cells[gx][gy] {
+                materials.add(Color::srgba(0.1, 0.4, 0.1, 1.0))
+            } else if !visibility.revealed[gx][gy] {
+                materials.add(Color::srgba(0.02, 0.04, 0.02, 1.0))
+            } else {
+                materials.add(Color::srgba(0.15, 0.25, 0.15, 1.0))
+            };
+
+            commands.spawn((
+                Mesh2d(cell_mesh.clone()),
+                MeshMaterial2d(color),
+                Transform::from_xyz(mx, my, 101.0),
+                MinimapMarker,
+            ));
+        }
+    }
+
+    for (i, &(wx, wy)) in fog_waypoints.waypoints.iter().enumerate() {
+        if i > 0 {
+            let mx = minimap_config.position.x - minimap_config.width / 2.0
+                + (wx as f32 + 0.5) * cell_width;
+            let my = minimap_config.position.y - minimap_config.height / 2.0
+                + (wy as f32 + 0.5) * cell_height;
+
+            let color = if i == fog_waypoints.current_target {
+                materials.add(Color::srgba(1.0, 0.9, 0.2, 1.0))
+            } else {
+                materials.add(Color::srgba(0.8, 0.7, 0.1, 0.7))
+            };
+
+            let marker_mesh = meshes.add(Circle::new(4.0));
+            commands.spawn((
+                Mesh2d(marker_mesh),
+                MeshMaterial2d(color),
+                Transform::from_xyz(mx, my, 102.0),
+                MinimapMarker,
+            ));
+        }
+    }
+
+    let goal_x = grid.grid_width - 2;
+    let goal_y = grid.grid_height / 2;
+    let gmx =
+        minimap_config.position.x - minimap_config.width / 2.0 + (goal_x as f32 + 0.5) * cell_width;
+    let gmy = minimap_config.position.y - minimap_config.height / 2.0
+        + (goal_y as f32 + 0.5) * cell_height;
+    let goal_mesh = meshes.add(Circle::new(5.0));
+    let goal_color = materials.add(Color::srgba(0.9, 0.8, 0.2, 1.0));
+    commands.spawn((
+        Mesh2d(goal_mesh),
+        MeshMaterial2d(goal_color),
+        Transform::from_xyz(gmx, gmy, 102.0),
+        MinimapMarker,
+    ));
+
+    let start_x = 2;
+    let start_y = grid.grid_height / 2;
+    let smx = minimap_config.position.x - minimap_config.width / 2.0
+        + (start_x as f32 + 0.5) * cell_width;
+    let smy = minimap_config.position.y - minimap_config.height / 2.0
+        + (start_y as f32 + 0.5) * cell_height;
+    let start_mesh = meshes.add(Circle::new(3.0));
+    let start_color = materials.add(Color::srgba(0.2, 0.5, 0.2, 0.6));
+    commands.spawn((
+        Mesh2d(start_mesh),
+        MeshMaterial2d(start_color),
+        Transform::from_xyz(smx, smy, 102.0),
+        MinimapMarker,
     ));
 }
 
@@ -313,14 +487,14 @@ fn world_to_grid(world_pos: Vec2, grid: &GridConfig) -> (usize, usize) {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
-struct Node {
+struct AStarNode {
     x: usize,
     y: usize,
     f: u32,
     g: u32,
 }
 
-impl Ord for Node {
+impl Ord for AStarNode {
     fn cmp(&self, other: &Self) -> Ordering {
         other
             .f
@@ -330,7 +504,7 @@ impl Ord for Node {
     }
 }
 
-impl PartialOrd for Node {
+impl PartialOrd for AStarNode {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -356,7 +530,7 @@ pub fn find_path(
 
     let h =
         ((goal.0 as i32 - start.0 as i32).abs() + (goal.1 as i32 - start.1 as i32).abs()) as u32;
-    open_set.push(Node {
+    open_set.push(AStarNode {
         x: start.0,
         y: start.1,
         f: h,
@@ -405,7 +579,7 @@ pub fn find_path(
 
                 let h =
                     ((goal.0 as i32 - nx as i32).abs() + (goal.1 as i32 - ny as i32).abs()) as u32;
-                open_set.push(Node {
+                open_set.push(AStarNode {
                     x: nx,
                     y: ny,
                     f: tentative_g + h,
@@ -487,7 +661,7 @@ fn camera_controls(
 ) {
     let mut camera_transform = camera_query.into_inner();
 
-    let speed = 300.0;
+    let speed = 400.0;
     let mut velocity = Vec3::ZERO;
 
     if keys.pressed(KeyCode::KeyW) || keys.pressed(KeyCode::ArrowUp) {
@@ -585,7 +759,6 @@ fn update_fog(
         return;
     }
 
-    let _fog_color_hidden = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.95));
     let fog_color_revealed = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.0));
 
     for (mut mat2d, transform) in fog_query.iter_mut() {
@@ -601,8 +774,6 @@ fn draw_waypoints(
     fog_waypoints: Res<FogWaypoints>,
     mut waypoint_query: Query<(&mut WaypointMarker, &mut MeshMaterial2d<ColorMaterial>)>,
 ) {
-    let _fog_waypoints_changed = fog_waypoints.is_changed();
-
     for (marker, mut mat) in waypoint_query.iter_mut() {
         let color = if marker.reached {
             Color::srgba(0.3, 0.8, 0.3, 0.3)
@@ -632,15 +803,15 @@ fn check_waypoint_reached(
         let dist = ((unit.grid_x as i32 - target_x as i32).abs()
             + (unit.grid_y as i32 - target_y as i32).abs()) as usize;
 
-        if dist <= 2 {
+        if dist <= 3 {
             let next_target = fog_waypoints.current_target + 1;
             if next_target < fog_waypoints.waypoints.len() {
                 fog_waypoints.current_target = next_target;
 
                 let (reveal_x, reveal_y) = fog_waypoints.waypoints[next_target];
-                for dx in -8..=8 {
-                    for dy in -8..=8 {
-                        if dx * dx + dy * dy <= 64 {
+                for dx in -10..=10 {
+                    for dy in -10..=10 {
+                        if dx * dx + dy * dy <= 100 {
                             let nx = reveal_x as i32 + dx;
                             let ny = reveal_y as i32 + dy;
                             if nx >= 0
@@ -661,6 +832,16 @@ fn check_waypoint_reached(
                 }
             }
         }
+    }
+}
+
+fn update_minimap(
+    query: Query<&Transform, With<PlayerUnit>>,
+    grid: Res<GridConfig>,
+    minimap_config: Res<MinimapConfig>,
+) {
+    for transform in query.iter() {
+        let _world_pos = transform.translation.truncate();
     }
 }
 

@@ -27,29 +27,35 @@ A web-based fantasy RTS game with deterministic sync, low latency networking, an
 ### Completed Features
 
 #### Tutorial Level 1: "Through the Woods"
-- [x] Grid-based level (40x30 cells, 32px per cell)
+- [x] Grid-based level (80x50 cells, 32px per cell)
 - [x] Blue player unit (circle) with movement
-- [x] Tree clusters (12 clusters, 54 tree cells)
+- [x] Tree clusters (30 clusters, ~120 tree cells)
 - [x] Golden goal zone on the right side
-- [x] A* pathfinding (Rust implementation)
+- [x] A* pathfinding (Rust implementation using BinaryHeap)
 - [x] Path visualization with gizmos
-- [x] WASD/Arrow camera controls
+- [x] WASD/Arrow camera controls (speed: 400)
 - [x] Tutorial UI overlay
 - [x] Level complete detection
 - [x] Fog of War system
   - [x] Dark fog overlay covering unexplored areas
-  - [x] Player vision radius (5 cells)
+  - [x] Player vision radius (6 cells, circular reveal)
   - [x] Progressive fog reveal
 - [x] Waypoint system
-  - [x] Intermediate waypoints guiding player through fog
+  - [x] 7 intermediate waypoints guiding player through fog
   - [x] Golden waypoint markers for current target
-  - [x] Faded markers for future waypoints
-  - [x] Reveal large area when reaching waypoint
+  - [x] Faded markers for future/reached waypoints
+  - [x] Large area reveal (10-cell radius) when reaching waypoint
+- [x] **Minimap (bottom-left)**
+  - [x] 200x125 pixel minimap
+  - [x] Shows terrain, obstacles (trees), fog of war
+  - [x] Player position indicator (blue)
+  - [x] Waypoint markers (yellow)
+  - [x] Goal zone marker (gold)
+  - [x] Start position marker (dim green)
 
 #### Waypoints for Level 1
 ```
-Waypoint Path:
-(8, 15) -> (15, 15) -> (22, 15) -> (28, 12) -> (34, 15) -> (37, 15)
+(2,25) [START] -> (10,25) -> (20,25) -> (30,25) -> (40,20) -> (50,25) -> (60,25) -> (70,25) -> (77,25) [GOAL]
 ```
 
 ### Architecture
@@ -58,16 +64,23 @@ Waypoint Path:
 dreamcraft/
 ├── src/
 │   ├── lib.rs              # Main game plugin
-│   │   ├── A* pathfinding
+│   │   ├── A* pathfinding (BinaryHeap-based)
 │   │   ├── Fog of War system
 │   │   ├── Waypoint system
+│   │   ├── Minimap rendering
 │   │   └── Level setup
 │   ├── main.rs             # Native entry point
-│   └── web.rs              # WASM entry point
+│   ├── web.rs              # WASM entry point
+│   └── test_main.rs        # Headless pathfinding tests
 ├── web/
-│   ├── test.html           # Headless pathfinding tests
+│   ├── test.html           # Headless pathfinding tests (browser)
 │   └── index.html          # Main game HTML
 ├── specs/                   # Game specifications
+│   ├── 01-overview.md      # This file
+│   ├── 02-units.md
+│   ├── 03-isometric.md
+│   ├── 04-input.md
+│   └── 05-networking.md
 └── bevy-docs/              # Bevy engine reference
 ```
 
@@ -97,3 +110,12 @@ dreamcraft/
 3. Goal zone always visible from the last waypoint
 4. A* ensures path exists from start to goal through all waypoints
 5. Obstacles create interesting navigation challenges without blocking progress
+6. Minimap helps player navigate in fog of war
+
+## Resource Definitions
+
+### Tree Clusters (30 total)
+Clusters are distributed across the 80x50 grid to create:
+- Navigation obstacles requiring pathfinding
+- Visual variety
+- Strategic chokepoints
