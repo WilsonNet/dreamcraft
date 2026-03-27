@@ -1,0 +1,36 @@
+[package]
+name = "dreamcraft"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { version = "0.18.1", features = ["dynamic_linking"] }
+fixed = "1.30.0"
+wasm-bindgen = "0.2.114"
+js-sys = "0.3.91"
+web-sys = { version = "0.3.91", features = ["console", "Window", "Document", "HtmlCanvasElement"] }
+
+[lib]
+crate-type = ["rlib"]
+
+[[bin]]
+name = "dreamcraft-bin"
+path = "src/main.rs"
+
+[[bin]]
+name = "dreamcraft-test"
+path = "src/test_main.rs"
+
+[[test]]
+name = "level1_test"
+path = "tests/level1_test.rs"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+codegen-units = 1
+lto = "thin"

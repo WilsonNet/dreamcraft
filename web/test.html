@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DreamCraft Level 1 - Pathfinding Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1 { color: #58a6ff; margin-bottom: 10px; }
+        .subtitle { color: #6e7681; margin-bottom: 20px; }
+        
+        .panel {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #8b949e;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .grid-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1px;
+            background: #21262d;
+            padding: 2px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .cell {
+            width: 16px;
+            height: 16px;
+            background: #238636;
+            border-radius: 2px;
+            transition: background 0.1s;
+        }
+        
+        .cell.obstacle { background: #1f4b1f; }
+        .cell.start { background: #1f4b8f; }
+        .cell.goal { background: #8b6914; }
+        .cell.path { background: #58a6ff; }
+        .cell.current { background: #f85149; }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+        
+        .stat {
+            background: #0d1117;
+            padding: 12px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #58a6ff;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #6e7681;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        
+        button {
+            background: #238636;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        
+        button:hover { background: #2ea043; }
+        button:active { background: #238636; }
+        
+        button.secondary {
+            background: #21262d;
+            border: 1px solid #30363d;
+        }
+        
+        button.secondary:hover { background: #30363d; }
+        
+        .log {
+            background: #0d1117;
+            padding: 12px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        
+        .log-entry {
+            color: #6e7681;
+        }
+        
+        .log-entry.success { color: #3fb950; }
+        .log-entry.error { color: #f85149; }
+        .log-entry.info { color: #58a6ff; }
+        
+        .test-results {
+            display: grid;
+            gap: 8px;
+        }
+        
+        .test-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: #0d1117;
+            border-radius: 4px;
+        }
+        
+        .test-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .test-icon.pass { background: #238636; }
+        .test-icon.fail { background: #da3633; }
+        .test-icon.pending { background: #6e7681; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>◈ DreamCraft Level 1 - Pathfinding Test</h1>
+        <p class="subtitle">Headless validation of level design and A* pathfinding</p>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="grid-size">40x30</div>
+                <div class="stat-label">Grid Size</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="obstacle-count">0</div>
+                <div class="stat-label">Obstacles</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="path-length">0</div>
+                <div class="stat-label">Path Length</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="test-status">--</div>
+                <div class="stat-label">Status</div>
+            </div>
+        </div>
+        
+        <div class="panel" style="margin-top: 20px;">
+            <div class="panel-title">Level Map</div>
+            <div class="grid-container" id="grid"></div>
+            <div class="controls">
+                <button onclick="runTests()">Run All Tests</button>
+                <button onclick="testDirectPath()">Test Direct Path</button>
+                <button onclick="testWaypoints()">Test Waypoints</button>
+                <button class="secondary" onclick="clearLog()">Clear Log</button>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-title">Test Results</div>
+            <div class="test-results" id="test-results">
+                <div class="test-item">
+                    <div class="test-icon pending">?</div>
+                    <span>Obstacle Grid Created</span>
+                </div>
+                <div class="test-item">
+                    <div class="test-icon pending">?</div>
+                    <span>Direct Path Exists</span>
+                </div>
+                <div class="test-item">
+                    <div class="test-icon pending">?</div>
+                    <span>Waypoint Navigation</span>
+                </div>
+                <div class="test-item">
+                    <div class="test-icon pending">?</div>
+                    <span>No Path Through Obstacles</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-title">Console Log</div>
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        const GRID_WIDTH = 40;
+        const GRID_HEIGHT = 30;
+        const START = { x: 2, y: 15 };
+        const GOAL = { x: 37, y: 15 };
+        
+        const TREE_CLUSTERS = [
+            [[8, 10], [9, 10], [8, 11], [9, 11], [10, 10]],
+            [[15, 5], [16, 5], [15, 6], [16, 6]],
+            [[20, 8], [21, 8], [20, 9], [21, 9], [22, 8]],
+            [[20, 20], [21, 20], [20, 21], [21, 21], [22, 20]],
+            [[25, 12], [26, 12], [25, 13], [26, 13], [27, 12]],
+            [[30, 5], [31, 5], [30, 6], [31, 6], [32, 5]],
+            [[12, 25], [13, 25], [12, 26], [13, 26], [14, 25]],
+            [[5, 5], [6, 5], [5, 6], [6, 6]],
+            [[35, 20], [36, 20], [35, 21], [36, 21], [37, 20]],
+            [[28, 25], [29, 25], [28, 26], [29, 26], [30, 25]],
+            [[16, 18], [17, 18], [16, 19]],
+            [[10, 4], [11, 4], [10, 5]],
+        ];
+        
+        let obstacles = [];
+        let grid = [];
+        let testResults = [];
+        
+        function init() {
+            obstacles = [];
+            for (let x = 0; x < GRID_WIDTH; x++) {
+                obstacles[x] = [];
+                for (let y = 0; y < GRID_HEIGHT; y++) {
+                    obstacles[x][y] = false;
+                }
+            }
+            
+            TREE_CLUSTERS.forEach(cluster => {
+                cluster.forEach(([x, y]) => {
+                    if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
+                        obstacles[x][y] = true;
+                    }
+                });
+            });
+            
+            document.getElementById('obstacle-count').textContent = getObstacleCount();
+            renderGrid();
+            log('Level initialized', 'info');
+            log(`Grid: ${GRID_WIDTH}x${GRID_HEIGHT}`, 'info');
+            log(`Start: (${START.x}, ${START.y})`, 'info');
+            log(`Goal: (${GOAL.x}, ${GOAL.y})`, 'info');
+            log(`Obstacles: ${getObstacleCount()}`, 'info');
+        }
+        
+        function getObstacleCount() {
+            let count = 0;
+            for (let x = 0; x < GRID_WIDTH; x++) {
+                for (let y = 0; y < GRID_HEIGHT; y++) {
+                    if (obstacles[x][y]) count++;
+                }
+            }
+            return count;
+        }
+        
+        function renderGrid(path = [], currentPos = null) {
+            const container = document.getElementById('grid');
+            container.innerHTML = '';
+            container.style.width = `${GRID_WIDTH * 17}px`;
+            
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    
+                    if (x === START.x && y === START.y) {
+                        cell.classList.add('start');
+                    } else if (x === GOAL.x && y === GOAL.y) {
+                        cell.classList.add('goal');
+                    } else if (obstacles[x][y]) {
+                        cell.classList.add('obstacle');
+                    } else if (currentPos && x === currentPos.x && y === currentPos.y) {
+                        cell.classList.add('current');
+                    } else if (path.some(p => p.x === x && p.y === y)) {
+                        cell.classList.add('path');
+                    }
+                    
+                    container.appendChild(cell);
+                }
+            }
+        }
+        
+        function heuristic(a, b) {
+            return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+        }
+        
+        function findPath(start, goal) {
+            const openSet = [{x: start.x, y: start.y}];
+            const closedSet = new Set();
+            const cameFrom = {};
+            const gCost = {};
+            const fCost = {};
+            
+            const startKey = start.x + ',' + start.y;
+            const goalKey = goal.x + ',' + goal.y;
+            
+            gCost[startKey] = 0;
+            fCost[startKey] = heuristic(start, goal);
+            
+            let iterations = 0;
+            while (openSet.length > 0) {
+                iterations++;
+                if (iterations > 1000) return []; // Safety limit
+                
+                // Find node with lowest fCost
+                let currentIdx = 0;
+                let currentCost = fCost[openSet[0].x + ',' + openSet[0].y] || Infinity;
+                for (let i = 1; i < openSet.length; i++) {
+                    const cost = fCost[openSet[i].x + ',' + openSet[i].y] || Infinity;
+                    if (cost < currentCost) {
+                        currentCost = cost;
+                        currentIdx = i;
+                    }
+                }
+                
+                const current = openSet.splice(currentIdx, 1)[0];
+                const currentKey = current.x + ',' + current.y;
+                
+                if (iterations <= 3) {
+                    document.title = 'Iter ' + iterations + ': ' + currentKey + ' goal=' + goalKey;
+                }
+                
+                if (currentKey === goalKey) {
+                    const path = [current];
+                    let node = current;
+                    while (cameFrom[node.x + ',' + node.y]) {
+                        node = cameFrom[node.x + ',' + node.y];
+                        path.unshift(node);
+                    }
+                    return path;
+                }
+                
+                closedSet.add(currentKey);
+                
+                const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+                for (const [dx, dy] of directions) {
+                    const nx = current.x + dx;
+                    const ny = current.y + dy;
+                    
+                    if (nx < 0 || nx >= GRID_WIDTH || ny < 0 || ny >= GRID_HEIGHT) continue;
+                    if (closedSet.has(nx + ',' + ny)) continue;
+                    if (obstacles[nx] && obstacles[nx][ny]) continue;
+                    
+                    const neighborKey = nx + ',' + ny;
+                    const tentativeG = gCost[currentKey] + 1;
+                    
+                    if (tentativeG < (gCost[neighborKey] || Infinity)) {
+                        cameFrom[neighborKey] = current;
+                        gCost[neighborKey] = tentativeG;
+                        fCost[neighborKey] = tentativeG + heuristic({x: nx, y: ny}, goal);
+                        
+                        if (!openSet.some(p => p.x === nx && p.y === ny)) {
+                            openSet.push({x: nx, y: ny});
+                        }
+                    }
+                }
+            }
+            
+            return [];
+        }
+        
+        function log(message, type = '') {
+            const logEl = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            log('Log cleared', 'info');
+        }
+        
+        function updateTestResult(index, passed) {
+            const results = document.querySelectorAll('.test-item');
+            if (results[index]) {
+                const icon = results[index].querySelector('.test-icon');
+                icon.className = `test-icon ${passed ? 'pass' : 'fail'}`;
+                icon.textContent = passed ? '✓' : '✗';
+            }
+        }
+        
+        function testObstacleGrid() {
+            const count = getObstacleCount();
+            const passed = !obstacles[START.x][START.y] && !obstacles[GOAL.x][GOAL.y];
+            log(`Obstacle grid: ${count} obstacles, start/goal clear`, passed ? 'success' : 'error');
+            updateTestResult(0, passed);
+            return passed;
+        }
+        
+        function testDirectPath() {
+            log('TEST: Grid=' + GRID_WIDTH + 'x' + GRID_HEIGHT + ' Start=' + START.x + ',' + START.y + ' Goal=' + GOAL.x + ',' + GOAL.y, 'info');
+            log('TEST: heuristic=' + heuristic(START, GOAL), 'info');
+            const path = findPath(START, GOAL);
+            log('TEST: Path length = ' + path.length, 'info');
+            const passed = path.length > 0;
+            
+            if (passed) {
+                log(`Direct path found: ${path.length} steps`, 'success');
+                document.getElementById('path-length').textContent = path.length;
+                renderGrid(path);
+            } else {
+                log('No direct path found - level may be unsolvable!', 'error');
+                document.getElementById('path-length').textContent = 'N/A';
+            }
+            
+            updateTestResult(1, passed);
+            return passed;
+        }
+        
+        function testWaypoints() {
+            const waypoints = [
+                { x: 10, y: 3 },
+                { x: 20, y: 3 },
+                { x: 25, y: 15 },
+                { x: 30, y: 27 },
+                { x: 35, y: 10 },
+            ];
+            
+            let current = START;
+            let totalLength = 0;
+            let passed = true;
+            
+            for (const wp of waypoints) {
+                const path = findPath(current, wp);
+                if (path.length === 0) {
+                    log(`No path to waypoint (${wp.x}, ${wp.y})`, 'error');
+                    passed = false;
+                    break;
+                }
+                totalLength += path.length;
+                current = wp;
+            }
+            
+            if (passed) {
+                const finalPath = findPath(current, GOAL);
+                if (finalPath.length === 0) {
+                    log('No path from last waypoint to goal', 'error');
+                    passed = false;
+                } else {
+                    totalLength += finalPath.length;
+                    log(`Waypoint navigation: ${waypoints.length} waypoints, ${totalLength} total steps`, 'success');
+                }
+            }
+            
+            updateTestResult(2, passed);
+            return passed;
+        }
+        
+        function testNoPathThroughObstacles() {
+            const allPathsValid = true;
+            
+            for (let x = 0; x < GRID_WIDTH; x++) {
+                for (let y = 0; y < GRID_HEIGHT; y++) {
+                    if (obstacles[x][y]) {
+                        const testStart = { x: Math.max(0, x - 1), y };
+                        const testEnd = { x: Math.min(GRID_WIDTH - 1, x + 1), y };
+                        const path = findPath(testStart, testEnd);
+                        
+                        if (path.some(p => p.x === x && p.y === y)) {
+                            log(`Path goes through obstacle at (${x}, ${y})!`, 'error');
+                            updateTestResult(3, false);
+                            return false;
+                        }
+                    }
+                }
+            }
+            
+            log('All paths avoid obstacles correctly', 'success');
+            updateTestResult(3, true);
+            return true;
+        }
+        
+        function runTests() {
+            log('--- Running all tests ---', 'info');
+            
+            const results = [
+                testObstacleGrid(),
+                testDirectPath(),
+                testWaypoints(),
+                testNoPathThroughObstacles()
+            ];
+            
+            const allPassed = results.every(r => r);
+            
+            document.getElementById('test-status').textContent = allPassed ? 'PASS' : 'FAIL';
+            document.getElementById('test-status').style.color = allPassed ? '#3fb950' : '#f85149';
+            
+            log(allPassed ? '✓ All tests passed!' : '✗ Some tests failed', allPassed ? 'success' : 'error');
+        }
+        
+        init();
+    </script>
+</body>
+</html>

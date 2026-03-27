@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DreamCraft RTS - Isometric PoC</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #1a1a2e; 
+            overflow: hidden; 
+            font-family: 'Courier New', monospace;
+        }
+        #gameCanvas { 
+            display: block; 
+            cursor: crosshair;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 12px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 11px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div>DreamCraft RTS - Isometric PoC</div>
+        <div>FPS: <span id="fps">0</span></div>
+        <div>Units: <span id="unitCount">0</span></div>
+        <div>Selected: <span id="selectedCount">0</span></div>
+    </div>
+    <div id="controls">
+        <div>Left Click: Select / Box Select</div>
+        <div>Right Click: Move / Attack</div>
+        <div>Shift+Click: Add to selection</div>
+    </div>
+    <script type="module" src="./game.ts"></script>
+</body>
+</html>

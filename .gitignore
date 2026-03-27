@@ -1,0 +1,8 @@
+/target/
+*.png
+.DS_Store
+*.swp
+*.swo
+*~
+dist/
+bevy-docs/
