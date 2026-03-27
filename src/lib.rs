@@ -26,7 +26,7 @@ impl Plugin for DreamCraftPlugin {
                     update_fog,
                     draw_waypoints,
                     check_waypoint_reached,
-                    update_minimap,
+                    update_minimap_camera,
                 ),
             );
     }
@@ -87,7 +87,8 @@ pub struct FogWaypoints {
 pub struct MinimapConfig {
     pub width: f32,
     pub height: f32,
-    pub position: Vec2,
+    pub offset_x: f32,
+    pub offset_y: f32,
 }
 
 impl Default for MinimapConfig {
@@ -95,7 +96,8 @@ impl Default for MinimapConfig {
         Self {
             width: 200.0,
             height: 125.0,
-            position: Vec2::new(-600.0, -350.0),
+            offset_x: 10.0,
+            offset_y: 10.0,
         }
     }
 }
@@ -153,7 +155,10 @@ pub struct WaypointMarker {
 }
 
 #[derive(Component)]
-pub struct MinimapMarker;
+pub struct MinimapSprite;
+
+#[derive(Component)]
+pub struct MinimapCamera;
 
 const TREE_CLUSTERS: [[(i32, i32); 6]; 30] = [
     [(8, 20), (9, 20), (8, 21), (9, 21), (10, 20), (10, 21)],
@@ -198,7 +203,33 @@ fn setup_tutorial_level(
     grid: Res<GridConfig>,
     minimap_config: Res<MinimapConfig>,
 ) {
-    commands.spawn(Camera2d);
+    commands.spawn((Camera2d, Name::new("MainCamera")));
+
+    commands
+        .spawn((
+            Camera2d,
+            MinimapCamera,
+            Name::new("MinimapCamera"),
+            Camera {
+                order: 1,
+                ..Default::default()
+            },
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(minimap_config.offset_x),
+                    bottom: Val::Px(minimap_config.offset_y),
+                    width: Val::Px(minimap_config.width),
+                    height: Val::Px(minimap_config.height),
+                    border: UiRect::all(Val::Px(2.0)),
+                    ..Default::default()
+                },
+                BorderColor::all(Color::srgb(0.3, 0.5, 0.3)),
+                BackgroundColor(Color::srgba(0.05, 0.1, 0.05, 0.95)),
+            ));
+        });
 
     obstacle_grid.cells = vec![vec![false; grid.grid_height]; grid.grid_width];
 
@@ -326,7 +357,7 @@ fn setup_tutorial_level(
         Selected,
     ));
 
-    setup_minimap(
+    setup_minimap_sprites(
         &mut commands,
         &grid,
         &obstacle_grid,
@@ -338,7 +369,7 @@ fn setup_tutorial_level(
     );
 }
 
-fn setup_minimap(
+fn setup_minimap_sprites(
     commands: &mut Commands,
     grid: &GridConfig,
     obstacle_grid: &ObstacleGrid,
@@ -348,37 +379,14 @@ fn setup_minimap(
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
 ) {
-    let bg_mesh = meshes.add(Rectangle::new(minimap_config.width, minimap_config.height));
-    let bg_color = materials.add(Color::srgba(0.05, 0.1, 0.05, 0.95));
-    commands.spawn((
-        Mesh2d(bg_mesh),
-        MeshMaterial2d(bg_color),
-        Transform::from_xyz(minimap_config.position.x, minimap_config.position.y, 100.0),
-        MinimapMarker,
-    ));
-
-    let border_mesh = meshes.add(Rectangle::new(
-        minimap_config.width + 4.0,
-        minimap_config.height + 4.0,
-    ));
-    let border_color = materials.add(Color::srgba(0.3, 0.5, 0.3, 0.8));
-    commands.spawn((
-        Mesh2d(border_mesh),
-        MeshMaterial2d(border_color),
-        Transform::from_xyz(minimap_config.position.x, minimap_config.position.y, 99.0),
-        MinimapMarker,
-    ));
-
     let cell_width = minimap_config.width / grid.grid_width as f32;
     let cell_height = minimap_config.height / grid.grid_height as f32;
     let cell_mesh = meshes.add(Rectangle::new(cell_width.max(1.0), cell_height.max(1.0)));
 
     for gx in 0..grid.grid_width {
         for gy in 0..grid.grid_height {
-            let mx = minimap_config.position.x - minimap_config.width / 2.0
-                + (gx as f32 + 0.5) * cell_width;
-            let my = minimap_config.position.y - minimap_config.height / 2.0
-                + (gy as f32 + 0.5) * cell_height;
+            let mx = (gx as f32 + 0.5) * cell_width - minimap_config.width / 2.0;
+            let my = (gy as f32 + 0.5) * cell_height - minimap_config.height / 2.0;
 
             let color = if obstacle_grid.cells[gx][gy] {
                 materials.add(Color::srgba(0.1, 0.4, 0.1, 1.0))
@@ -391,18 +399,16 @@ fn setup_minimap(
             commands.spawn((
                 Mesh2d(cell_mesh.clone()),
                 MeshMaterial2d(color),
-                Transform::from_xyz(mx, my, 101.0),
-                MinimapMarker,
+                Transform::from_xyz(mx, my, 0.0),
+                MinimapSprite,
             ));
         }
     }
 
     for (i, &(wx, wy)) in fog_waypoints.waypoints.iter().enumerate() {
         if i > 0 {
-            let mx = minimap_config.position.x - minimap_config.width / 2.0
-                + (wx as f32 + 0.5) * cell_width;
-            let my = minimap_config.position.y - minimap_config.height / 2.0
-                + (wy as f32 + 0.5) * cell_height;
+            let mx = (wx as f32 + 0.5) * cell_width - minimap_config.width / 2.0;
+            let my = (wy as f32 + 0.5) * cell_height - minimap_config.height / 2.0;
 
             let color = if i == fog_waypoints.current_target {
                 materials.add(Color::srgba(1.0, 0.9, 0.2, 1.0))
@@ -414,40 +420,36 @@ fn setup_minimap(
             commands.spawn((
                 Mesh2d(marker_mesh),
                 MeshMaterial2d(color),
-                Transform::from_xyz(mx, my, 102.0),
-                MinimapMarker,
+                Transform::from_xyz(mx, my, 1.0),
+                MinimapSprite,
             ));
         }
     }
 
     let goal_x = grid.grid_width - 2;
     let goal_y = grid.grid_height / 2;
-    let gmx =
-        minimap_config.position.x - minimap_config.width / 2.0 + (goal_x as f32 + 0.5) * cell_width;
-    let gmy = minimap_config.position.y - minimap_config.height / 2.0
-        + (goal_y as f32 + 0.5) * cell_height;
+    let gmx = (goal_x as f32 + 0.5) * cell_width - minimap_config.width / 2.0;
+    let gmy = (goal_y as f32 + 0.5) * cell_height - minimap_config.height / 2.0;
     let goal_mesh = meshes.add(Circle::new(5.0));
     let goal_color = materials.add(Color::srgba(0.9, 0.8, 0.2, 1.0));
     commands.spawn((
         Mesh2d(goal_mesh),
         MeshMaterial2d(goal_color),
-        Transform::from_xyz(gmx, gmy, 102.0),
-        MinimapMarker,
+        Transform::from_xyz(gmx, gmy, 1.0),
+        MinimapSprite,
     ));
 
     let start_x = 2;
     let start_y = grid.grid_height / 2;
-    let smx = minimap_config.position.x - minimap_config.width / 2.0
-        + (start_x as f32 + 0.5) * cell_width;
-    let smy = minimap_config.position.y - minimap_config.height / 2.0
-        + (start_y as f32 + 0.5) * cell_height;
+    let smx = (start_x as f32 + 0.5) * cell_width - minimap_config.width / 2.0;
+    let smy = (start_y as f32 + 0.5) * cell_height - minimap_config.height / 2.0;
     let start_mesh = meshes.add(Circle::new(3.0));
     let start_color = materials.add(Color::srgba(0.2, 0.5, 0.2, 0.6));
     commands.spawn((
         Mesh2d(start_mesh),
         MeshMaterial2d(start_color),
-        Transform::from_xyz(smx, smy, 102.0),
-        MinimapMarker,
+        Transform::from_xyz(smx, smy, 1.0),
+        MinimapSprite,
     ));
 }
 
@@ -655,41 +657,41 @@ fn unit_movement(
 
 fn camera_controls(
     keys: Res<ButtonInput<KeyCode>>,
-    camera_query: Single<&mut Transform, With<Camera2d>>,
+    mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<MinimapCamera>)>,
     time: Res<Time>,
     grid: Res<GridConfig>,
 ) {
-    let mut camera_transform = camera_query.into_inner();
+    if let Ok(mut camera_transform) = camera_query.single_mut() {
+        let speed = 400.0;
+        let mut velocity = Vec3::ZERO;
 
-    let speed = 400.0;
-    let mut velocity = Vec3::ZERO;
+        if keys.pressed(KeyCode::KeyW) || keys.pressed(KeyCode::ArrowUp) {
+            velocity.y += speed;
+        }
+        if keys.pressed(KeyCode::KeyS) || keys.pressed(KeyCode::ArrowDown) {
+            velocity.y -= speed;
+        }
+        if keys.pressed(KeyCode::KeyA) || keys.pressed(KeyCode::ArrowLeft) {
+            velocity.x -= speed;
+        }
+        if keys.pressed(KeyCode::KeyD) || keys.pressed(KeyCode::ArrowRight) {
+            velocity.x += speed;
+        }
 
-    if keys.pressed(KeyCode::KeyW) || keys.pressed(KeyCode::ArrowUp) {
-        velocity.y += speed;
+        camera_transform.translation += velocity * time.delta_secs();
+
+        let half_width = grid.cell_size * grid.grid_width as f32 / 2.0 + 200.0;
+        let half_height = grid.cell_size * grid.grid_height as f32 / 2.0 + 200.0;
+
+        camera_transform.translation.x = camera_transform
+            .translation
+            .x
+            .clamp(-half_width, half_width);
+        camera_transform.translation.y = camera_transform
+            .translation
+            .y
+            .clamp(-half_height, half_height);
     }
-    if keys.pressed(KeyCode::KeyS) || keys.pressed(KeyCode::ArrowDown) {
-        velocity.y -= speed;
-    }
-    if keys.pressed(KeyCode::KeyA) || keys.pressed(KeyCode::ArrowLeft) {
-        velocity.x -= speed;
-    }
-    if keys.pressed(KeyCode::KeyD) || keys.pressed(KeyCode::ArrowRight) {
-        velocity.x += speed;
-    }
-
-    camera_transform.translation += velocity * time.delta_secs();
-
-    let half_width = grid.cell_size * grid.grid_width as f32 / 2.0 + 200.0;
-    let half_height = grid.cell_size * grid.grid_height as f32 / 2.0 + 200.0;
-
-    camera_transform.translation.x = camera_transform
-        .translation
-        .x
-        .clamp(-half_width, half_width);
-    camera_transform.translation.y = camera_transform
-        .translation
-        .y
-        .clamp(-half_height, half_height);
 }
 
 fn check_goal(
@@ -835,13 +837,14 @@ fn check_waypoint_reached(
     }
 }
 
-fn update_minimap(
-    query: Query<&Transform, With<PlayerUnit>>,
-    grid: Res<GridConfig>,
-    minimap_config: Res<MinimapConfig>,
+fn update_minimap_camera(
+    mut camera_query: Query<&mut Transform, With<MinimapCamera>>,
+    window: Query<&Window>,
 ) {
-    for transform in query.iter() {
-        let _world_pos = transform.translation.truncate();
+    let window = window.single().unwrap();
+    if let Ok(mut transform) = camera_query.single_mut() {
+        transform.translation.x = window.width() / 2.0;
+        transform.translation.y = window.height() / 2.0;
     }
 }
 

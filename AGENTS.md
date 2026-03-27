@@ -1,5 +1,23 @@
 # DreamCraft - Fantasy RTS Tech Stack
 
+## Skills Map
+
+Skills are located in `.opencode/skills/` and provide specialized instructions:
+
+| Skill | Purpose |
+|-------|---------|
+| **bevy.md** | Bevy ECS patterns, common errors, UI patterns, WASM setup |
+| **tmux.md** | Terminal multiplexing, session management, troubleshooting |
+| **specs.md** | Keeping `specs/` folder updated with new features |
+
+### Skill Update Rule (IMPORTANT!)
+After completing ANY task, update relevant skills if:
+- You discovered a new pattern or error fix
+- You learned something not in the skill
+- A skill is missing information that would have helped
+
+Example: Fixed a Bevy UI error? → Update `bevy.md` with the fix.
+
 ## Core Architecture
 
 ### Logic (The Brain)
@@ -32,6 +50,8 @@ dreamcraft/
 ├── .cargo/config.toml     # Cargo config (mold linker)
 ├── index.html             # HTML entry for Trunk
 ├── bevy-docs/             # Bevy engine source for reference
+├── specs/                 # Game specifications
+├── .opencode/skills/      # Specialized skills (ALWAYS KEEP UPDATED!)
 ├── src/
 │   ├── main.rs           # Native entry point
 │   ├── lib.rs            # Game plugin & ECS
@@ -113,6 +133,8 @@ The `bevy-docs/` directory contains the full Bevy engine source for quick refere
 - ECS patterns: Look at `bevy-docs/examples/ecs/`
 - 2D rendering: `bevy-docs/examples/2d/`
 - Shaders: `bevy-docs/examples/shader/`
+
+Also see `.opencode/skills/bevy.md` for quick reference.
 
 ## Troubleshooting
 
