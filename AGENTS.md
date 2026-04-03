@@ -8,7 +8,7 @@ Skills are located in `.opencode/skills/` and `.claude/skills/` and provide spec
 
 | Skill | Purpose |
 |-------|---------|
-| **bevy** | Bevy ECS patterns, common errors, UI patterns, WASM setup, debug console |
+| **bevy** | Bevy ECS patterns, common errors, UI patterns, WASM/native setup |
 | **tmux** | Terminal multiplexing, session management, troubleshooting |
 | **specs** | Keeping `specs/` folder updated with new features |
 
@@ -24,57 +24,41 @@ Example: Fixed a Bevy UI error? -> Update `.opencode/skills/bevy/SKILL.md` with 
 
 ### Logic (The Brain)
 - **Language**: Rust
-- **Target**: WebAssembly (WASM)
+- **Targets**: Native (desktop) + WASM (browser)
 - **ECS Framework**: Bevy 0.18
 - **Math**: `fixed` crate for deterministic floating-point (essential for RTS synchronization)
 
-### Networking (The Nerve)
+### Networking (The Nerve) - Future
 - **Client-Server**: WebTransport
 - **P2P LAN**: WebRTC DataChannels
 - **Rationale**: Bypass WebSocket latency for competitive RTS gameplay
 
 ### Graphics (The Eyes)
-- **API**: WebGPU (via Bevy)
-- **Standard**: 2026 high-performance browser rendering
+- **API**: WebGPU (via Bevy) on browser, Vulkan on native
+- **Standard**: 2026 high-performance rendering
 - **Features**: Custom shaders for fantasy "ambient" skill effects
 
 ### UI
-- **Framework**: React 19 (loaded from CDN in trunk-served page)
-- **Console**: Agent Console overlay (React) — toggled with backtick key
-- **Minimap**: React canvas component, StarCraft-style bottom-left
-
-### Bevy <-> React Interop
-Game state flows through `localStorage`:
-- **Bevy -> React**: `dreamcraft_debug_state` (JSON, updated every 30 frames)
-- **Bevy -> React**: `dreamcraft_minimap` (compact text grid, updated every 30 frames)
-- **React -> Bevy**: `dreamcraft_command` (JSON command, consumed by `read_console_commands` system)
-- **Bevy -> React**: `dreamcraft_command_result` (JSON response)
-
-This allows headless control via Playwright (`window.dreamcraftConsole` API).
+- **Native**: Bevy UI (window, title bar, game view)
+- **Browser**: Simple canvas (no React) - game renders to HTML canvas
+- **Headless**: File-based command system (`headless_command.json` / `headless_result.json`)
 
 ## Project Structure
 
 ```
 dreamcraft/
 ├── CLAUDE.md              # This file
-├── Trunk.toml             # Trunk WASM bundler config
+├── Trunk.toml             # Trunk WASM bundler config (for browser build)
 ├── Cargo.toml             # Rust configuration
-├── .cargo/config.toml     # Cargo config (mold linker)
-├── index.html             # HTML entry for Trunk (game + React console + minimap)
-├── reference.jpg          # StarCraft Brood War UI reference
-├── bevy-docs/             # Bevy engine source for reference
-├── specs/                 # Game specifications
-├── .opencode/skills/      # Specialized skills (ALWAYS KEEP UPDATED!)
-├── .claude/skills/        # Claude Code skills (mirrors .opencode/skills/)
+├── .cargo/config.toml     # Cargo config (mold linker, clang)
+├── index.html             # HTML entry for WASM (minimal, no React)
 ├── src/
-│   ├── main.rs           # Native entry point
+│   ├── main.rs           # Native entry point (with headless mode support)
 │   ├── lib.rs            # Game plugin & ECS (all game logic)
-│   └── web.rs            # WASM entry point (minimal, just starts Bevy app)
-└── web/                   # Legacy Bun-based UI (not actively used)
-    ├── src/
-    │   ├── App.tsx       # Old console app
-    │   └── ConsoleApp.tsx # Old console with localStorage sync
-    └── package.json
+│   └── web.rs            # WASM entry point (minimal)
+├── specs/                 # Game specifications
+├── .opencode/skills/      # Specialized skills
+└── .claude/skills/        # Claude Code skills (mirrors .opencode/skills/)
 ```
 
 ## Development Setup
@@ -84,7 +68,6 @@ dreamcraft/
 - Trunk WASM bundler
 - Mold linker (installed)
 - Clang (installed)
-- Bun (for web/React — legacy, not needed for main dev flow)
 
 ### Install Tools
 ```bash
@@ -98,31 +81,65 @@ cargo binstall trunk -y
 
 ### Development Commands
 
-#### WASM (Browser) — PRIMARY WORKFLOW
+#### Native (PRIMARY - fast iteration)
+```bash
+# With window (for playing)
+cargo run --bin dreamcraft-bin --features bevy/dynamic_linking
+
+# Headless (for agents/LLMs)
+cargo run --bin dreamcraft-bin --features bevy/dynamic_linking -- --headless
+```
+
+#### Headless Agent Commands
+Write to `headless_command.json`, read from `headless_result.json`:
+
+```bash
+# Status
+echo '{"cmd": "status"}' > headless_command.json
+
+# Move player
+echo '{"cmd": "goto", "x": 10, "y": 25}' > headless_command.json
+
+# Verify player position
+echo '{"cmd": "verify", "verify": {"type": "player_at", "x": 10, "y": 25}}' > headless_command.json
+
+# Verify level complete
+echo '{"cmd": "verify", "verify": {"type": "level_complete"}}' > headless_command.json
+
+# Reset level
+echo '{"cmd": "reset"}' > headless_command.json
+```
+
+#### WASM (Browser) - Legacy, for testing
 ```bash
 # Start dev server (runs on http://localhost:8080)
-# This serves the game + React console + minimap, all on one page
 /home/wilsonn/.asdf/installs/rust/stable/bin/trunk serve
 
 # Or build only
 /home/wilsonn/.asdf/installs/rust/stable/bin/trunk build
-
-# Force rebuild after editing lib.rs (touch to invalidate cache)
-touch src/lib.rs && /home/wilsonn/.asdf/installs/rust/stable/bin/trunk build
 ```
 
-#### Native (Desktop Testing)
+#### tmux Setup (REQUIRED for agents)
+**IMPORTANT**: Always use the tmux skill to run the game. This ensures proper process management and allows you to monitor output.
+
 ```bash
-# NOTE: Native build currently broken (lib.rs uses wasm-only extern blocks)
-# Use WASM build for all development
-cargo run --features bevy/dynamic_linking
+# Use tmux skill to create/manage session
+tmux new-session -d -s dreamcraft -n native -c /home/wilsonn/www/dreamcraft
+tmux send-keys -t dreamcraft:native 'cargo run --bin dreamcraft-bin --features bevy/dynamic_linking' Enter
+
+# Check if game is running
+tmux list-sessions
+tmux capture-pane -t dreamcraft:native -p
+
+# View live output
+tmux attach -t dreamcraft:native
 ```
 
-#### tmux Setup
-```bash
-tmux new-session -d -s dreamcraft -n trunk -c /path/to/dreamcraft
-tmux send-keys -t dreamcraft:trunk '/home/wilsonn/.asdf/installs/rust/stable/bin/trunk serve' Enter
-```
+**Benefits of tmux + mold linker:**
+- Game runs in background without blocking your terminal
+- Easy to check compilation errors and runtime output
+- Mold linker (configured in `.cargo/config.toml`) provides fast linking
+- Can restart game without killing your session
 
 ### Cargo Configuration (.cargo/config.toml)
 ```toml
@@ -161,55 +178,35 @@ Always check and update relevant specs after implementing features (see specs sk
 
 ### Implemented
 - [x] 80x50 grid map with A* pathfinding
-- [x] Player unit (blue circle) with right-click movement
+- [x] Player unit (blue circle with "M" label) with right-click movement
 - [x] Fog of war (cells revealed as player explores)
 - [x] 8 waypoints through the map
 - [x] Goal zone (right edge) — level complete when reached
 - [x] Tree obstacles (30 clusters, 132 cells)
 - [x] Camera pan (WASD/Arrow keys)
-- [x] Context menu suppressed (no right-click browser menu)
-- [x] StarCraft-style minimap (React canvas, bottom-left)
-- [x] Agent Console (React overlay, backtick toggle)
-- [x] Headless game control via localStorage + Playwright
+- [x] Headless command system (file-based for agentic testing)
+- [x] Native build with dynamic_linking (fast iteration)
+- [x] Window title: "DreamCraft RTS - Tutorial Level 1"
+
+### Headless Agent API
+- `status` — Returns player position
+- `goto <x> <y>` — Move player to grid position
+- `verify player_at <x> <y>` — Verify player is at position
+- `verify level_complete` — Check if level is complete
+- `reset` — Reset level to start
 
 ### Known Issues
 - Waypoint 3 at (40,20) collides with tree cluster — pathfinding skips it
 - Camera doesn't auto-follow player (must pan manually or use console `goto`)
-- Native build broken (wasm-only extern blocks in lib.rs need cfg guards)
-
-## Agent Console
-
-Toggle with backtick (`` ` ``). Commands:
-- `status` — Full game state with diagnostics (player visible, fog, camera distance)
-- `fog` — Fog of war coverage
-- `waypoints` — List all waypoints with distances and status
-- `goto <x> <y>` — Move player to grid position
-- `next` — Move to next waypoint
-- `autoplay` — Auto-complete level through all waypoints
-- `reset` — Reset level
-- `watch` — Toggle live state feed
-- `help` / `clear`
-
-### Diagnostics (auto-detected warnings)
-- "Player not visible on screen!" — camera viewport doesn't contain player
-- "Player hidden under fog of war!" — player cell not revealed
-- "Camera too far from player (Npx)" — camera drift > 800px
-- "Player unit is not selected!" — unit lost selection
-
-### Headless API (for Playwright/testing)
-```js
-window.dreamcraftConsole.getState()       // returns parsed debug state
-window.dreamcraftConsole.sendCommand(cmd, x, y)  // sends command to game
-window.dreamcraftConsole.getCommandResult()      // reads command response
-```
+- Headless mode creates window then closes immediately (needs fix)
 
 ## Key Design Principles
 
 1. **Determinism**: All game logic uses fixed-point arithmetic for perfect sync across clients
 2. **Low Latency**: WebTransport/WebRTC minimize network delay vs WebSockets
-3. **Performance**: WebGPU for GPU-compute and rendering; React for UI overlays
-4. **Modularity**: Clear separation between logic (Rust/Bevy), UI (React), diagnostics (Agent Console)
-5. **Agentic Testing**: All game state observable and controllable via localStorage bridge
+3. **Performance**: WebGPU for GPU-compute and rendering; native uses Vulkan
+4. **Modularity**: Clear separation between logic (Rust/Bevy), native UI, browser canvas
+5. **Agentic Testing**: All game state controllable and verifiable via headless command files
 
 ## Bevy Reference
 
@@ -226,14 +223,10 @@ Also see `.opencode/skills/bevy/SKILL.md` for quick reference.
 ### Before Searching Docs (Max 3 attempts):
 1. Check tmux session: `tmux list-sessions`
 2. Check tmux window: `tmux list-windows -t dreamcraft`
-3. Check output: `tmux capture-pane -t dreamcraft:trunk -p`
+3. Check output: `tmux capture-pane -t dreamcraft:native -p`
 
 ### Common Issues:
-- **Trunk not found**: Use full path `/home/wilsonn/.asdf/installs/rust/stable/bin/trunk serve`
-- **Port in use**: Kill existing process `lsof -ti:8080 | xargs kill` or change port in Trunk.toml
+- **Dynamic linking fails**: Use `--features bevy/dynamic_linking` for native
 - **WASM build fails**: Check Cargo.toml has correct crate-type (rlib only, not cdylib)
-- **Trunk rebuild loop**: Ensure Trunk.toml `[watch] ignore` includes `dist`, `.playwright-mcp`
-- **dynamic_linking breaks WASM**: Never use `bevy = { features = ["dynamic_linking"] }` in Cargo.toml — use as CLI flag only for native: `cargo run --features bevy/dynamic_linking`
-- **Viewport struct private in Bevy 0.18**: Can't use `bevy::render::camera::Viewport` directly — use render layers or HTML overlay instead
-- **Second camera overwrites screen**: Cameras with `order > 0` and no viewport will clear and re-render the full screen. Use HTML canvas overlays instead of extra cameras for minimap/UI.
+- **Headless command not processed**: Check `headless_result.json` for errors
 - **Cached WASM build**: `trunk build` may use cached lib. Force rebuild: `touch src/lib.rs`

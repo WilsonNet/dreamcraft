@@ -1,11 +1,11 @@
 ---
 name: bevy
-description: Bevy ECS patterns, common errors, UI patterns, WASM setup, debug console, minimap
+description: Bevy ECS patterns, common errors, UI patterns, native/WASM setup, headless commands
 ---
 
 # Bevy Game Engine Skill
 
-Use this skill when working with Bevy ECS game engine in Rust/WASM projects.
+Use this skill when working with Bevy ECS game engine in Rust projects.
 
 ## Common Patterns
 
@@ -82,18 +82,33 @@ resolution: (1280, 720).into(),
 - A camera with `order: 1` and no viewport renders full screen
 - It clears with default clear color, overwriting the main camera
 - `bevy::render::camera::Viewport` is private — cannot set viewport
-- **Solution**: Use HTML/React canvas overlays for minimap, debug UI, etc.
+- **Solution**: Use Bevy UI nodes for minimap, debug UI, etc.
 
 ```rust
 // BAD - overwrites main camera, player invisible!
 commands.spawn((Camera2d, Camera { order: 1, ..Default::default() }));
 
-// GOOD - single camera, overlays via HTML/React
+// GOOD - single camera, overlays via Bevy UI
 commands.spawn((Camera2d, Transform::from_xyz(x, y, 100.0)));
-// Minimap/console rendered as React components in index.html
 ```
 
-## WASM + Trunk
+## Native Development (PRIMARY)
+
+### Cargo Configuration (.cargo/config.toml)
+```toml
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]
+```
+
+### Running Native (with dynamic linking for fast iteration)
+```bash
+# With window (for playing)
+cargo run --bin dreamcraft-bin --features bevy/dynamic_linking
+
+# Headless (for agents/LLMs)
+cargo run --bin dreamcraft-bin --features bevy/dynamic_linking -- --headless
+```
 
 ### Cargo.toml
 ```toml
@@ -101,31 +116,11 @@ commands.spawn((Camera2d, Transform::from_xyz(x, y, 100.0)));
 crate-type = ["rlib"]  # NOT cdylib!
 
 # NEVER put dynamic_linking in default features — breaks WASM!
-bevy = "0.18.1"  # NOT bevy = { features = ["dynamic_linking"] }
+bevy = "0.18.1"
 # Use CLI flag for native only: cargo run --features bevy/dynamic_linking
 ```
 
-### WASM Entry Point (src/web.rs)
-```rust
-use bevy::prelude::*;
-use dreamcraft::DreamCraftPlugin;
-
-fn main() {  // NOT #[wasm_bindgen(start)] — trunk handles this
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "DreamCraft RTS".into(),
-                resolution: (1280, 720).into(),  // u32!
-                fit_canvas_to_parent: true,
-                prevent_default_event_handling: false,
-                ..default()
-            }),
-            ..default()
-        }))
-        .add_plugins(DreamCraftPlugin)
-        .run();
-}
-```
+## WASM + Trunk
 
 ### Trunk.toml
 ```toml
@@ -137,10 +132,9 @@ watch_paths = ["src", "index.html"]
 ignore = ["target", "dist", ".playwright-mcp", "web", "bevy-docs"]
 ```
 
-### index.html
+### index.html (minimal, no React)
 ```html
 <link data-trunk rel="rust" data-bin="dreamcraft-web" />
-<!-- Prevent right-click context menu -->
 <script>document.addEventListener('contextmenu', e => e.preventDefault());</script>
 ```
 
@@ -150,10 +144,66 @@ ignore = ["target", "dist", ".playwright-mcp", "web", "bevy-docs"]
 touch src/lib.rs && trunk build
 ```
 
-## Bevy <-> React Interop via localStorage
+## Headless Commands (Native)
 
-### Bevy Side: Broadcasting State
+### File-based command system
+Commands are read from `headless_command.json`, results written to `headless_result.json`.
+
 ```rust
+// lib.rs - read commands every 30 frames
+fn read_stdin_commands(
+    mut player_query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
+    obstacle_grid: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+    game_state: Res<GameState>,
+    mut frame_counter: Local<u64>,
+) {
+    *frame_counter += 1;
+    if *frame_counter % 30 != 0 { return; }
+
+    let cmd_file = std::path::Path::new("headless_command.json");
+    if !cmd_file.exists() { return; }
+
+    let buffer = std::fs::read_to_string(cmd_file).unwrap_or_default();
+    let _ = std::fs::remove_file(cmd_file);
+
+    let cmd: ConsoleCommand = serde_json::from_str(&buffer).unwrap();
+    let result = handle_headless_command(&mut player_query, ...);
+    write_result(&result);
+}
+
+fn write_result(result: &serde_json::Value) {
+    let _ = std::fs::write("headless_result.json", result.to_string());
+    println!("RESULT: {}", result);
+}
+```
+
+### Available Commands
+```bash
+# Status
+echo '{"cmd": "status"}' > headless_command.json
+
+# Move player
+echo '{"cmd": "goto", "x": 10, "y": 25}' > headless_command.json
+
+# Verify player position
+echo '{"cmd": "verify", "verify": {"type": "player_at", "x": 10, "y": 25}}' > headless_command.json
+
+# Verify level complete
+echo '{"cmd": "verify", "verify": {"type": "level_complete"}}' > headless_command.json
+```
+
+### Response Format
+```json
+{"ok": true, "msg": "Player at (2, 25)", "player_grid": [2, 25]}
+```
+
+## WASM Browser Interop (localStorage)
+
+Only needed for browser/WASM builds. Uses localStorage bridge:
+
+```rust
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = localStorage)]
@@ -163,36 +213,9 @@ extern "C" {
     #[wasm_bindgen(js_namespace = localStorage)]
     fn removeItem(key: &str);
 }
-
-fn broadcast_debug_state(json: &str) {
-    setItem("dreamcraft_debug_state", json);
-}
 ```
 
-### Bevy Side: Reading Commands
-```rust
-fn read_console_commands(/* ... */) {
-    let cmd_str = match getItem("dreamcraft_command") {
-        Some(s) if !s.is_empty() => s,
-        _ => return,
-    };
-    removeItem("dreamcraft_command");
-    // Parse and execute...
-    setItem("dreamcraft_command_result", &result_json);
-}
-```
-
-### React Side (in index.html)
-```js
-// Read state
-const s = JSON.parse(localStorage.getItem('dreamcraft_debug_state'));
-
-// Send command
-localStorage.setItem('dreamcraft_command', JSON.stringify({ cmd: 'goto', x: 10, y: 25 }));
-
-// Read result
-const r = JSON.parse(localStorage.getItem('dreamcraft_command_result'));
-```
+Commands sent via `dreamcraft_command`, results in `dreamcraft_command_result`.
 
 ## Debug Diagnostics
 
@@ -201,13 +224,3 @@ The debug state includes automatic warnings:
 - `player_in_fog` — is player cell revealed?
 - `camera_distance_to_player` — px distance
 - `warnings` array — auto-populated from checks above
-
-These surface in the Agent Console UI as a red warning banner and in `status` output.
-
-## Minimap (StarCraft-style)
-
-Implemented as React canvas component, NOT a Bevy camera:
-- Bevy broadcasts `dreamcraft_minimap` (compact text grid) to localStorage
-- React reads it and draws on a `<canvas>` element
-- Characters: `.` = fog, `#` = obstacle, ` ` = revealed, `P` = player, `W` = current waypoint, `w` = other waypoint
-- Camera viewport drawn as white rectangle

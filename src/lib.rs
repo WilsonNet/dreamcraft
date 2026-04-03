@@ -2,8 +2,11 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
+
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
@@ -26,7 +29,10 @@ impl Plugin for DreamCraftPlugin {
                 Update,
                 (
                     handle_input,
+                    #[cfg(target_arch = "wasm32")]
                     read_console_commands,
+                    #[cfg(not(target_arch = "wasm32"))]
+                    read_stdin_commands,
                     unit_movement,
                     camera_controls,
                     check_goal,
@@ -35,7 +41,10 @@ impl Plugin for DreamCraftPlugin {
                     update_fog,
                     draw_waypoints,
                     check_waypoint_reached,
+                    #[cfg(target_arch = "wasm32")]
                     broadcast_minimap_data,
+                    #[cfg(not(target_arch = "wasm32"))]
+                    update_native_minimap,
                     debug_console_output,
                 ),
             );
@@ -97,8 +106,6 @@ pub struct FogWaypoints {
 pub struct MinimapConfig {
     pub width: f32,
     pub height: f32,
-    pub offset_x: f32,
-    pub offset_y: f32,
 }
 
 impl Default for MinimapConfig {
@@ -106,8 +113,6 @@ impl Default for MinimapConfig {
         Self {
             width: 200.0,
             height: 125.0,
-            offset_x: 10.0,
-            offset_y: 10.0,
         }
     }
 }
@@ -211,21 +216,167 @@ fn setup_tutorial_level(
     mut visibility_grid: ResMut<VisibilityGrid>,
     fog_waypoints: ResMut<FogWaypoints>,
     grid: Res<GridConfig>,
-    _minimap_config: Res<MinimapConfig>,
+    #[cfg(not(target_arch = "wasm32"))] minimap_config: Res<MinimapConfig>,
 ) {
     let start_x = 2;
     let start_y = grid.grid_height / 2;
     let start_world_pos = grid_to_world(start_x, start_y, &grid);
 
-    commands.spawn((
-        Camera2d,
-        Name::new("MainCamera"),
-        Transform::from_xyz(start_world_pos.x, start_world_pos.y, 100.0),
-    ));
-
-    // Minimap is rendered as HTML canvas overlay (see index.html)
+    // Spawn camera first, then spawn minimap as children
+    let camera_entity = commands
+        .spawn((
+            Camera2d,
+            Name::new("MainCamera"),
+            Transform::from_xyz(start_world_pos.x, start_world_pos.y, 100.0),
+        ))
+        .id();
 
     obstacle_grid.cells = vec![vec![false; grid.grid_height]; grid.grid_width];
+
+    // Initialize trees in obstacle grid first
+    for cluster in TREE_CLUSTERS.iter() {
+        for &(gx, gy) in cluster {
+            if gx > 0 && gx < grid.grid_width as i32 && gy < grid.grid_height as i32 {
+                let gx = gx as usize;
+                let gy = gy as usize;
+                obstacle_grid.cells[gx][gy] = true;
+            }
+        }
+    }
+
+    visibility_grid.revealed = vec![vec![false; grid.grid_height]; grid.grid_width];
+    visibility_grid.view_radius = 6;
+
+    let start_x = 2;
+    let start_y = grid.grid_height / 2;
+    reveal_area(start_x, start_y, &mut visibility_grid, &grid);
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // Spawn minimap UI using Bevy UI for fixed screen positioning
+        // Minimap will be positioned at left: 20px, bottom: 30px (CSS-like)
+        commands
+            .spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(20.0),
+                    bottom: Val::Px(30.0),
+                    width: Val::Px(minimap_config.width),
+                    height: Val::Px(minimap_config.height),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.9)),
+                MinimapEntity,
+                MinimapBackground,
+            ))
+            .with_children(|parent| {
+                // Border
+                parent.spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(-4.0),
+                        right: Val::Px(-4.0),
+                        top: Val::Px(-4.0),
+                        bottom: Val::Px(-4.0),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgb(0.3, 0.5, 0.3)),
+                    MinimapEntity,
+                ));
+
+                // Minimap content grid - spawn individual cell indicators
+                let cell_width = minimap_config.width / grid.grid_width as f32;
+                let cell_height = minimap_config.height / grid.grid_height as f32;
+
+                for gx in 0..grid.grid_width {
+                    for gy in 0..grid.grid_height {
+                        let color = if obstacle_grid.cells[gx][gy] {
+                            Color::srgba(0.2, 0.6, 0.2, 1.0) // Tree
+                        } else if !visibility_grid.revealed[gx][gy] {
+                            Color::srgba(0.05, 0.08, 0.05, 1.0) // Fog
+                        } else {
+                            Color::srgba(0.25, 0.4, 0.25, 1.0) // Ground
+                        };
+
+                        parent.spawn((
+                            Node {
+                                position_type: PositionType::Absolute,
+                                left: Val::Px(gx as f32 * cell_width),
+                                bottom: Val::Px(gy as f32 * cell_height),
+                                width: Val::Px(cell_width.max(1.0)),
+                                height: Val::Px(cell_height.max(1.0)),
+                                ..default()
+                            },
+                            BackgroundColor(color),
+                            MinimapEntity,
+                            MinimapSprite,
+                        ));
+                    }
+                }
+
+                // Waypoints
+                for (i, &(wx, wy)) in fog_waypoints.waypoints.iter().enumerate() {
+                    if i > 0 {
+                        let color = if i == fog_waypoints.current_target {
+                            Color::srgba(1.0, 0.9, 0.2, 1.0)
+                        } else {
+                            Color::srgba(0.8, 0.7, 0.1, 0.7)
+                        };
+
+                        parent.spawn((
+                            Node {
+                                position_type: PositionType::Absolute,
+                                left: Val::Px(wx as f32 * cell_width),
+                                bottom: Val::Px(wy as f32 * cell_height),
+                                width: Val::Px(8.0),
+                                height: Val::Px(8.0),
+                                ..default()
+                            },
+                            BackgroundColor(color),
+                            MinimapEntity,
+                            MinimapSprite,
+                        ));
+                    }
+                }
+
+                // Goal marker
+                let goal_x = grid.grid_width - 2;
+                let goal_y = grid.grid_height / 2;
+                parent.spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(goal_x as f32 * cell_width),
+                        bottom: Val::Px(goal_y as f32 * cell_height),
+                        width: Val::Px(10.0),
+                        height: Val::Px(10.0),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgba(0.9, 0.8, 0.2, 1.0)),
+                    MinimapEntity,
+                    MinimapSprite,
+                ));
+
+                // Player marker
+                parent.spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(2.0 * cell_width),
+                        bottom: Val::Px((grid.grid_height / 2) as f32 * cell_height),
+                        width: Val::Px(12.0),
+                        height: Val::Px(12.0),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgb(0.3, 0.6, 0.9)),
+                    MinimapEntity,
+                    PlayerMinimapMarker,
+                ));
+            });
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        // Minimap is rendered as HTML canvas overlay (see index.html)
+    }
 
     let ground_color = materials.add(Color::srgb(0.12, 0.2, 0.12));
     let ground = meshes.add(Rectangle::new(
@@ -293,7 +444,6 @@ fn setup_tutorial_level(
             if gx > 0 && gx < grid.grid_width as i32 && gy < grid.grid_height as i32 {
                 let gx = gx as usize;
                 let gy = gy as usize;
-                obstacle_grid.cells[gx][gy] = true;
 
                 let world_pos = grid_to_world(gx, gy, &grid);
 
@@ -332,107 +482,34 @@ fn setup_tutorial_level(
 
     let world_pos = grid_to_world(start_x, start_y, &grid);
 
-    commands.spawn((
-        Mesh2d(player_mesh),
-        MeshMaterial2d(player_color),
-        Transform::from_xyz(world_pos.x, world_pos.y, 5.0),
-        Unit {
-            speed: 150.0,
-            grid_x: start_x,
-            grid_y: start_y,
-        },
-        Target {
-            path: Vec::new(),
-            path_index: 0,
-        },
-        PlayerUnit,
-        Selected,
-    ));
-
-}
-
-fn setup_minimap_sprites(
-    commands: &mut Commands,
-    grid: &GridConfig,
-    obstacle_grid: &ObstacleGrid,
-    visibility: &VisibilityGrid,
-    fog_waypoints: &FogWaypoints,
-    minimap_config: &MinimapConfig,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
-) {
-    let cell_width = minimap_config.width / grid.grid_width as f32;
-    let cell_height = minimap_config.height / grid.grid_height as f32;
-    let cell_mesh = meshes.add(Rectangle::new(cell_width.max(1.0), cell_height.max(1.0)));
-
-    for gx in 0..grid.grid_width {
-        for gy in 0..grid.grid_height {
-            let mx = (gx as f32 + 0.5) * cell_width - minimap_config.width / 2.0;
-            let my = (gy as f32 + 0.5) * cell_height - minimap_config.height / 2.0;
-
-            let color = if obstacle_grid.cells[gx][gy] {
-                materials.add(Color::srgba(0.1, 0.4, 0.1, 1.0))
-            } else if !visibility.revealed[gx][gy] {
-                materials.add(Color::srgba(0.02, 0.04, 0.02, 1.0))
-            } else {
-                materials.add(Color::srgba(0.15, 0.25, 0.15, 1.0))
-            };
-
-            commands.spawn((
-                Mesh2d(cell_mesh.clone()),
-                MeshMaterial2d(color),
-                Transform::from_xyz(mx, my, 0.0),
-                MinimapSprite,
+    commands
+        .spawn((
+            Mesh2d(player_mesh),
+            MeshMaterial2d(player_color),
+            Transform::from_xyz(world_pos.x, world_pos.y, 5.0),
+            Unit {
+                speed: 150.0,
+                grid_x: start_x,
+                grid_y: start_y,
+            },
+            Target {
+                path: Vec::new(),
+                path_index: 0,
+            },
+            PlayerUnit,
+            Selected,
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Text2d::new("M"),
+                TextFont {
+                    font_size: 18.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+                Transform::from_xyz(0.0, -1.0, 6.0),
             ));
-        }
-    }
-
-    for (i, &(wx, wy)) in fog_waypoints.waypoints.iter().enumerate() {
-        if i > 0 {
-            let mx = (wx as f32 + 0.5) * cell_width - minimap_config.width / 2.0;
-            let my = (wy as f32 + 0.5) * cell_height - minimap_config.height / 2.0;
-
-            let color = if i == fog_waypoints.current_target {
-                materials.add(Color::srgba(1.0, 0.9, 0.2, 1.0))
-            } else {
-                materials.add(Color::srgba(0.8, 0.7, 0.1, 0.7))
-            };
-
-            let marker_mesh = meshes.add(Circle::new(4.0));
-            commands.spawn((
-                Mesh2d(marker_mesh),
-                MeshMaterial2d(color),
-                Transform::from_xyz(mx, my, 1.0),
-                MinimapSprite,
-            ));
-        }
-    }
-
-    let goal_x = grid.grid_width - 2;
-    let goal_y = grid.grid_height / 2;
-    let gmx = (goal_x as f32 + 0.5) * cell_width - minimap_config.width / 2.0;
-    let gmy = (goal_y as f32 + 0.5) * cell_height - minimap_config.height / 2.0;
-    let goal_mesh = meshes.add(Circle::new(5.0));
-    let goal_color = materials.add(Color::srgba(0.9, 0.8, 0.2, 1.0));
-    commands.spawn((
-        Mesh2d(goal_mesh),
-        MeshMaterial2d(goal_color),
-        Transform::from_xyz(gmx, gmy, 1.0),
-        MinimapSprite,
-    ));
-
-    let start_x = 2;
-    let start_y = grid.grid_height / 2;
-    let smx = (start_x as f32 + 0.5) * cell_width - minimap_config.width / 2.0;
-    let smy = (start_y as f32 + 0.5) * cell_height - minimap_config.height / 2.0;
-    let start_mesh = meshes.add(Circle::new(3.0));
-    let start_color = materials.add(Color::srgba(0.2, 0.5, 0.2, 0.6));
-    commands.spawn((
-        Mesh2d(start_mesh),
-        MeshMaterial2d(start_color),
-        Transform::from_xyz(smx, smy, 1.0),
-        MinimapSprite,
-    ));
+        });
 }
 
 fn reveal_area(cx: usize, cy: usize, visibility: &mut VisibilityGrid, grid: &GridConfig) {
@@ -806,12 +883,12 @@ fn check_waypoint_reached(
                                 visibility.revealed[nx as usize][ny as usize] = true;
                             }
                         }
-                    }
-                }
 
-                for mut marker in waypoint_query.iter_mut() {
-                    if marker.index == next_target - 1 {
-                        marker.reached = true;
+                        for mut marker in waypoint_query.iter_mut() {
+                            if marker.index == next_target - 1 {
+                                marker.reached = true;
+                            }
+                        }
                     }
                 }
             }
@@ -848,7 +925,11 @@ fn broadcast_minimap_data(
                 .map_or(false, |&(wx, wy)| gx == wx && gy == wy)
             {
                 minimap.push('W');
-            } else if fog_waypoints.waypoints.iter().any(|&(wx, wy)| gx == wx && gy == wy) {
+            } else if fog_waypoints
+                .waypoints
+                .iter()
+                .any(|&(wx, wy)| gx == wx && gy == wy)
+            {
                 minimap.push('w');
             } else if !visibility_grid.revealed.is_empty() && !visibility_grid.revealed[gx][gy] {
                 minimap.push('.');
@@ -861,13 +942,16 @@ fn broadcast_minimap_data(
         minimap.push('\n');
     }
 
-    setItem("dreamcraft_minimap", &minimap);
-    let meta = serde_json::json!({
-        "width": grid.grid_width,
-        "height": grid.grid_height,
-        "player": [unit.grid_x, unit.grid_y],
-    });
-    setItem("dreamcraft_minimap_meta", &meta.to_string());
+    #[cfg(target_arch = "wasm32")]
+    {
+        setItem("dreamcraft_minimap", &minimap);
+        let meta = serde_json::json!({
+            "width": grid.grid_width,
+            "height": grid.grid_height,
+            "player": [unit.grid_x, unit.grid_y],
+        });
+        setItem("dreamcraft_minimap_meta", &meta.to_string());
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -931,8 +1015,7 @@ fn debug_console_output(
         .flat_map(|col| col.iter())
         .filter(|&&v| v)
         .count();
-    let fog_coverage_pct =
-        ((total_cells - revealed_cells) as f32 / total_cells as f32) * 100.0;
+    let fog_coverage_pct = ((total_cells - revealed_cells) as f32 / total_cells as f32) * 100.0;
 
     // Diagnostics
     let camera_distance = ((camera_pos.x - player_transform.translation.x).powi(2)
@@ -1000,6 +1083,7 @@ fn debug_console_output(
     broadcast_debug_state(&json);
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = localStorage)]
@@ -1012,8 +1096,30 @@ extern "C" {
     fn removeItem(key: &str);
 }
 
+#[cfg(target_arch = "wasm32")]
 fn broadcast_debug_state(json: &str) {
     setItem("dreamcraft_debug_state", json);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn broadcast_debug_state(_json: &str) {}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn set_command_result(_json: &str) {
+    println!("RESULT: {}", _json);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn set_command_result(json: &str) {
+    setItem("dreamcraft_command_result", json);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn clear_command() {}
+
+#[cfg(target_arch = "wasm32")]
+fn clear_command() {
+    removeItem("dreamcraft_command");
 }
 
 #[derive(Deserialize, Debug)]
@@ -1021,66 +1127,193 @@ struct ConsoleCommand {
     cmd: String,
     x: Option<usize>,
     y: Option<usize>,
+    verify: Option<VerifyCommand>,
 }
 
+#[derive(Deserialize, Debug)]
+struct VerifyCommand {
+    #[serde(rename = "type")]
+    verify_type: String,
+    x: Option<usize>,
+    y: Option<usize>,
+}
+
+#[cfg(target_arch = "wasm32")]
 fn read_console_commands(
     mut player_query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
     obstacle_grid: Res<ObstacleGrid>,
     grid: Res<GridConfig>,
-    mut game_state: ResMut<GameState>,
+    game_state: Res<GameState>,
 ) {
     let cmd_str = match getItem("dreamcraft_command") {
         Some(s) if !s.is_empty() => s,
         _ => return,
     };
 
-    removeItem("dreamcraft_command");
+    clear_command();
 
     let cmd: ConsoleCommand = match serde_json::from_str(&cmd_str) {
         Ok(c) => c,
         Err(_) => return,
     };
 
+    let result =
+        handle_headless_command(&mut player_query, &obstacle_grid, &grid, &game_state, cmd);
+    set_command_result(&result.to_string());
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn read_stdin_commands(
+    mut player_query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
+    obstacle_grid: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+    game_state: Res<GameState>,
+    mut frame_counter: Local<u64>,
+) {
+    *frame_counter += 1;
+    if *frame_counter % 30 != 0 {
+        return;
+    }
+
+    let cmd_file = std::path::Path::new("headless_command.json");
+    if !cmd_file.exists() {
+        return;
+    }
+
+    let buffer = std::fs::read_to_string(cmd_file).unwrap_or_default();
+    let _ = std::fs::remove_file(cmd_file);
+
+    if buffer.trim().is_empty() {
+        return;
+    }
+
+    let cmd: ConsoleCommand = match serde_json::from_str(&buffer) {
+        Ok(c) => c,
+        Err(_) => {
+            write_result(&serde_json::json!({"ok": false, "msg": "Invalid JSON command"}));
+            return;
+        }
+    };
+
+    let result =
+        handle_headless_command(&mut player_query, &obstacle_grid, &grid, &game_state, cmd);
+    write_result(&result);
+}
+
+fn write_result(result: &serde_json::Value) {
+    let _ = std::fs::write("headless_result.json", result.to_string());
+    println!("RESULT: {}", result);
+}
+
+fn handle_headless_command(
+    player_query: &mut Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
+    obstacle_grid: &Res<ObstacleGrid>,
+    grid: &Res<GridConfig>,
+    game_state: &Res<GameState>,
+    cmd: ConsoleCommand,
+) -> serde_json::Value {
     match cmd.cmd.as_str() {
         "goto" => {
-            if let (Some(gx), Some(gy)) = (cmd.x, cmd.y) {
-                for (unit, mut target) in player_query.iter_mut() {
-                    let path = find_path(
-                        (unit.grid_x, unit.grid_y),
-                        (gx, gy),
-                        &obstacle_grid.cells,
-                        grid.grid_width,
-                        grid.grid_height,
-                    );
-                    if !path.is_empty() {
-                        target.path = path;
-                        target.path_index = 0;
-                        let result = serde_json::json!({"ok": true, "msg": format!("Moving to ({},{})", gx, gy)});
-                        setItem("dreamcraft_command_result", &result.to_string());
-                    } else {
-                        let result = serde_json::json!({"ok": false, "msg": format!("No path to ({},{})", gx, gy)});
-                        setItem("dreamcraft_command_result", &result.to_string());
-                    }
+            let mut updated = false;
+            for (unit, mut target) in player_query.iter_mut() {
+                let path = find_path(
+                    (unit.grid_x, unit.grid_y),
+                    (cmd.x.unwrap_or(0), cmd.y.unwrap_or(0)),
+                    &obstacle_grid.cells,
+                    grid.grid_width,
+                    grid.grid_height,
+                );
+                if !path.is_empty() {
+                    target.path = path;
+                    target.path_index = 0;
+                    updated = true;
                 }
             }
-        }
-        "reset" => {
-            game_state.level_complete = false;
-            for (mut unit, mut target) in player_query.iter_mut() {
-                unit.grid_x = 2;
-                unit.grid_y = grid.grid_height / 2;
-                target.path.clear();
-                target.path_index = 0;
+            if updated {
+                serde_json::json!({"ok": true, "msg": format!("Moving to ({},{})", cmd.x.unwrap_or(0), cmd.y.unwrap_or(0))})
+            } else {
+                serde_json::json!({"ok": false, "msg": "No path found"})
             }
-            let result = serde_json::json!({"ok": true, "msg": "Level reset"});
-            setItem("dreamcraft_command_result", &result.to_string());
+        }
+        "status" => {
+            let (unit, _target) = player_query.single().unwrap();
+            serde_json::json!({
+                "ok": true,
+                "msg": format!("Player at ({}, {})", unit.grid_x, unit.grid_y),
+                "player_grid": [unit.grid_x, unit.grid_y]
+            })
+        }
+        "verify" => {
+            if let Some(v) = cmd.verify {
+                match v.verify_type.as_str() {
+                    "player_at" => {
+                        let (unit, _target) = player_query.single().unwrap();
+                        let matches =
+                            unit.grid_x == v.x.unwrap_or(0) && unit.grid_y == v.y.unwrap_or(0);
+                        let msg = if matches {
+                            "Player at expected position".to_string()
+                        } else {
+                            format!(
+                                "Player at ({}, {}), expected ({}, {})",
+                                unit.grid_x,
+                                unit.grid_y,
+                                v.x.unwrap_or(0),
+                                v.y.unwrap_or(0)
+                            )
+                        };
+                        serde_json::json!({"ok": matches, "msg": msg})
+                    }
+                    "level_complete" => {
+                        serde_json::json!({"ok": game_state.level_complete, "msg": if game_state.level_complete { "Level complete" } else { "Level not complete" }})
+                    }
+                    "waypoint_reached" => {
+                        serde_json::json!({"ok": true, "msg": "Waypoint check not yet implemented"})
+                    }
+                    _ => serde_json::json!({"ok": false, "msg": "Unknown verify type"}),
+                }
+            } else {
+                serde_json::json!({"ok": false, "msg": "No verify spec provided"})
+            }
         }
         _ => {
-            let result = serde_json::json!({"ok": false, "msg": format!("Unknown command: {}", cmd.cmd)});
-            setItem("dreamcraft_command_result", &result.to_string());
+            serde_json::json!({"ok": false, "msg": format!("Unknown command: {}", cmd.cmd)})
         }
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+fn update_native_minimap(
+    grid: Res<GridConfig>,
+    player_query: Query<&Unit, With<PlayerUnit>>,
+    mut player_marker_query: Query<&mut Node, With<PlayerMinimapMarker>>,
+    minimap_config: Res<MinimapConfig>,
+    mut frame_counter: Local<u64>,
+) {
+    *frame_counter += 1;
+    if *frame_counter % 5 != 0 {
+        return;
+    }
+
+    let unit = player_query.single().unwrap();
+
+    let cell_width = minimap_config.width / grid.grid_width as f32;
+    let cell_height = minimap_config.height / grid.grid_height as f32;
+
+    let player_left = unit.grid_x as f32 * cell_width;
+    let player_bottom = unit.grid_y as f32 * cell_height;
+
+    for mut node in player_marker_query.iter_mut() {
+        node.left = Val::Px(player_left);
+        node.bottom = Val::Px(player_bottom);
+    }
+}
+
+#[derive(Component)]
+struct MinimapEntity;
+#[derive(Component)]
+struct MinimapBackground;
+#[derive(Component)]
+struct PlayerMinimapMarker;
 
 pub fn run() {
     App::new()
