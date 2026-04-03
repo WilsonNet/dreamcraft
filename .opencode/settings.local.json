@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tmux list-sessions:*)",
+      "Bash(tmux list-windows:*)",
+      "Bash(rustup target:*)",
+      "Bash(/home/wilsonn/.asdf/installs/rust/stable/bin/trunk build:*)",
+      "Bash(tmux has-session:*)",
+      "Bash(tmux new-session:*)",
+      "Bash(tmux send-keys:*)",
+      "Bash(tmux capture-pane:*)",
+      "Bash(lsof -ti:8080)",
+      "Bash(ps:*)",
+      "Bash(kill 128183)",
+      "Bash(curl -s http://localhost:8080/)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_evaluate",
+      "Bash(cargo build:*)"
+    ]
+  }
+}
