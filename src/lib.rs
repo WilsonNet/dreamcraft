@@ -1,6 +1,14 @@
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
 
 pub struct DreamCraftPlugin;
 
@@ -18,6 +26,7 @@ impl Plugin for DreamCraftPlugin {
                 Update,
                 (
                     handle_input,
+                    read_console_commands,
                     unit_movement,
                     camera_controls,
                     check_goal,
@@ -26,7 +35,8 @@ impl Plugin for DreamCraftPlugin {
                     update_fog,
                     draw_waypoints,
                     check_waypoint_reached,
-                    update_minimap_camera,
+                    broadcast_minimap_data,
+                    debug_console_output,
                 ),
             );
     }
@@ -201,35 +211,19 @@ fn setup_tutorial_level(
     mut visibility_grid: ResMut<VisibilityGrid>,
     fog_waypoints: ResMut<FogWaypoints>,
     grid: Res<GridConfig>,
-    minimap_config: Res<MinimapConfig>,
+    _minimap_config: Res<MinimapConfig>,
 ) {
-    commands.spawn((Camera2d, Name::new("MainCamera")));
+    let start_x = 2;
+    let start_y = grid.grid_height / 2;
+    let start_world_pos = grid_to_world(start_x, start_y, &grid);
 
-    commands
-        .spawn((
-            Camera2d,
-            MinimapCamera,
-            Name::new("MinimapCamera"),
-            Camera {
-                order: 1,
-                ..Default::default()
-            },
-        ))
-        .with_children(|parent| {
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(minimap_config.offset_x),
-                    bottom: Val::Px(minimap_config.offset_y),
-                    width: Val::Px(minimap_config.width),
-                    height: Val::Px(minimap_config.height),
-                    border: UiRect::all(Val::Px(2.0)),
-                    ..Default::default()
-                },
-                BorderColor::all(Color::srgb(0.3, 0.5, 0.3)),
-                BackgroundColor(Color::srgba(0.05, 0.1, 0.05, 0.95)),
-            ));
-        });
+    commands.spawn((
+        Camera2d,
+        Name::new("MainCamera"),
+        Transform::from_xyz(start_world_pos.x, start_world_pos.y, 100.0),
+    ));
+
+    // Minimap is rendered as HTML canvas overlay (see index.html)
 
     obstacle_grid.cells = vec![vec![false; grid.grid_height]; grid.grid_width];
 
@@ -336,8 +330,6 @@ fn setup_tutorial_level(
     let player_color = materials.add(Color::srgb(0.3, 0.6, 0.9));
     let player_mesh = meshes.add(Circle::new(12.0));
 
-    let start_x = 2;
-    let start_y = grid.grid_height / 2;
     let world_pos = grid_to_world(start_x, start_y, &grid);
 
     commands.spawn((
@@ -357,16 +349,6 @@ fn setup_tutorial_level(
         Selected,
     ));
 
-    setup_minimap_sprites(
-        &mut commands,
-        &grid,
-        &obstacle_grid,
-        &visibility_grid,
-        &fog_waypoints,
-        &minimap_config,
-        &mut meshes,
-        &mut materials,
-    );
 }
 
 fn setup_minimap_sprites(
@@ -837,14 +819,266 @@ fn check_waypoint_reached(
     }
 }
 
-fn update_minimap_camera(
-    mut camera_query: Query<&mut Transform, With<MinimapCamera>>,
-    window: Query<&Window>,
+fn broadcast_minimap_data(
+    visibility_grid: Res<VisibilityGrid>,
+    obstacle_grid: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+    player_query: Query<&Unit, With<PlayerUnit>>,
+    fog_waypoints: Res<FogWaypoints>,
+    mut frame_counter: Local<u64>,
 ) {
-    let window = window.single().unwrap();
-    if let Ok(mut transform) = camera_query.single_mut() {
-        transform.translation.x = window.width() / 2.0;
-        transform.translation.y = window.height() / 2.0;
+    *frame_counter += 1;
+    // Update minimap every 30 frames
+    if *frame_counter % 30 != 0 {
+        return;
+    }
+
+    let unit = player_query.single().unwrap();
+
+    // Encode minimap as a compact string: for each cell, one char
+    // '.' = unrevealed, ' ' = revealed empty, '#' = obstacle, 'P' = player, 'W' = waypoint target, 'w' = waypoint
+    let mut minimap = String::with_capacity(grid.grid_width * grid.grid_height + grid.grid_height);
+    for gy in 0..grid.grid_height {
+        for gx in 0..grid.grid_width {
+            if gx == unit.grid_x && gy == unit.grid_y {
+                minimap.push('P');
+            } else if fog_waypoints
+                .waypoints
+                .get(fog_waypoints.current_target)
+                .map_or(false, |&(wx, wy)| gx == wx && gy == wy)
+            {
+                minimap.push('W');
+            } else if fog_waypoints.waypoints.iter().any(|&(wx, wy)| gx == wx && gy == wy) {
+                minimap.push('w');
+            } else if !visibility_grid.revealed.is_empty() && !visibility_grid.revealed[gx][gy] {
+                minimap.push('.');
+            } else if obstacle_grid.cells[gx][gy] {
+                minimap.push('#');
+            } else {
+                minimap.push(' ');
+            }
+        }
+        minimap.push('\n');
+    }
+
+    setItem("dreamcraft_minimap", &minimap);
+    let meta = serde_json::json!({
+        "width": grid.grid_width,
+        "height": grid.grid_height,
+        "player": [unit.grid_x, unit.grid_y],
+    });
+    setItem("dreamcraft_minimap_meta", &meta.to_string());
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DebugState {
+    frame: u64,
+    camera_pos: [f32; 2],
+    player_pos: [f32; 2],
+    player_grid: [usize; 2],
+    current_waypoint: usize,
+    total_waypoints: usize,
+    waypoints: Vec<(usize, usize)>,
+    level_complete: bool,
+    is_selected: bool,
+    has_target: bool,
+    path_length: usize,
+    revealed_cells: usize,
+    total_cells: usize,
+    fog_coverage_pct: f32,
+    obstacle_count: usize,
+    grid_width: usize,
+    grid_height: usize,
+    // Diagnostics
+    player_visible: bool,
+    player_in_fog: bool,
+    camera_distance_to_player: f32,
+    warnings: Vec<String>,
+}
+
+fn debug_console_output(
+    camera_query: Query<&Transform, (With<Camera2d>, Without<MinimapCamera>)>,
+    player_query: Query<(&Unit, &Transform, &Target, Option<&Selected>), With<PlayerUnit>>,
+    fog_waypoints: Res<FogWaypoints>,
+    game_state: Res<GameState>,
+    visibility_grid: Res<VisibilityGrid>,
+    obstacle_grid: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+    mut frame_counter: Local<u64>,
+) {
+    *frame_counter += 1;
+
+    if *frame_counter % 30 != 0 {
+        return;
+    }
+
+    let camera_pos = camera_query
+        .single()
+        .map(|t| t.translation.truncate())
+        .unwrap_or(Vec2::ZERO);
+    let (unit, player_transform, target, selected) = player_query.single().unwrap();
+
+    let total_cells = grid.grid_width * grid.grid_height;
+    let revealed_cells = visibility_grid
+        .revealed
+        .iter()
+        .flat_map(|col| col.iter())
+        .filter(|&&v| v)
+        .count();
+    let obstacle_count = obstacle_grid
+        .cells
+        .iter()
+        .flat_map(|col| col.iter())
+        .filter(|&&v| v)
+        .count();
+    let fog_coverage_pct =
+        ((total_cells - revealed_cells) as f32 / total_cells as f32) * 100.0;
+
+    // Diagnostics
+    let camera_distance = ((camera_pos.x - player_transform.translation.x).powi(2)
+        + (camera_pos.y - player_transform.translation.y).powi(2))
+    .sqrt();
+
+    let player_in_fog = if unit.grid_x < grid.grid_width && unit.grid_y < grid.grid_height {
+        !visibility_grid.revealed[unit.grid_x][unit.grid_y]
+    } else {
+        true
+    };
+
+    // Check if player is within camera viewport (roughly 640px each side)
+    let half_vw = 640.0;
+    let half_vh = 360.0;
+    let player_visible = (player_transform.translation.x - camera_pos.x).abs() < half_vw
+        && (player_transform.translation.y - camera_pos.y).abs() < half_vh
+        && !player_in_fog;
+
+    let mut warnings = Vec::new();
+    if !player_visible {
+        warnings.push("Player not visible on screen!".to_string());
+    }
+    if player_in_fog {
+        warnings.push("Player hidden under fog of war!".to_string());
+    }
+    if camera_distance > 800.0 {
+        warnings.push(format!(
+            "Camera too far from player ({:.0}px)",
+            camera_distance
+        ));
+    }
+    if !selected.is_some() {
+        warnings.push("Player unit is not selected!".to_string());
+    }
+
+    let state = DebugState {
+        frame: *frame_counter,
+        camera_pos: [camera_pos.x, camera_pos.y],
+        player_pos: [
+            player_transform.translation.x,
+            player_transform.translation.y,
+        ],
+        player_grid: [unit.grid_x, unit.grid_y],
+        current_waypoint: fog_waypoints.current_target,
+        total_waypoints: fog_waypoints.waypoints.len(),
+        waypoints: fog_waypoints.waypoints.clone(),
+        level_complete: game_state.level_complete,
+        is_selected: selected.is_some(),
+        has_target: !target.path.is_empty() && target.path_index < target.path.len(),
+        path_length: target.path.len().saturating_sub(target.path_index),
+        revealed_cells,
+        total_cells,
+        fog_coverage_pct,
+        obstacle_count,
+        grid_width: grid.grid_width,
+        grid_height: grid.grid_height,
+        player_visible,
+        player_in_fog,
+        camera_distance_to_player: camera_distance,
+        warnings,
+    };
+
+    let json = serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
+    broadcast_debug_state(&json);
+}
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = localStorage)]
+    fn setItem(key: &str, value: &str);
+
+    #[wasm_bindgen(js_namespace = localStorage)]
+    fn getItem(key: &str) -> Option<String>;
+
+    #[wasm_bindgen(js_namespace = localStorage)]
+    fn removeItem(key: &str);
+}
+
+fn broadcast_debug_state(json: &str) {
+    setItem("dreamcraft_debug_state", json);
+}
+
+#[derive(Deserialize, Debug)]
+struct ConsoleCommand {
+    cmd: String,
+    x: Option<usize>,
+    y: Option<usize>,
+}
+
+fn read_console_commands(
+    mut player_query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
+    obstacle_grid: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+    mut game_state: ResMut<GameState>,
+) {
+    let cmd_str = match getItem("dreamcraft_command") {
+        Some(s) if !s.is_empty() => s,
+        _ => return,
+    };
+
+    removeItem("dreamcraft_command");
+
+    let cmd: ConsoleCommand = match serde_json::from_str(&cmd_str) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    match cmd.cmd.as_str() {
+        "goto" => {
+            if let (Some(gx), Some(gy)) = (cmd.x, cmd.y) {
+                for (unit, mut target) in player_query.iter_mut() {
+                    let path = find_path(
+                        (unit.grid_x, unit.grid_y),
+                        (gx, gy),
+                        &obstacle_grid.cells,
+                        grid.grid_width,
+                        grid.grid_height,
+                    );
+                    if !path.is_empty() {
+                        target.path = path;
+                        target.path_index = 0;
+                        let result = serde_json::json!({"ok": true, "msg": format!("Moving to ({},{})", gx, gy)});
+                        setItem("dreamcraft_command_result", &result.to_string());
+                    } else {
+                        let result = serde_json::json!({"ok": false, "msg": format!("No path to ({},{})", gx, gy)});
+                        setItem("dreamcraft_command_result", &result.to_string());
+                    }
+                }
+            }
+        }
+        "reset" => {
+            game_state.level_complete = false;
+            for (mut unit, mut target) in player_query.iter_mut() {
+                unit.grid_x = 2;
+                unit.grid_y = grid.grid_height / 2;
+                target.path.clear();
+                target.path_index = 0;
+            }
+            let result = serde_json::json!({"ok": true, "msg": "Level reset"});
+            setItem("dreamcraft_command_result", &result.to_string());
+        }
+        _ => {
+            let result = serde_json::json!({"ok": false, "msg": format!("Unknown command: {}", cmd.cmd)});
+            setItem("dreamcraft_command_result", &result.to_string());
+        }
     }
 }
 

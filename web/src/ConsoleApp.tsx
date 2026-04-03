@@ -10,6 +10,16 @@ interface GameState {
   obstacles: string;
 }
 
+interface DebugState {
+  frame: number;
+  camera_pos: [number, number];
+  player_pos: [number, number];
+  player_grid: [number, number];
+  current_waypoint: number;
+  total_waypoints: number;
+  level_complete: boolean;
+}
+
 declare global {
   interface Window {
     dreamcraft?: {
@@ -50,13 +60,59 @@ const App: React.FC = () => {
     }
   }, [output]);
 
+  const [debugState, setDebugState] = useState<DebugState | null>(null);
+
   useEffect(() => {
+    // Listen for debug state updates from localStorage (cross-tab sync)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'dreamcraft_debug_state' && e.newValue) {
+        try {
+          const state = JSON.parse(e.newValue) as DebugState;
+          setDebugState(state);
+          // Also sync to gameState for display
+          setGameState({
+            playerX: state.player_grid[0],
+            playerY: state.player_grid[1],
+            goalX: 78,
+            gridWidth: 80,
+            gridHeight: 50,
+            levelComplete: state.level_complete,
+            obstacles: '',
+          });
+        } catch (err) {
+          console.error('Failed to parse debug state:', err);
+        }
+      }
+    };
+    
+    // Also poll for initial state
+    const checkInitialState = () => {
+      const stored = localStorage.getItem('dreamcraft_debug_state');
+      if (stored) {
+        try {
+          const state = JSON.parse(stored) as DebugState;
+          setDebugState(state);
+        } catch (err) {
+          console.error('Failed to parse initial debug state:', err);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    checkInitialState();
+    
     const interval = setInterval(() => {
+      // Continue polling for updates
       if (window.dreamcraft) {
         setGameState(window.dreamcraft.getState());
       }
+      checkInitialState();
     }, 500);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const addOutput = (text: string) => {
@@ -231,14 +287,26 @@ const App: React.FC = () => {
           <span style={{ marginLeft: 20, color: '#888', fontSize: 12 }}>
             Browser-based Level Tester
           </span>
+          <span style={{ 
+            marginLeft: 15, 
+            padding: '2px 8px', 
+            borderRadius: 3, 
+            fontSize: 11,
+            background: debugState ? '#1a3a1a' : '#3a2a2a',
+            color: debugState ? '#7cb87c' : '#b87c7c'
+          }}>
+            {debugState ? '🟢 Connected' : '🔴 No Game'}
+          </span>
         </div>
-        {gameState && (
+        {debugState && (
           <div style={{ display: 'flex', gap: 20, fontSize: 13 }}>
-            <span>Player: <span style={{ color: '#4af' }}>({gameState.playerX}, {gameState.playerY})</span></span>
-            <span>Goal: <span style={{ color: '#fa0' }}>({gameState.goalX}, {Math.floor(gameState.gridHeight / 2)})</span></span>
-            <span style={{ color: gameState.levelComplete ? '#0f0' : '#f55' }}>
-              {gameState.levelComplete ? '✓ COMPLETE' : 'In Progress'}
+            <span>Player: <span style={{ color: '#4af' }}>({debugState.player_grid[0]}, {debugState.player_grid[1]})</span></span>
+            <span>Camera: <span style={{ color: '#a0a' }}>({debugState.camera_pos[0].toFixed(0)}, {debugState.camera_pos[1].toFixed(0)})</span></span>
+            <span>Waypoint: <span style={{ color: '#fa0' }}>{debugState.current_waypoint}/{debugState.total_waypoints}</span></span>
+            <span style={{ color: debugState.level_complete ? '#0f0' : '#f55' }}>
+              {debugState.level_complete ? '✓ COMPLETE' : 'In Progress'}
             </span>
+            <span style={{ color: '#666', fontSize: 11 }}>Frame: {debugState.frame}</span>
           </div>
         )}
       </div>

@@ -9,19 +9,521 @@
         html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0f0a; }
         #game-container { width: 100%; height: 100%; }
     </style>
-    <link data-trunk rel="rust" data-bin="dreamcraft-bin" />
+    <link data-trunk rel="rust" data-bin="dreamcraft-web" />
 </head>
 <body>
     <div id="game-container"></div>
+    <script>document.addEventListener('contextmenu', e => e.preventDefault());</script>
+
+    <!-- Game HUD overlay -->
     <div id="ui" style="position: absolute; top: 10px; left: 10px; color: #fff; font-family: monospace; font-size: 13px; background: rgba(0,0,0,0.8); padding: 12px; border-radius: 6px; pointer-events: none; border: 1px solid #3a5a3a;">
         <div style="font-size: 16px; font-weight: bold; color: #7cb87c; margin-bottom: 8px;">Tutorial: Through the Woods</div>
         <div style="color: #aaa;">Objective: Guide your unit to the golden goal zone</div>
         <div style="margin-top: 8px; color: #7cb87c;">Controls:</div>
         <div style="color: #ccc; margin-left: 10px;">Right-Click: Move to location</div>
         <div style="color: #ccc; margin-left: 10px;">WASD/Arrows: Pan camera</div>
+        <div style="color: #ccc; margin-left: 10px;">` (backtick): Toggle console</div>
     </div>
-    <div id="goal-status" style="position: absolute; bottom: 10px; left: 10px; color: #fff; font-family: monospace; font-size: 14px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 6px; pointer-events: none; border: 1px solid #3a5a3a;">
+
+    <div id="goal-status" style="position: absolute; bottom: 10px; left: 220px; color: #fff; font-family: monospace; font-size: 14px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 6px; pointer-events: none; border: 1px solid #3a5a3a;">
         <span id="status-text">Navigate around the trees to reach the goal!</span>
     </div>
+
+    <!-- React console overlay -->
+    <div id="console-root"></div>
+
+    <script type="module">
+        import React from 'https://esm.sh/react@19?dev';
+        import ReactDOM from 'https://esm.sh/react-dom@19/client?dev';
+
+        const { useState, useRef, useEffect, useCallback, createElement: h } = React;
+
+        const COMMANDS = [
+            { cmd: 'help', desc: 'Show this help message' },
+            { cmd: 'status', desc: 'Full game state inspection' },
+            { cmd: 'fog', desc: 'Show fog of war coverage' },
+            { cmd: 'waypoints', desc: 'List all waypoints and status' },
+            { cmd: 'goto <x> <y>', desc: 'Move player to grid position' },
+            { cmd: 'next', desc: 'Move to next waypoint' },
+            { cmd: 'autoplay', desc: 'Auto-complete level via all waypoints' },
+            { cmd: 'reset', desc: 'Reset level to start' },
+            { cmd: 'watch', desc: 'Toggle live state feed' },
+            { cmd: 'clear', desc: 'Clear console' },
+        ];
+
+        function sendCommand(cmd, x, y) {
+            const payload = { cmd };
+            if (x !== undefined) payload.x = x;
+            if (y !== undefined) payload.y = y;
+            localStorage.setItem('dreamcraft_command', JSON.stringify(payload));
+        }
+
+        function getCommandResult() {
+            const r = localStorage.getItem('dreamcraft_command_result');
+            if (r) {
+                localStorage.removeItem('dreamcraft_command_result');
+                try { return JSON.parse(r); } catch { return null; }
+            }
+            return null;
+        }
+
+        function getState() {
+            const s = localStorage.getItem('dreamcraft_debug_state');
+            if (s) { try { return JSON.parse(s); } catch {} }
+            return null;
+        }
+
+        function Console() {
+            const [visible, setVisible] = useState(false);
+            const [output, setOutput] = useState([
+                'DreamCraft Agent Console v2.0',
+                'Press ` to toggle. Type "help" for commands.',
+                '\u2500'.repeat(45),
+            ]);
+            const [input, setInput] = useState('');
+            const [debugState, setDebugState] = useState(null);
+            const [watching, setWatching] = useState(false);
+            const consoleRef = useRef(null);
+            const inputRef = useRef(null);
+
+            useEffect(() => {
+                const handler = (e) => {
+                    if (e.key === '`') { e.preventDefault(); setVisible(v => !v); }
+                };
+                window.addEventListener('keydown', handler);
+                return () => window.removeEventListener('keydown', handler);
+            }, []);
+
+            useEffect(() => {
+                if (visible && inputRef.current) inputRef.current.focus();
+            }, [visible]);
+
+            useEffect(() => {
+                const poll = setInterval(() => {
+                    const s = getState();
+                    if (s) setDebugState(s);
+                }, 500);
+                return () => clearInterval(poll);
+            }, []);
+
+            useEffect(() => {
+                if (consoleRef.current) consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+            }, [output]);
+
+            useEffect(() => {
+                if (!watching) return;
+                const id = setInterval(() => {
+                    const s = getState();
+                    if (s) {
+                        setOutput(prev => [...prev,
+                            `[watch] F:${s.frame} Pos:(${s.player_grid[0]},${s.player_grid[1]}) WP:${s.current_waypoint}/${s.total_waypoints} Fog:${s.fog_coverage_pct?.toFixed(0) ?? '?'}% ${s.has_target ? 'MOVING('+s.path_length+')' : 'IDLE'} ${s.level_complete ? 'COMPLETE!' : ''}`
+                        ]);
+                    }
+                }, 2000);
+                return () => clearInterval(id);
+            }, [watching]);
+
+            const addOutput = useCallback((text) => setOutput(prev => [...prev, text]), []);
+            const addLines = useCallback((lines) => setOutput(prev => [...prev, ...lines]), []);
+
+            const waitForResult = useCallback(() => {
+                return new Promise((resolve) => {
+                    let attempts = 0;
+                    const check = setInterval(() => {
+                        const r = getCommandResult();
+                        if (r || attempts > 20) { clearInterval(check); resolve(r); }
+                        attempts++;
+                    }, 100);
+                });
+            }, []);
+
+            const waitForArrival = useCallback((targetX, targetY, timeoutMs = 30000) => {
+                return new Promise((resolve) => {
+                    const start = Date.now();
+                    const check = setInterval(() => {
+                        const s = getState();
+                        if (!s) return;
+                        const dist = Math.abs(s.player_grid[0] - targetX) + Math.abs(s.player_grid[1] - targetY);
+                        if (dist <= 3 || Date.now() - start > timeoutMs) {
+                            clearInterval(check);
+                            resolve(s);
+                        }
+                    }, 200);
+                });
+            }, []);
+
+            const runCommand = useCallback(async (cmd) => {
+                const parts = cmd.trim().split(/\s+/);
+                const command = parts[0].toLowerCase();
+                const args = parts.slice(1);
+                addOutput('> ' + cmd);
+
+                const s = getState();
+
+                switch (command) {
+                    case 'help':
+                        addOutput('Available commands:');
+                        COMMANDS.forEach(c => addOutput('  ' + c.cmd.padEnd(18) + ' - ' + c.desc));
+                        break;
+
+                    case 'status':
+                        if (!s) { addOutput('ERROR: No game state'); break; }
+                        addLines([
+                            '\u2500\u2500 Game State \u2500\u2500',
+                            `  Frame: ${s.frame}`,
+                            `  Player Grid: (${s.player_grid[0]}, ${s.player_grid[1]})`,
+                            `  Player World: (${s.player_pos[0].toFixed(0)}, ${s.player_pos[1].toFixed(0)})`,
+                            `  Camera: (${s.camera_pos[0].toFixed(0)}, ${s.camera_pos[1].toFixed(0)})`,
+                            `  Camera-Player Dist: ${s.camera_distance_to_player?.toFixed(0) ?? '?'}px`,
+                            `  Player Visible: ${s.player_visible ? 'YES' : 'NO'}`,
+                            `  Player In Fog: ${s.player_in_fog ? 'YES' : 'NO'}`,
+                            `  Selected: ${s.is_selected ? 'YES' : 'NO'}`,
+                            `  Moving: ${s.has_target ? 'YES (' + s.path_length + ' steps remaining)' : 'IDLE'}`,
+                            '\u2500\u2500 Level Progress \u2500\u2500',
+                            `  Waypoint: ${s.current_waypoint}/${s.total_waypoints}`,
+                            `  Level Complete: ${s.level_complete ? 'YES!' : 'No'}`,
+                            '\u2500\u2500 Map \u2500\u2500',
+                            `  Grid: ${s.grid_width}x${s.grid_height} (${s.total_cells} cells)`,
+                            `  Revealed: ${s.revealed_cells}/${s.total_cells} (${(100 - s.fog_coverage_pct).toFixed(1)}%)`,
+                            `  Fog: ${s.fog_coverage_pct.toFixed(1)}%`,
+                            `  Obstacles: ${s.obstacle_count} cells`,
+                        ]);
+                        if (s.warnings && s.warnings.length > 0) {
+                            addOutput('\u2500\u2500 WARNINGS \u2500\u2500');
+                            s.warnings.forEach(w => addOutput('  WARNING: ' + w));
+                        }
+                        break;
+
+                    case 'fog':
+                        if (!s) { addOutput('ERROR: No game state'); break; }
+                        addLines([
+                            `Fog of War: ${s.fog_coverage_pct.toFixed(1)}% covered`,
+                            `Revealed: ${s.revealed_cells} / ${s.total_cells} cells`,
+                            `View reveals as you reach waypoints.`,
+                        ]);
+                        break;
+
+                    case 'waypoints':
+                        if (!s || !s.waypoints) { addOutput('ERROR: No waypoint data'); break; }
+                        addOutput('Waypoints:');
+                        s.waypoints.forEach((wp, i) => {
+                            const dist = Math.abs(s.player_grid[0] - wp[0]) + Math.abs(s.player_grid[1] - wp[1]);
+                            const status = i < s.current_waypoint ? '\u2713 reached' :
+                                           i === s.current_waypoint ? '\u25B6 CURRENT TARGET' :
+                                           'pending';
+                            addOutput(`  [${i}] (${wp[0]}, ${wp[1]}) dist:${dist} ${status}`);
+                        });
+                        break;
+
+                    case 'goto': {
+                        if (args.length < 2) { addOutput('Usage: goto <x> <y>'); break; }
+                        const x = parseInt(args[0]), y = parseInt(args[1]);
+                        sendCommand('goto', x, y);
+                        const result = await waitForResult();
+                        addOutput(result ? result.msg : 'Command sent (no response)');
+                        break;
+                    }
+
+                    case 'next': {
+                        if (!s || !s.waypoints) { addOutput('ERROR: No waypoint data'); break; }
+                        if (s.current_waypoint >= s.waypoints.length) { addOutput('All waypoints reached!'); break; }
+                        const [wx, wy] = s.waypoints[s.current_waypoint];
+                        addOutput(`Moving to waypoint ${s.current_waypoint}: (${wx}, ${wy})`);
+                        sendCommand('goto', wx, wy);
+                        const result = await waitForResult();
+                        addOutput(result ? result.msg : 'Command sent');
+                        break;
+                    }
+
+                    case 'autoplay': {
+                        if (!s || !s.waypoints) { addOutput('ERROR: No waypoint data'); break; }
+                        addOutput('=== AUTOPLAY START ===');
+                        for (let i = s.current_waypoint; i < s.waypoints.length; i++) {
+                            const current = getState();
+                            if (current && current.level_complete) {
+                                addOutput('Level complete!');
+                                break;
+                            }
+                            const [wx, wy] = s.waypoints[i];
+                            addOutput(`>> Waypoint ${i}: (${wx}, ${wy})`);
+                            sendCommand('goto', wx, wy);
+                            const result = await waitForResult();
+                            addOutput(result ? '   ' + result.msg : '   sent');
+                            addOutput('   Waiting for arrival...');
+                            const arrived = await waitForArrival(wx, wy);
+                            addOutput(`   Arrived at (${arrived.player_grid[0]}, ${arrived.player_grid[1]})`);
+                        }
+                        // Final push to goal
+                        const goalX = s.grid_width - 2;
+                        const goalY = Math.floor(s.grid_height / 2);
+                        addOutput(`>> Final: Goal zone (${goalX}, ${goalY})`);
+                        sendCommand('goto', goalX, goalY);
+                        await waitForResult();
+                        const fin = await waitForArrival(goalX, goalY, 60000);
+                        addOutput(fin.level_complete ? '=== LEVEL COMPLETE! ===' : `Arrived at (${fin.player_grid[0]}, ${fin.player_grid[1]})`);
+                        break;
+                    }
+
+                    case 'reset':
+                        sendCommand('reset');
+                        const rr = await waitForResult();
+                        addOutput(rr ? rr.msg : 'Reset sent');
+                        break;
+
+                    case 'watch':
+                        setWatching(w => !w);
+                        addOutput(watching ? 'Watch stopped.' : 'Watching game state...');
+                        break;
+
+                    case 'clear':
+                        setOutput([]);
+                        break;
+
+                    case '':
+                        break;
+
+                    default:
+                        addOutput('Unknown command: ' + command);
+                        addOutput('Type "help" for available commands');
+                }
+            }, [watching, addOutput, addLines, waitForResult, waitForArrival]);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (input.trim()) { runCommand(input); setInput(''); }
+            };
+
+            if (!visible) return null;
+
+            const statusDot = debugState ? '\u{1F7E2} Connected' : '\u{1F534} No Game';
+            const statusBg = debugState ? '#1a3a1a' : '#3a2a2a';
+            const statusColor = debugState ? '#7cb87c' : '#b87c7c';
+
+            return h('div', {
+                style: {
+                    position: 'fixed', right: 0, top: 0, bottom: 0, width: '440px',
+                    display: 'flex', flexDirection: 'column',
+                    background: 'linear-gradient(180deg, #0a0a0a 0%, #0d0d1a 100%)',
+                    fontFamily: 'Consolas, Monaco, monospace',
+                    color: '#00ff00',
+                    borderLeft: '2px solid #333',
+                    zIndex: 9999,
+                    boxShadow: '-5px 0 20px rgba(0,0,0,0.8)',
+                },
+                onClick: (e) => e.stopPropagation(),
+            }, [
+                h('div', { key: 'header', style: { padding: '12px 15px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+                    h('div', { key: 'title' }, [
+                        h('span', { key: 't', style: { fontSize: 15, fontWeight: 'bold', color: '#00ff00' } }, 'Agent Console'),
+                        h('span', { key: 's', style: { marginLeft: 10, padding: '2px 8px', borderRadius: 3, fontSize: 11, background: statusBg, color: statusColor } }, statusDot),
+                    ]),
+                    h('button', {
+                        key: 'close',
+                        onClick: () => setVisible(false),
+                        style: { background: 'none', border: '1px solid #555', color: '#888', padding: '2px 8px', borderRadius: 3, cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }
+                    }, 'ESC'),
+                ]),
+                debugState && h('div', { key: 'state', style: { padding: '8px 15px', borderBottom: '1px solid #222', fontSize: 11, color: '#888', display: 'flex', gap: 10, flexWrap: 'wrap' } }, [
+                    h('span', { key: 'p' }, ['Pos:', h('span', { key: 'pv', style: { color: '#4af' } }, `(${debugState.player_grid[0]},${debugState.player_grid[1]})`)]),
+                    h('span', { key: 'w' }, ['WP:', h('span', { key: 'wv', style: { color: '#fa0' } }, `${debugState.current_waypoint}/${debugState.total_waypoints}`)]),
+                    h('span', { key: 'fog' }, ['Fog:', h('span', { key: 'fv', style: { color: '#a6a' } }, `${debugState.fog_coverage_pct?.toFixed(0) ?? '?'}%`)]),
+                    h('span', { key: 'sel' }, debugState.is_selected ? h('span', { style: { color: '#0f0' } }, 'SEL') : h('span', { style: { color: '#833' } }, 'UNSEL')),
+                    h('span', { key: 'mv' }, debugState.has_target ? h('span', { style: { color: '#4f4' } }, `MOV(${debugState.path_length})`) : h('span', { style: { color: '#555' } }, 'IDLE')),
+                    h('span', { key: 'c', style: { color: debugState.level_complete ? '#0f0' : '#f55' } }, debugState.level_complete ? 'DONE' : 'PLAY'),
+                ]),
+                // Warning banner
+                debugState && debugState.warnings && debugState.warnings.length > 0 && h('div', {
+                    key: 'warnings',
+                    style: { padding: '6px 15px', background: '#3a1a1a', borderBottom: '1px solid #622', fontSize: 11 }
+                }, debugState.warnings.map((w, i) =>
+                    h('div', { key: i, style: { color: '#f88' } }, '\u26A0 ' + w)
+                )),
+                h('div', { key: 'output', ref: consoleRef, style: { flex: 1, overflow: 'auto', padding: '10px 15px', fontSize: 12, lineHeight: 1.6 } },
+                    output.map((line, i) =>
+                        h('div', {
+                            key: i,
+                            style: {
+                                color: line.startsWith('>') ? '#fff' :
+                                       line.startsWith('[watch]') ? '#6af' :
+                                       line.startsWith('ERROR') || line.startsWith('  WARNING') ? '#f55' :
+                                       line.startsWith('===') ? '#ff0' :
+                                       line.startsWith('>>') ? '#4f4' :
+                                       line.startsWith('  ') && line.includes(':') ? '#ccc' :
+                                       line.startsWith('\u2500') ? '#555' :
+                                       line.includes('COMPLETE') ? '#0f0' : '#aaa'
+                            }
+                        }, line)
+                    )
+                ),
+                h('form', { key: 'input', onSubmit: handleSubmit, style: { padding: '10px 15px', borderTop: '1px solid #333', display: 'flex', alignItems: 'center', background: '#111' } }, [
+                    h('span', { key: 'prompt', style: { color: '#0f0', marginRight: 8, fontSize: 14 } }, '>'),
+                    h('input', {
+                        key: 'field',
+                        ref: inputRef,
+                        type: 'text',
+                        value: input,
+                        onChange: (e) => setInput(e.target.value),
+                        placeholder: "status | waypoints | autoplay | help",
+                        style: { flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: 13, fontFamily: 'inherit' }
+                    }),
+                ]),
+            ]);
+        }
+
+        // === MINIMAP COMPONENT (StarCraft-style bottom-left) ===
+        function Minimap() {
+            const canvasRef = useRef(null);
+            const [meta, setMeta] = useState(null);
+
+            useEffect(() => {
+                const draw = () => {
+                    const canvas = canvasRef.current;
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+
+                    const mapStr = localStorage.getItem('dreamcraft_minimap');
+                    const metaStr = localStorage.getItem('dreamcraft_minimap_meta');
+                    if (!mapStr || !metaStr) return;
+
+                    let m;
+                    try { m = JSON.parse(metaStr); } catch { return; }
+                    setMeta(m);
+
+                    const W = m.width;
+                    const H = m.height;
+                    const cw = canvas.width;
+                    const ch = canvas.height;
+                    const cellW = cw / W;
+                    const cellH = ch / H;
+
+                    const rows = mapStr.split('\n');
+
+                    ctx.fillStyle = '#0a120a';
+                    ctx.fillRect(0, 0, cw, ch);
+
+                    for (let gy = 0; gy < H && gy < rows.length; gy++) {
+                        const row = rows[gy];
+                        for (let gx = 0; gx < W && gx < row.length; gx++) {
+                            const c = row[gx];
+                            const x = gx * cellW;
+                            const y = gy * cellH;
+
+                            switch (c) {
+                                case '.': // fog
+                                    ctx.fillStyle = '#080e08';
+                                    ctx.fillRect(x, y, cellW + 0.5, cellH + 0.5);
+                                    break;
+                                case '#': // obstacle/tree
+                                    ctx.fillStyle = '#1a4a1a';
+                                    ctx.fillRect(x, y, cellW + 0.5, cellH + 0.5);
+                                    break;
+                                case ' ': // revealed empty
+                                    ctx.fillStyle = '#1a2a1a';
+                                    ctx.fillRect(x, y, cellW + 0.5, cellH + 0.5);
+                                    break;
+                                case 'P': // player
+                                    ctx.fillStyle = '#1a2a1a';
+                                    ctx.fillRect(x, y, cellW + 0.5, cellH + 0.5);
+                                    ctx.fillStyle = '#4a9aff';
+                                    ctx.beginPath();
+                                    ctx.arc(x + cellW/2, y + cellH/2, Math.max(cellW, 3), 0, Math.PI * 2);
+                                    ctx.fill();
+                                    break;
+                                case 'W': // current waypoint target
+                                    ctx.fillStyle = '#1a2a1a';
+                                    ctx.fillRect(x, y, cellW + 0.5, cellH + 0.5);
+                                    ctx.fillStyle = '#ffdd33';
+                                    ctx.beginPath();
+                                    ctx.arc(x + cellW/2, y + cellH/2, Math.max(cellW, 2), 0, Math.PI * 2);
+                                    ctx.fill();
+                                    break;
+                                case 'w': // other waypoint
+                                    ctx.fillStyle = '#1a2a1a';
+                                    ctx.fillRect(x, y, cellW + 0.5, cellH + 0.5);
+                                    ctx.fillStyle = '#665511';
+                                    ctx.fillRect(x + 1, y + 1, cellW - 1, cellH - 1);
+                                    break;
+                            }
+                        }
+                    }
+
+                    // Goal zone (last 3 columns)
+                    for (let gy = 0; gy < H; gy++) {
+                        for (let gx = W - 3; gx < W; gx++) {
+                            const row = rows[gy];
+                            if (row && row[gx] === ' ') {
+                                ctx.fillStyle = 'rgba(200, 170, 30, 0.3)';
+                                ctx.fillRect(gx * cellW, gy * cellH, cellW + 0.5, cellH + 0.5);
+                            }
+                        }
+                    }
+
+                    // Camera viewport indicator
+                    const state = getState();
+                    if (state) {
+                        // Camera center in grid coords
+                        const camGx = (state.camera_pos[0] + 1280) / 32;
+                        const camGy = (state.camera_pos[1] + 800) / 32;
+                        // Viewport is ~40x22 grid cells (1280/32, 720/32)
+                        const vpW = 40 * cellW;
+                        const vpH = 22.5 * cellH;
+                        const vpX = (camGx - 20) * cellW;
+                        const vpY = (camGy - 11.25) * cellH;
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(vpX, vpY, vpW, vpH);
+                    }
+
+                    // Border
+                    ctx.strokeStyle = '#3a5a3a';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(0, 0, cw, ch);
+                };
+
+                const interval = setInterval(draw, 500);
+                draw();
+                return () => clearInterval(interval);
+            }, []);
+
+            return h('div', {
+                style: {
+                    position: 'fixed',
+                    left: 8,
+                    bottom: 8,
+                    zIndex: 9998,
+                    pointerEvents: 'none',
+                }
+            }, [
+                h('canvas', {
+                    key: 'minimap-canvas',
+                    ref: canvasRef,
+                    width: 200,
+                    height: 125,
+                    style: {
+                        display: 'block',
+                        borderRadius: 4,
+                        boxShadow: '0 0 10px rgba(0,0,0,0.8)',
+                    }
+                }),
+            ]);
+        }
+
+        // Expose API for headless/Playwright control
+        window.dreamcraftConsole = {
+            getState,
+            sendCommand,
+            getCommandResult,
+        };
+
+        function App() {
+            return h(React.Fragment, null, [
+                h(Console, { key: 'console' }),
+                h(Minimap, { key: 'minimap' }),
+            ]);
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('console-root'));
+        root.render(h(App));
+    </script>
 </body>
 </html>

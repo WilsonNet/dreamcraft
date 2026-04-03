@@ -4,11 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.18.1", features = ["dynamic_linking"] }
+bevy = "0.18.1"
 fixed = "1.30.0"
 wasm-bindgen = "0.2.114"
 js-sys = "0.3.91"
 web-sys = { version = "0.3.91", features = ["console", "Window", "Document", "HtmlCanvasElement"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [lib]
 crate-type = ["rlib"]
@@ -20,6 +22,10 @@ path = "src/main.rs"
 [[bin]]
 name = "dreamcraft-test"
 path = "src/test_main.rs"
+
+[[bin]]
+name = "dreamcraft-web"
+path = "src/web.rs"
 
 [[test]]
 name = "level1_test"

@@ -1,3 +1,8 @@
+---
+name: tmux
+description: Terminal multiplexing, session management, troubleshooting
+---
+
 # Tmux Skill
 
 Use this skill when working with tmux sessions and terminal multiplexing.
@@ -40,7 +45,7 @@ Use this skill when working with tmux sessions and terminal multiplexing.
 1. Check if session exists: `tmux list-sessions`
 2. Check window exists: `tmux list-windows -t <session>`
 3. Check output: `tmux capture-pane -t <session>:<window> -p`
-4. If stuck, send Ctrl+C and restart: `tmux send-keys -t <session>:<window> C-c`
+4. If stuck, send Ctrl-C and restart: `tmux send-keys -t <session>:<window> C-c`
 
 ## Examples
 

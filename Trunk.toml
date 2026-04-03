@@ -3,5 +3,5 @@ port = 8080
 open = false
 
 [watch]
-watch_paths = ["src"]
-ignore = ["target", "dist"]
+watch_paths = ["src", "index.html"]
+ignore = ["target", "dist", ".playwright-mcp", "web", "bevy-docs"]

@@ -1,3 +1,8 @@
+---
+name: specs
+description: Keeping specs/ folder updated with new features
+---
+
 # Specs Update Skill
 
 ## Purpose
