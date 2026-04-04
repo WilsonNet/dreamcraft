@@ -327,7 +327,7 @@ fn initialize_grids(
 fn spawn_minimap(
     commands: &mut Commands,
     _meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
+    _materials: &mut ResMut<Assets<ColorMaterial>>,
     obstacles: &ObstacleGrid,
     visibility: &VisibilityGrid,
     waypoints: &FogWaypoints,
@@ -339,6 +339,7 @@ fn spawn_minimap(
     let cell_h = cfg.height / grid.grid_height as f32;
 
     commands.entity(camera).with_children(|p| {
+        // Spawn background container with border as child
         p.spawn((
             Node {
                 position_type: PositionType::Absolute,
@@ -352,8 +353,9 @@ fn spawn_minimap(
             MinimapEntity,
             MinimapBackground,
         ))
-        .with_children(|border| {
-            border.spawn((
+        .with_children(|bg| {
+            // Spawn border
+            bg.spawn((
                 Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(-4.0),
@@ -367,6 +369,7 @@ fn spawn_minimap(
             ));
         });
 
+        // Spawn cells as children of camera (same level as background)
         for gx in 0..grid.grid_width {
             for gy in 0..grid.grid_height {
                 let color = if obstacles.cells[gx][gy] {
@@ -382,8 +385,8 @@ fn spawn_minimap(
                 p.spawn((
                     Node {
                         position_type: PositionType::Absolute,
-                        left: Val::Px(gx as f32 * cell_w),
-                        bottom: Val::Px(gy as f32 * cell_h),
+                        left: Val::Px(20.0 + gx as f32 * cell_w),
+                        bottom: Val::Px(30.0 + gy as f32 * cell_h),
                         width: Val::Px(cell_w.max(1.0)),
                         height: Val::Px(cell_h.max(1.0)),
                         ..default()
@@ -395,6 +398,7 @@ fn spawn_minimap(
             }
         }
 
+        // Spawn waypoints
         for (i, &(wx, wy)) in waypoints.waypoints.iter().enumerate() {
             if i > 0 {
                 let color = if i == waypoints.current_target {
@@ -405,8 +409,8 @@ fn spawn_minimap(
                 p.spawn((
                     Node {
                         position_type: PositionType::Absolute,
-                        left: Val::Px(wx as f32 * cell_w),
-                        bottom: Val::Px(wy as f32 * cell_h),
+                        left: Val::Px(20.0 + wx as f32 * cell_w),
+                        bottom: Val::Px(30.0 + wy as f32 * cell_h),
                         width: Val::Px(8.0),
                         height: Val::Px(8.0),
                         ..default()
@@ -418,11 +422,12 @@ fn spawn_minimap(
             }
         }
 
+        // Spawn goal
         p.spawn((
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Px((grid.grid_width - 2) as f32 * cell_w),
-                bottom: Val::Px((grid.grid_height / 2) as f32 * cell_h),
+                left: Val::Px(20.0 + (grid.grid_width - 2) as f32 * cell_w),
+                bottom: Val::Px(30.0 + (grid.grid_height / 2) as f32 * cell_h),
                 width: Val::Px(10.0),
                 height: Val::Px(10.0),
                 ..default()
@@ -432,11 +437,12 @@ fn spawn_minimap(
             MinimapSprite,
         ));
 
+        // Spawn player marker
         p.spawn((
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Px(2.0 * cell_w),
-                bottom: Val::Px((grid.grid_height / 2) as f32 * cell_h),
+                left: Val::Px(20.0 + 2.0 * cell_w),
+                bottom: Val::Px(30.0 + (grid.grid_height / 2) as f32 * cell_h),
                 width: Val::Px(12.0),
                 height: Val::Px(12.0),
                 ..default()
@@ -931,8 +937,8 @@ fn update_native_minimap(
     let ch = cfg.height / grid.grid_height as f32;
 
     for mut node in marker.iter_mut() {
-        node.left = Val::Px(unit.grid_x as f32 * cw);
-        node.bottom = Val::Px(unit.grid_y as f32 * ch);
+        node.left = Val::Px(20.0 + unit.grid_x as f32 * cw);
+        node.bottom = Val::Px(30.0 + unit.grid_y as f32 * ch);
     }
 }
 
@@ -961,11 +967,11 @@ fn update_minimap_visibility(
 
     for (mut bg, node) in query.iter_mut() {
         let gx = match node.left {
-            Val::Px(x) => (x / cw).round() as usize,
+            Val::Px(x) => ((x - 20.0) / cw).round() as usize,
             _ => continue,
         };
         let gy = match node.bottom {
-            Val::Px(y) => (y / ch).round() as usize,
+            Val::Px(y) => ((y - 30.0) / ch).round() as usize,
             _ => continue,
         };
         if gx >= grid.grid_width || gy >= grid.grid_height {
