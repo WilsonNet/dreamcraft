@@ -63,6 +63,16 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 - [x] Border (green)
 - [x] Independent of camera movement (screen-space rendering)
 - [x] Left-click on minimap re-centers main camera to clicked map location
+- [x] Minimap draws above bottom HUD layer (always visible over HUD background)
+
+#### RTS Command HUD (bottom bar)
+- [x] Bottom-screen RTS HUD bar placeholder
+- [x] HUD height increased to exceed minimap top edge by ~10px (170px HUD vs minimap top at 159px)
+- [x] Clickable Move command button (`Mo` placeholder), small size, anchored bottom-right
+- [x] Move command mode cursor feedback (changes to move cursor)
+- [x] Left-click world to issue move order, then cursor resets to default
+- [x] Ordered unit enters `Moving` state while following command path
+- [x] Bottom center reserved for future control group UI
 
 #### Agent Console (React overlay)
 - [ ] Toggle with backtick (`` ` ``) key

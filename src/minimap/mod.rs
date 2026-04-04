@@ -29,6 +29,7 @@ pub fn spawn_minimap(
                 ..default()
             },
             BackgroundColor(Color::srgb(0.3, 0.5, 0.3)), // Green border
+            GlobalZIndex(20),
             MinimapEntity,
             MinimapBackground,
         ))

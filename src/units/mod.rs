@@ -259,12 +259,20 @@ pub fn enemy_ai_chase(
 
 /// Move all units (player and enemy) along their paths
 pub fn unit_movement(
-    mut query: Query<(&mut Unit, &mut Target, &mut Transform)>,
+    mut query: Query<(
+        &mut Unit,
+        &mut Target,
+        &mut Transform,
+        &mut UnitStateMachine,
+    )>,
     grid: Res<GridConfig>,
     time: Res<Time>,
 ) {
-    for (mut unit, mut target, mut transform) in query.iter_mut() {
+    for (mut unit, mut target, mut transform, mut state_machine) in query.iter_mut() {
         if target.path_index >= target.path.len() {
+            if state_machine.state == UnitState::Moving {
+                state_machine.state = UnitState::Idle;
+            }
             continue;
         }
 

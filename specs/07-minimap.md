@@ -12,6 +12,7 @@ StarCraft: Brood War style minimap — bottom-left corner, always visible.
 - **Size**: 200x125 pixels (scaled cells for 80x50 grid)
 - **Position**: Fixed screen-space at `left: 20px, bottom: 30px`
 - **Interaction**: Left-click support via `Interaction` + `RelativeCursorPosition`
+- **Layering**: Uses UI global z-order so minimap always renders over bottom HUD background
 
 ### Why Bevy UI (not React or Camera)
 

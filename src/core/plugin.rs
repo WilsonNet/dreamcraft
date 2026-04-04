@@ -4,6 +4,7 @@ use crate::core::{ObstacleGrid, VisibilityGrid};
 use crate::grid::{self};
 use crate::input;
 use crate::minimap;
+use crate::ui;
 use crate::units::{self, Health, Target, Unit, UnitStateMachine};
 use bevy::prelude::*;
 
@@ -22,6 +23,7 @@ impl Plugin for DreamCraftPlugin {
             .init_resource::<VisibilityGrid>()
             .init_resource::<FogWaypoints>()
             .init_resource::<MinimapConfig>()
+            .init_resource::<ui::CommandUiState>()
             .register_type::<MinimapEntity>()
             .register_type::<MinimapSprite>()
             .register_type::<MinimapBackground>()
@@ -34,11 +36,14 @@ impl Plugin for DreamCraftPlugin {
             .register_type::<Target>()
             .register_type::<Health>()
             .register_type::<UnitStateMachine>()
+            .register_type::<ui::CommandUiState>()
+            .register_type::<ui::MoveCommandButton>()
             .insert_resource(ClearColor(Color::srgb(0.02, 0.04, 0.02)))
-            .add_systems(Startup, grid::setup_tutorial_level)
+            .add_systems(Startup, (grid::setup_tutorial_level, ui::spawn_rts_hud))
             .add_systems(
                 Update,
                 (
+                    ui::handle_move_button_interaction,
                     input::handle_input,
                     #[cfg(target_arch = "wasm32")]
                     units::read_console_commands,
