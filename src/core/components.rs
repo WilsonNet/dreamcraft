@@ -1,14 +1,25 @@
 //! Core game components
 
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
-/// Marker for player-controlled units
+/// Team/Faction component - determines which side a unit belongs to
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize, Component,
+)]
+#[reflect(Component, Serialize, Deserialize)]
+pub enum Team {
+    #[default]
+    Player,
+    Enemy,
+}
+
+/// Marker for player-controlled units (same as Team::Player)
 #[derive(Component)]
 pub struct PlayerUnit;
 
-/// Marker for enemy units
-#[derive(Component, Reflect)]
-#[reflect(Component)]
+/// Marker for enemy units (same as Team::Enemy)
+#[derive(Component)]
 pub struct EnemyUnit;
 
 /// Marker for selected units

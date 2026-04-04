@@ -4,12 +4,12 @@ use crate::core::{ObstacleGrid, VisibilityGrid};
 use crate::grid::{self};
 use crate::input;
 use crate::minimap;
-use crate::units::{self};
+use crate::units::{self, Health, Target, Unit, UnitStateMachine};
 use bevy::prelude::*;
 
 use super::{
-    EnemyUnit, FogWaypoints, GameState, GridConfig, MinimapBackground, MinimapCameraViewport,
-    MinimapClickArea, MinimapConfig, MinimapEntity, MinimapSprite, PlayerMinimapMarker,
+    FogWaypoints, GameState, GridConfig, MinimapBackground, MinimapCameraViewport,
+    MinimapClickArea, MinimapConfig, MinimapEntity, MinimapSprite, PlayerMinimapMarker, Team,
 };
 
 pub struct DreamCraftPlugin;
@@ -28,7 +28,11 @@ impl Plugin for DreamCraftPlugin {
             .register_type::<MinimapClickArea>()
             .register_type::<PlayerMinimapMarker>()
             .register_type::<MinimapCameraViewport>()
-            .register_type::<EnemyUnit>()
+            .register_type::<Team>()
+            .register_type::<Unit>()
+            .register_type::<Target>()
+            .register_type::<Health>()
+            .register_type::<UnitStateMachine>()
             .insert_resource(ClearColor(Color::srgb(0.02, 0.04, 0.02)))
             .add_systems(Startup, grid::setup_tutorial_level)
             .add_systems(
@@ -39,6 +43,7 @@ impl Plugin for DreamCraftPlugin {
                     units::read_console_commands,
                     #[cfg(not(target_arch = "wasm32"))]
                     units::read_stdin_commands,
+                    units::enemy_ai_chase,
                     units::unit_movement,
                     input::camera_controls,
                     #[cfg(not(target_arch = "wasm32"))]
@@ -48,6 +53,7 @@ impl Plugin for DreamCraftPlugin {
                     grid::update_visibility,
                     grid::update_fog,
                     units::update_enemy_visibility,
+                    units::spawn_health_bars,
                     units::draw_waypoints,
                     units::check_waypoint_reached,
                     #[cfg(target_arch = "wasm32")]

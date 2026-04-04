@@ -6,92 +6,124 @@ use crate::pathfinding::find_path;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+/// Unit behavior states
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+pub enum UnitState {
+    #[default]
+    Idle,
+    Moving,
+}
+
 /// Unit component with movement data
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
 pub struct Unit {
     pub speed: f32,
     pub grid_x: usize,
     pub grid_y: usize,
 }
 
+/// Health component for units
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct Health {
+    pub current: u32,
+    pub max: u32,
+}
+
+/// State machine for unit behavior
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct UnitStateMachine {
+    pub state: UnitState,
+}
+
 /// Target destination with path
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
 pub struct Target {
     pub path: Vec<(usize, usize)>,
     pub path_index: usize,
 }
 
-/// Spawn a unit (player or enemy)
+/// Health bar marker
+#[derive(Component)]
+pub struct HealthBar;
+
+/// MeleeUnit bundle - all melee units share these components
+/// Player and Enemy are identical units, differentiated only by Team
+#[derive(Bundle, Default)]
+pub struct MeleeUnit {
+    pub unit: Unit,
+    pub health: Health,
+    pub state: UnitStateMachine,
+    pub target: Target,
+}
+
+impl MeleeUnit {
+    pub fn new(grid_x: usize, grid_y: usize) -> Self {
+        Self {
+            unit: Unit {
+                speed: 150.0,
+                grid_x,
+                grid_y,
+            },
+            health: Health {
+                current: 100,
+                max: 100,
+            },
+            state: UnitStateMachine::default(),
+            target: Target::default(),
+        }
+    }
+}
+
+/// Spawn a unit with a specific team using MeleeUnit bundle
 pub fn spawn_unit(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
     grid_x: usize,
     grid_y: usize,
-    speed: f32,
-    color: Color,
-    is_player: bool,
+    team: Team,
     grid: &GridConfig,
 ) {
     let pos = grid_to_world(grid_x, grid_y, grid);
+    let color = match team {
+        Team::Player => Color::srgb(0.3, 0.5, 0.9),
+        Team::Enemy => Color::srgb(0.9, 0.3, 0.3),
+    };
+    let label = match team {
+        Team::Player => "M",
+        Team::Enemy => "E",
+    };
+
+    // Spawn MeleeUnit bundle - identical for both player and enemy
     let mut entity = commands.spawn((
         Mesh2d(meshes.add(Circle::new(12.0))),
         MeshMaterial2d(materials.add(color)),
         Transform::from_xyz(pos.x, pos.y, 5.0),
-        Unit {
-            speed,
-            grid_x,
-            grid_y,
-        },
-        Target {
-            path: Vec::new(),
-            path_index: 0,
-        },
+        MeleeUnit::new(grid_x, grid_y),
+        team,
     ));
 
-    if is_player {
-        entity.insert((PlayerUnit, Selected));
+    if team == Team::Player {
+        entity.insert(PlayerUnit);
     } else {
         entity.insert((EnemyUnit, Visibility::Hidden));
     }
 
     entity.with_children(|p| {
         p.spawn((
-            Text2d::new("M"),
+            Text2d::new(label),
             TextFont {
                 font_size: 18.0,
                 ..default()
             },
             TextColor(Color::WHITE),
-            Transform::from_xyz(0.0, -1.0, 6.0),
+            Transform::from_xyz(0.0, 0.0, 1.0),
         ));
     });
-}
-
-/// Move units along their path
-pub fn unit_movement(
-    mut query: Query<(&mut Unit, &mut Target, &mut Transform), With<PlayerUnit>>,
-    grid: Res<GridConfig>,
-    time: Res<Time>,
-) {
-    for (mut unit, mut target, mut transform) in query.iter_mut() {
-        if target.path_index < target.path.len() {
-            let (nx, ny) = target.path[target.path_index];
-            let target_pos = grid_to_world(nx, ny, &grid);
-            let dir = target_pos - transform.translation.truncate();
-            let dist = dir.length();
-
-            if dist < 5.0 {
-                unit.grid_x = nx;
-                unit.grid_y = ny;
-                target.path_index += 1;
-            } else {
-                let vel = dir.normalize() * unit.speed * time.delta_secs();
-                transform.translation.x += vel.x;
-                transform.translation.y += vel.y;
-            }
-        }
-    }
 }
 
 /// Check if player reached the goal
@@ -110,6 +142,43 @@ pub fn check_goal(
     }
 }
 
+/// Spawn health bars for units
+pub fn spawn_health_bars(mut commands: Commands, units: Query<(Entity, &Health), Added<Health>>) {
+    for (entity, health) in units.iter() {
+        let health_percent = health.current as f32 / health.max as f32;
+
+        commands.entity(entity).with_children(|parent| {
+            // Health bar background
+            parent.spawn((
+                Sprite {
+                    color: Color::srgb(0.2, 0.2, 0.2),
+                    custom_size: Some(Vec2::new(24.0, 4.0)),
+                    ..default()
+                },
+                Transform::from_xyz(0.0, 18.0, 7.0),
+                HealthBar,
+            ));
+
+            // Health bar fill
+            parent.spawn((
+                Sprite {
+                    color: if health_percent > 0.5 {
+                        Color::srgb(0.2, 0.8, 0.2)
+                    } else if health_percent > 0.25 {
+                        Color::srgb(0.9, 0.7, 0.1)
+                    } else {
+                        Color::srgb(0.9, 0.2, 0.2)
+                    },
+                    custom_size: Some(Vec2::new(24.0 * health_percent, 4.0)),
+                    ..default()
+                },
+                Transform::from_xyz(-12.0 + 12.0 * health_percent, 18.0, 8.0),
+                HealthBar,
+            ));
+        });
+    }
+}
+
 /// Update enemy visibility based on player vision radius
 pub fn update_enemy_visibility(
     player: Query<&Unit, With<PlayerUnit>>,
@@ -120,22 +189,104 @@ pub fn update_enemy_visibility(
         return;
     };
 
+    // Simple check: enemy is visible if player can see its cell
     for (enemy_unit, mut visibility) in enemies.iter_mut() {
-        let dx = (enemy_unit.grid_x as i32 - player_unit.grid_x as i32).abs();
-        let dy = (enemy_unit.grid_y as i32 - player_unit.grid_y as i32).abs();
-        let distance_sq = dx * dx + dy * dy;
-        let radius = visibility_grid.view_radius as i32;
-        let in_vision = distance_sq <= radius * radius;
+        let dist_sq = (enemy_unit.grid_x as i32 - player_unit.grid_x as i32).pow(2)
+            + (enemy_unit.grid_y as i32 - player_unit.grid_y as i32).pow(2);
+        let in_vision_radius = (dist_sq as f32).sqrt() < visibility_grid.view_radius as f32;
 
-        // Also check if the cell is currently visible (not just explored)
         let cell_visible = enemy_unit.grid_x < visibility_grid.cells.len()
             && enemy_unit.grid_y < visibility_grid.cells[0].len()
             && visibility_grid.cells[enemy_unit.grid_x][enemy_unit.grid_y] == 2;
 
-        if in_vision && cell_visible {
+        if in_vision_radius && cell_visible {
             *visibility = Visibility::Visible;
         } else {
             *visibility = Visibility::Hidden;
+        }
+    }
+}
+
+/// Enemy AI - chase player when in vision range
+/// Enemy is an identical unit to player - same speed, same class
+/// Only chases while player is within enemy view radius
+pub fn enemy_ai_chase(
+    player: Query<(&Unit, &Transform), With<PlayerUnit>>,
+    mut enemies: Query<(&Unit, &mut Target, &Transform), With<EnemyUnit>>,
+    grid: Res<GridConfig>,
+    obstacles: Res<ObstacleGrid>,
+    visibility_grid: Res<VisibilityGrid>,
+) {
+    let Ok((player_unit, player_transform)) = player.single() else {
+        return;
+    };
+
+    let player_world = player_transform.translation.truncate();
+
+    for (enemy_unit, mut target, enemy_transform) in enemies.iter_mut() {
+        let enemy_world = enemy_transform.translation.truncate();
+        let dist = (player_world - enemy_world).length();
+        let vision_radius = visibility_grid.view_radius as f32 * grid.cell_size;
+
+        // Always agro while player is inside view radius
+        if dist > vision_radius {
+            target.path.clear();
+            target.path_index = 0;
+            continue;
+        }
+
+        let destination = (player_unit.grid_x, player_unit.grid_y);
+        let needs_repath = target.path.is_empty()
+            || target.path_index >= target.path.len()
+            || target.path.last().copied() != Some(destination);
+
+        if needs_repath {
+            let path = find_path(
+                (enemy_unit.grid_x, enemy_unit.grid_y),
+                destination,
+                &obstacles.cells,
+                grid.grid_width,
+                grid.grid_height,
+            );
+
+            if !path.is_empty() {
+                target.path = path;
+                target.path_index = 0;
+            }
+        }
+    }
+}
+
+/// Move all units (player and enemy) along their paths
+pub fn unit_movement(
+    mut query: Query<(&mut Unit, &mut Target, &mut Transform)>,
+    grid: Res<GridConfig>,
+    time: Res<Time>,
+) {
+    for (mut unit, mut target, mut transform) in query.iter_mut() {
+        if target.path_index >= target.path.len() {
+            continue;
+        }
+
+        let (nx, ny) = target.path[target.path_index];
+        if nx == unit.grid_x && ny == unit.grid_y {
+            target.path_index += 1;
+            continue;
+        }
+
+        let target_pos = grid_to_world(nx, ny, &grid);
+        let current_world = transform.translation.truncate();
+        let dir = target_pos - current_world;
+        let dist = dir.length();
+
+        if dist < 5.0 {
+            unit.grid_x = nx;
+            unit.grid_y = ny;
+            target.path_index += 1;
+        } else {
+            let vel = dir.normalize() * unit.speed * time.delta_secs();
+            transform.translation.x += vel.x;
+            transform.translation.y += vel.y;
         }
     }
 }

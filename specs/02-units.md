@@ -22,24 +22,58 @@
   - Speed: 150.0 (world units/sec)
   - Vision range: 6 cells (radius)
   - Controlled via right-click movement
-  
-- **Enemy Unit**: Red circle with "M" label
-  - Speed: 80.0 (world units/sec)
+  - Health: 100 HP with health bar above unit
+   
+- **Enemy Unit**: Red circle with "E" label
+  - Speed: 150.0 (world units/sec)
   - Same race as player (melee unit)
   - Hidden in fog until revealed
-  - Stationary (no AI implemented yet)
+  - Health: 100 HP with health bar above unit
+  - AI Behavior:
+    - Chases player when player enters enemy view radius
+    - Stops chasing when player leaves enemy view radius
+    - Re-paths to current player position as needed
+
+### Health Bars
+
+All units have StarCraft-style health bars:
+- Positioned above unit
+- 24px wide, 4px tall
+- Color indicates health level:
+  - Green (> 50%)
+  - Yellow (25-50%)
+  - Red (< 25%)
+- Background: dark gray
+- Auto-spawned when unit is created
+
+### Unit State Machine
+
+Universal state machine for all units (player and AI):
+
+**States**:
+- `Idle`: Default state, no active behavior
+- `Moving`: Unit has an active movement path
 
 ## Component Structure
 
 ```rust
+enum Team {
+    Player,
+    Enemy,
+}
+
 struct Unit {
-    unit_type: UnitType,
     speed: f32,
-    hp: u32,
-    max_hp: u32,
-    attack_range: f32,
-    vision_range: f32,
-    damage: u32,
+    grid_x: usize,
+    grid_y: usize,
+}
+
+#[derive(Bundle)]
+struct MeleeUnit {
+    unit: Unit,
+    health: Health,
+    state: UnitStateMachine,
+    target: Target,
 }
 
 struct UnitTransform {
@@ -54,6 +88,8 @@ struct Target {
     path: Vec<Vec2>,
 }
 
+struct PlayerUnit;
+struct EnemyUnit;
 struct Selected;
 ```
 
@@ -76,10 +112,16 @@ Enemies are hidden by default and only become visible when:
 
 This creates a true Fog of War experience where enemies can hide in unexplored or dark areas.
 
-**Implementation**:
-- System: `update_enemy_visibility` runs in Update schedule
-- Enemy spawns with `Visibility::Hidden`
-- System checks distance between player and enemy using grid coordinates
-- Uses Euclidean distance: `sqrt(dx² + dy²) <= vision_radius`
-- Only shows enemy when both distance AND fog state allow visibility
-- Enemy immediately hidden when player moves out of range
+### Enemy AI
+
+**View-Radius Agro Behavior**:
+- System: `enemy_ai_chase` runs every frame
+- Enemy enters chase immediately when player is inside enemy view radius
+- Calculates path to player using A* pathfinding
+- Recalculates when needed (path empty, finished, or destination changed)
+- Clears chase path when player leaves enemy view radius
+
+**Systems**:
+- `update_enemy_visibility`: Manages visibility and triggers agro state
+- `enemy_ai_chase`: Calculates chase paths for agro enemies
+- `unit_movement`: Universal movement for all units (player and AI)

@@ -1,8 +1,8 @@
 //! Grid setup, visibility, and fog of war systems
 
 use crate::core::{
-    FogCell, FogWaypoints, GoalZone, GridConfig, MinimapConfig, ObstacleGrid, PlayerUnit, Tree,
-    VisibilityGrid, WaypointMarker,
+    FogCell, FogWaypoints, GoalZone, GridConfig, MinimapConfig, ObstacleGrid, PlayerUnit, Team,
+    Tree, VisibilityGrid, WaypointMarker,
 };
 use crate::units::{spawn_unit, Unit};
 use bevy::prelude::*;
@@ -269,9 +269,7 @@ fn spawn_player(
         materials,
         grid_x,
         grid_y,
-        150.0,
-        Color::srgb(0.3, 0.6, 0.9),
-        true,
+        Team::Player,
         grid,
     );
 }
@@ -290,9 +288,7 @@ fn spawn_enemy(
         materials,
         grid_x,
         grid_y,
-        80.0,
-        Color::srgb(0.9, 0.3, 0.3),
-        false,
+        Team::Enemy,
         grid,
     );
 }
