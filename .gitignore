@@ -6,3 +6,7 @@
 *~
 dist/
 bevy-docs/
+.playwright-mcp/
+headless_result.json
+debug-console.html
+*.png
