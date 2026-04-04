@@ -84,6 +84,30 @@ fn setup_level(...) {
 - Reusable components
 - Clearer intent
 
+### File Size Limit
+**Files MUST NOT exceed 420 lines.** If a file grows beyond 420 lines:
+1. Identify logical groupings of code (components, resources, systems, etc.)
+2. Extract related code into separate modules
+3. Organize modules by feature/domain (units, grid, minimap, input, etc.)
+4. Use `mod.rs` files to expose public API
+
+**Example structure:**
+```
+src/
+├── main.rs          # Entry point (< 50 lines)
+├── lib.rs           # Plugin registration (< 50 lines)
+├── core/
+│   ├── mod.rs       # Module exports
+│   ├── components.rs
+│   ├── resources.rs
+│   └── plugin.rs
+├── units/           # Unit logic
+├── grid/            # Grid & fog of war
+├── minimap/         # Minimap rendering
+├── input/           # Input handling
+└── pathfinding/     # A* pathfinding
+```
+
 ## Core Architecture
 
 ### Logic (The Brain)

@@ -1,4 +1,5 @@
-use dreamcraft::{find_path, GridConfig};
+use dreamcraft::pathfinding::find_path;
+use dreamcraft::GridConfig;
 
 fn main() {
     println!("=== DreamCraft Level 1 Headless Test ===\n");
