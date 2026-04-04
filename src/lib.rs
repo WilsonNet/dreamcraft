@@ -478,74 +478,79 @@ fn setup_tutorial_level(
         GoalZone,
     ));
 
-    let player_color = materials.add(Color::srgb(0.3, 0.6, 0.9));
-    let player_mesh = meshes.add(Circle::new(12.0));
+    spawn_unit(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        start_x,
+        start_y,
+        150.0,
+        Color::srgb(0.3, 0.6, 0.9),
+        PlayerUnit,
+        true,
+        &grid,
+    );
 
-    let world_pos = grid_to_world(start_x, start_y, &grid);
+    spawn_unit(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        50,
+        25,
+        80.0,
+        Color::srgb(0.9, 0.3, 0.3),
+        EnemyUnit,
+        false,
+        &grid,
+    );
+}
 
-    commands
-        .spawn((
-            Mesh2d(player_mesh),
-            MeshMaterial2d(player_color),
-            Transform::from_xyz(world_pos.x, world_pos.y, 5.0),
-            Unit {
-                speed: 150.0,
-                grid_x: start_x,
-                grid_y: start_y,
-            },
-            Target {
-                path: Vec::new(),
-                path_index: 0,
-            },
-            PlayerUnit,
-            Selected,
-        ))
-        .with_children(|parent| {
-            parent.spawn((
-                Text2d::new("M"),
-                TextFont {
-                    font_size: 18.0,
-                    ..default()
-                },
-                TextColor(Color::WHITE),
-                Transform::from_xyz(0.0, -1.0, 6.0),
-            ));
-        });
+fn spawn_unit<T: Component>(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    grid_x: usize,
+    grid_y: usize,
+    speed: f32,
+    color: Color,
+    unit_type: T,
+    is_player: bool,
+    grid: &GridConfig,
+) {
+    let world_pos = grid_to_world(grid_x, grid_y, &grid);
+    let mesh = meshes.add(Circle::new(12.0));
 
-    // Spawn enemy unit in fog (at position 50, 25 - far from player start)
-    let enemy_x = 50;
-    let enemy_y = 25;
-    let enemy_world_pos = grid_to_world(enemy_x, enemy_y, &grid);
-    let enemy_color = materials.add(Color::srgb(0.9, 0.3, 0.3));
-    let enemy_mesh = meshes.add(Circle::new(12.0));
+    let mut entity = commands.spawn((
+        Mesh2d(mesh),
+        MeshMaterial2d(materials.add(color)),
+        Transform::from_xyz(world_pos.x, world_pos.y, 5.0),
+        Unit {
+            speed,
+            grid_x,
+            grid_y,
+        },
+        Target {
+            path: Vec::new(),
+            path_index: 0,
+        },
+        unit_type,
+    ));
 
-    commands
-        .spawn((
-            Mesh2d(enemy_mesh),
-            MeshMaterial2d(enemy_color),
-            Transform::from_xyz(enemy_world_pos.x, enemy_world_pos.y, 5.0),
-            Unit {
-                speed: 80.0,
-                grid_x: enemy_x,
-                grid_y: enemy_y,
+    if is_player {
+        entity.insert(Selected);
+    }
+
+    entity.with_children(|parent| {
+        parent.spawn((
+            Text2d::new("M"),
+            TextFont {
+                font_size: 18.0,
+                ..default()
             },
-            Target {
-                path: Vec::new(),
-                path_index: 0,
-            },
-            EnemyUnit,
-        ))
-        .with_children(|parent| {
-            parent.spawn((
-                Text2d::new("M"),
-                TextFont {
-                    font_size: 18.0,
-                    ..default()
-                },
-                TextColor(Color::WHITE),
-                Transform::from_xyz(0.0, -1.0, 6.0),
-            ));
-        });
+            TextColor(Color::WHITE),
+            Transform::from_xyz(0.0, -1.0, 6.0),
+        ));
+    });
 }
 
 fn reveal_area(cx: usize, cy: usize, visibility: &mut VisibilityGrid, grid: &GridConfig) {

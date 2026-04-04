@@ -1,0 +1,263 @@
+[      24ms] [WARNING] The `integrity` attribute is currently ignored for preload destinations that do not support subresource integrity. See https://crbug.com/981419 for more information @ http://localhost:8080/:23
+[     276ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ https://esm.sh/react-dom@19.2.4/es2022/client.development.mjs:19855
+[     360ms] [WARNING] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio @ http://localhost:8080/dreamcraft-web-4afa08c5aa832bfc.js:1314
+[     362ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_winit-0.18.1/src/system.rs:68%c Creating new window DreamCraft RTS (0v0) color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-4afa08c5aa832bfc.js:973
+[     376ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/renderer/mod.rs:283%c AdapterInfo { name: "ANGLE (AMD, AMD Radeon Graphics (radeonsi rembrandt ACO), OpenGL ES 3.2)", vendor: 4098, device: 0, device_type: Other, driver: "", driver_info: "WebGL 2.0 (OpenGL ES 3.0 Chromium)", backend: Gl } color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-4afa08c5aa832bfc.js:973
+[     417ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/batching/gpu_preprocessing.rs:1135%c GPU preprocessing is not supported on this device. Falling back to CPU preprocessing. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-4afa08c5aa832bfc.js:973
+[     417ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_core_pipeline-0.18.1/src/oit/resolve/mod.rs:72%c OrderIndependentTransparencyPlugin not loaded. GPU lacks support: DownlevelFlags::FRAGMENT_WRITABLE_STORAGE. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-4afa08c5aa832bfc.js:973
+[     418ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/ssao/mod.rs:70%c ScreenSpaceAmbientOcclusionPlugin not loaded. GPU lacks support: Limits::max_storage_textures_per_shader_stage is less than 5. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-4afa08c5aa832bfc.js:973
+[     419ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/light_probe/generate.rs:130%c Disabling EnvironmentMapGenerationPlugin because compute is not supported on this platform. This is safe to ignore if you are not using EnvironmentMapGenerationPlugin. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-4afa08c5aa832bfc.js:973
+[     419ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/atmosphere/mod.rs:131%c AtmospherePlugin not loaded. GPU lacks support for compute shaders. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-4afa08c5aa832bfc.js:973
+[     449ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_post_process-0.18.1/src/dof/mod.rs:825%c Disabling depth of field on this platform because depth textures aren't supported correctly color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-4afa08c5aa832bfc.js:973
+[    1809ms] [WARNING] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio @ http://localhost:8080/dreamcraft-web-4afa08c5aa832bfc.js:1456
+[    1840ms] [WARNING] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio @ http://localhost:8080/dreamcraft-web-4afa08c5aa832bfc.js:1456
+[   92674ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[   94100ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  103222ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  104608ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  112116ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  113521ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  126378ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  127818ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  145460ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  146804ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  156614ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  158014ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  166834ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  168287ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  182097ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  183550ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  191354ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  192636ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  207676ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  209087ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  231797ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: bad status returned from cargo artifacts request
+ @ http://localhost:8080/:493
+[  233161ms] [ERROR] Build failed: error from build pipeline
+
+Caused by:
+	0: HTML build pipeline failed (1 errors), showing first
+	1: error from asset pipeline
+	2: running cargo build
+	3: error during cargo build execution
+	4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "/home/wilsonn/www/dreamcraft/Cargo.toml", "--bin", "dreamcraft-web"]' returned a bad status: exit status: 101
+ @ http://localhost:8080/:493
+[  275250ms] [WARNING] The `integrity` attribute is currently ignored for preload destinations that do not support subresource integrity. See https://crbug.com/981419 for more information @ http://localhost:8080/:23
+[  275983ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_winit-0.18.1/src/system.rs:68%c Creating new window DreamCraft RTS (0v0) color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-210cbd152dd45ca2.js:973
+[  276010ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/renderer/mod.rs:283%c AdapterInfo { name: "ANGLE (AMD, AMD Radeon Graphics (radeonsi rembrandt ACO), OpenGL ES 3.2)", vendor: 4098, device: 0, device_type: Other, driver: "", driver_info: "WebGL 2.0 (OpenGL ES 3.0 Chromium)", backend: Gl } color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-210cbd152dd45ca2.js:973
+[  276116ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/batching/gpu_preprocessing.rs:1135%c GPU preprocessing is not supported on this device. Falling back to CPU preprocessing. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-210cbd152dd45ca2.js:973
+[  276116ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_core_pipeline-0.18.1/src/oit/resolve/mod.rs:72%c OrderIndependentTransparencyPlugin not loaded. GPU lacks support: DownlevelFlags::FRAGMENT_WRITABLE_STORAGE. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-210cbd152dd45ca2.js:973
+[  276120ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/ssao/mod.rs:70%c ScreenSpaceAmbientOcclusionPlugin not loaded. GPU lacks support: Limits::max_storage_textures_per_shader_stage is less than 5. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-210cbd152dd45ca2.js:973
+[  276120ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/light_probe/generate.rs:130%c Disabling EnvironmentMapGenerationPlugin because compute is not supported on this platform. This is safe to ignore if you are not using EnvironmentMapGenerationPlugin. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-210cbd152dd45ca2.js:973
+[  276121ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/atmosphere/mod.rs:131%c AtmospherePlugin not loaded. GPU lacks support for compute shaders. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-210cbd152dd45ca2.js:973
+[  276267ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_post_process-0.18.1/src/dof/mod.rs:825%c Disabling depth of field on this platform because depth textures aren't supported correctly color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-210cbd152dd45ca2.js:973
+[  276792ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ https://esm.sh/react-dom@19.2.4/es2022/client.development.mjs:19855
+[  301126ms] [WARNING] The `integrity` attribute is currently ignored for preload destinations that do not support subresource integrity. See https://crbug.com/981419 for more information @ http://localhost:8080/:23
+[  301449ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ https://esm.sh/react-dom@19.2.4/es2022/client.development.mjs:19855
+[  301553ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_winit-0.18.1/src/system.rs:68%c Creating new window DreamCraft RTS (0v0) color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  301569ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/renderer/mod.rs:283%c AdapterInfo { name: "ANGLE (AMD, AMD Radeon Graphics (radeonsi rembrandt ACO), OpenGL ES 3.2)", vendor: 4098, device: 0, device_type: Other, driver: "", driver_info: "WebGL 2.0 (OpenGL ES 3.0 Chromium)", backend: Gl } color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  301613ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/batching/gpu_preprocessing.rs:1135%c GPU preprocessing is not supported on this device. Falling back to CPU preprocessing. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  301613ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_core_pipeline-0.18.1/src/oit/resolve/mod.rs:72%c OrderIndependentTransparencyPlugin not loaded. GPU lacks support: DownlevelFlags::FRAGMENT_WRITABLE_STORAGE. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  301615ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/ssao/mod.rs:70%c ScreenSpaceAmbientOcclusionPlugin not loaded. GPU lacks support: Limits::max_storage_textures_per_shader_stage is less than 5. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  301615ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/light_probe/generate.rs:130%c Disabling EnvironmentMapGenerationPlugin because compute is not supported on this platform. This is safe to ignore if you are not using EnvironmentMapGenerationPlugin. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  301616ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/atmosphere/mod.rs:131%c AtmospherePlugin not loaded. GPU lacks support for compute shaders. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  301643ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_post_process-0.18.1/src/dof/mod.rs:825%c Disabling depth of field on this platform because depth textures aren't supported correctly color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  315740ms] [WARNING] The `integrity` attribute is currently ignored for preload destinations that do not support subresource integrity. See https://crbug.com/981419 for more information @ http://localhost:8080/:23
+[  315749ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ https://esm.sh/react-dom@19.2.4/es2022/client.development.mjs:19855
+[  316219ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_winit-0.18.1/src/system.rs:68%c Creating new window DreamCraft RTS (0v0) color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  316243ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/renderer/mod.rs:283%c AdapterInfo { name: "ANGLE (AMD, AMD Radeon Graphics (radeonsi rembrandt ACO), OpenGL ES 3.2)", vendor: 4098, device: 0, device_type: Other, driver: "", driver_info: "WebGL 2.0 (OpenGL ES 3.0 Chromium)", backend: Gl } color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  316293ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/batching/gpu_preprocessing.rs:1135%c GPU preprocessing is not supported on this device. Falling back to CPU preprocessing. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  316293ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_core_pipeline-0.18.1/src/oit/resolve/mod.rs:72%c OrderIndependentTransparencyPlugin not loaded. GPU lacks support: DownlevelFlags::FRAGMENT_WRITABLE_STORAGE. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  316295ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/ssao/mod.rs:70%c ScreenSpaceAmbientOcclusionPlugin not loaded. GPU lacks support: Limits::max_storage_textures_per_shader_stage is less than 5. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  316296ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/light_probe/generate.rs:130%c Disabling EnvironmentMapGenerationPlugin because compute is not supported on this platform. This is safe to ignore if you are not using EnvironmentMapGenerationPlugin. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  316296ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/atmosphere/mod.rs:131%c AtmospherePlugin not loaded. GPU lacks support for compute shaders. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  316328ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_post_process-0.18.1/src/dof/mod.rs:825%c Disabling depth of field on this platform because depth textures aren't supported correctly color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  350449ms] [WARNING] The `integrity` attribute is currently ignored for preload destinations that do not support subresource integrity. See https://crbug.com/981419 for more information @ http://localhost:8080/:23
+[  350491ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ https://esm.sh/react-dom@19.2.4/es2022/client.development.mjs:19855
+[  350998ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_winit-0.18.1/src/system.rs:68%c Creating new window DreamCraft RTS (0v0) color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  351016ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/renderer/mod.rs:283%c AdapterInfo { name: "ANGLE (AMD, AMD Radeon Graphics (radeonsi rembrandt ACO), OpenGL ES 3.2)", vendor: 4098, device: 0, device_type: Other, driver: "", driver_info: "WebGL 2.0 (OpenGL ES 3.0 Chromium)", backend: Gl } color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  351074ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/batching/gpu_preprocessing.rs:1135%c GPU preprocessing is not supported on this device. Falling back to CPU preprocessing. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  351074ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_core_pipeline-0.18.1/src/oit/resolve/mod.rs:72%c OrderIndependentTransparencyPlugin not loaded. GPU lacks support: DownlevelFlags::FRAGMENT_WRITABLE_STORAGE. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  351077ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/ssao/mod.rs:70%c ScreenSpaceAmbientOcclusionPlugin not loaded. GPU lacks support: Limits::max_storage_textures_per_shader_stage is less than 5. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  351077ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/light_probe/generate.rs:130%c Disabling EnvironmentMapGenerationPlugin because compute is not supported on this platform. This is safe to ignore if you are not using EnvironmentMapGenerationPlugin. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  351077ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/atmosphere/mod.rs:131%c AtmospherePlugin not loaded. GPU lacks support for compute shaders. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  351124ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_post_process-0.18.1/src/dof/mod.rs:825%c Disabling depth of field on this platform because depth textures aren't supported correctly color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  386373ms] [ERROR] WebSocket connection to 'ws://localhost:8080/.well-known/trunk/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8080/:639
+[  391374ms] [ERROR] WebSocket connection to 'ws://localhost:8080/.well-known/trunk/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8080/:639
+[  396375ms] [ERROR] WebSocket connection to 'ws://localhost:8080/.well-known/trunk/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:8080/:639
+[  401394ms] [WARNING] The `integrity` attribute is currently ignored for preload destinations that do not support subresource integrity. See https://crbug.com/981419 for more information @ http://localhost:8080/:23
+[  401402ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ https://esm.sh/react-dom@19.2.4/es2022/client.development.mjs:19855
+[  401789ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_winit-0.18.1/src/system.rs:68%c Creating new window DreamCraft RTS (0v0) color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  401802ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/renderer/mod.rs:283%c AdapterInfo { name: "ANGLE (AMD, AMD Radeon Graphics (radeonsi rembrandt ACO), OpenGL ES 3.2)", vendor: 4098, device: 0, device_type: Other, driver: "", driver_info: "WebGL 2.0 (OpenGL ES 3.0 Chromium)", backend: Gl } color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  401845ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_render-0.18.1/src/batching/gpu_preprocessing.rs:1135%c GPU preprocessing is not supported on this device. Falling back to CPU preprocessing. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  401846ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_core_pipeline-0.18.1/src/oit/resolve/mod.rs:72%c OrderIndependentTransparencyPlugin not loaded. GPU lacks support: DownlevelFlags::FRAGMENT_WRITABLE_STORAGE. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  401847ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/ssao/mod.rs:70%c ScreenSpaceAmbientOcclusionPlugin not loaded. GPU lacks support: Limits::max_storage_textures_per_shader_stage is less than 5. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  401847ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/light_probe/generate.rs:130%c Disabling EnvironmentMapGenerationPlugin because compute is not supported on this platform. This is safe to ignore if you are not using EnvironmentMapGenerationPlugin. color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  401847ms] [LOG] %cWARN%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_pbr-0.18.1/src/atmosphere/mod.rs:131%c AtmospherePlugin not loaded. GPU lacks support for compute shaders. color: orange; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973
+[  401874ms] [LOG] %cINFO%c /home/wilsonn/.asdf/installs/rust/stable/registry/src/index.crates.io-1949cf8c6b5b557f/bevy_post_process-0.18.1/src/dof/mod.rs:825%c Disabling depth of field on this platform because depth textures aren't supported correctly color: whitesmoke; background: #444 color: gray; font-style: italic color: inherit @ http://localhost:8080/dreamcraft-web-35ac3f5295ba42d3.js:973

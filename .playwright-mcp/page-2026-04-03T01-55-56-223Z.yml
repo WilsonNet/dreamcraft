@@ -1,0 +1,9 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - generic: "Tutorial: Through the Woods"
+    - generic: "Objective: Guide your unit to the golden goal zone"
+    - generic: "Controls:"
+    - generic: "Right-Click: Move to location"
+    - generic: "WASD/Arrows: Pan camera"
+    - generic: "` (backtick): Toggle console"
+  - generic: Navigate around the trees to reach the goal!

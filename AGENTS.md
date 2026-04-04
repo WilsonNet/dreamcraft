@@ -50,6 +50,40 @@ After completing ANY task, update relevant skills if:
 
 Example: Fixed a Bevy UI error? -> Update `.opencode/skills/bevy/SKILL.md` with the fix.
 
+## Code Style Rules
+
+### Function Length Limit
+**Functions MUST NOT exceed 50 lines.** If a function grows beyond 50 lines:
+1. Identify logical sub-tasks within the function
+2. Extract each sub-task into a separate private function
+3. Give extracted functions descriptive names
+4. Keep the original function as a coordinator
+
+**Example:**
+```rust
+// BAD - 80 lines doing too much
+fn setup_level(...) {
+    // spawn camera (10 lines)
+    // init grids (15 lines)
+    // spawn minimap (30 lines)
+    // spawn units (25 lines)
+}
+
+// GOOD - each task extracted
+fn setup_level(...) {
+    spawn_camera(&mut commands, ...);
+    initialize_grids(&mut obstacle_grid, ...);
+    spawn_minimap(&mut commands, ...);
+    spawn_units(&mut commands, ...);
+}
+```
+
+**Benefits:**
+- Easier to test individual pieces
+- Better readability
+- Reusable components
+- Clearer intent
+
 ## Core Architecture
 
 ### Logic (The Brain)

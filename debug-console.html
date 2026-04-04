@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DreamCraft Debug Console</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { 
+            width: 100%; 
+            height: 100%; 
+            overflow: hidden; 
+            background: #0a0f0a;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        #debug-container { 
+            width: 100%; 
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        #header {
+            background: #1a2a1a;
+            color: #7cb87c;
+            padding: 12px 16px;
+            border-bottom: 2px solid #3a5a3a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #header h1 {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #connection-status {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            background: #2a3a2a;
+            color: #7cb87c;
+        }
+        #connection-status.disconnected {
+            background: #3a2a2a;
+            color: #b87c7c;
+        }
+        #main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        #state-panel {
+            width: 50%;
+            padding: 16px;
+            background: #0f1a0f;
+            border-right: 1px solid #2a3a2a;
+            overflow-y: auto;
+        }
+        #console-panel {
+            width: 50%;
+            padding: 16px;
+            background: #0a0f0a;
+            overflow-y: auto;
+        }
+        .panel-title {
+            color: #7cb87c;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a3a2a;
+        }
+        .state-item {
+            margin: 8px 0;
+            padding: 8px 12px;
+            background: #1a2a1a;
+            border-radius: 4px;
+            border-left: 3px solid #3a5a3a;
+        }
+        .state-item.error {
+            border-left-color: #b87c7c;
+            background: #2a1a1a;
+        }
+        .state-item.success {
+            border-left-color: #7cb87c;
+            background: #1a3a1a;
+        }
+        .state-key {
+            color: #7cb87c;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        .state-value {
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .console-entry {
+            margin: 4px 0;
+            padding: 6px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            word-break: break-all;
+        }
+        .console-entry.debug {
+            background: #1a2a2a;
+            color: #8cb8dc;
+        }
+        .console-entry.error {
+            background: #2a1a1a;
+            color: #dc8c8c;
+        }
+        .console-entry.warn {
+            background: #2a2a1a;
+            color: #dcbc8c;
+        }
+        .console-entry.info {
+            background: #1a1a2a;
+            color: #a0a0dc;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 10px;
+            margin-right: 8px;
+        }
+        #validation-panel {
+            padding: 16px;
+            background: #0f1a0f;
+            border-top: 2px solid #2a3a2a;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .validation-item {
+            margin: 4px 0;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .validation-item.pass {
+            background: #1a3a1a;
+            color: #7cb87c;
+        }
+        .validation-item.fail {
+            background: #3a1a1a;
+            color: #b87c7c;
+        }
+        .validation-item.pending {
+            background: #2a2a1a;
+            color: #b8b87c;
+        }
+        .btn {
+            background: #2a4a2a;
+            color: #7cb87c;
+            border: 1px solid #3a5a3a;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+        }
+        .btn:hover {
+            background: #3a5a3a;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .empty-state {
+            color: #555;
+            text-align: center;
+            padding: 40px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div id="debug-container">
+        <div id="header">
+            <h1>🎮 DreamCraft Debug Console</h1>
+            <div id="connection-status" class="disconnected">Disconnected</div>
+        </div>
+        <div id="main-content">
+            <div id="state-panel">
+                <div class="panel-title">Game State</div>
+                <div id="state-content">
+                    <div class="empty-state">Waiting for game connection...</div>
+                </div>
+            </div>
+            <div id="console-panel">
+                <div class="panel-title">Console Output</div>
+                <div id="console-content">
+                    <div class="empty-state">No messages received yet</div>
+                </div>
+            </div>
+        </div>
+        <div id="validation-panel">
+            <div class="panel-title">Validation Results</div>
+            <div id="validation-content">
+                <div class="validation-item pending">⏳ Waiting for game state...</div>
+            </div>
+            <div id="controls">
+                <button class="btn" onclick="runValidation()" id="validate-btn" disabled>Run Validation</button>
+                <button class="btn" onclick="clearConsole()">Clear Console</button>
+                <button class="btn" onclick="exportData()">Export Data</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = null;
+        let consoleHistory = [];
+        let ws = null;
+        
+        // Try to connect via WebSocket first, fall back to BroadcastChannel
+        function connectToGame() {
+            // Try BroadcastChannel for same-origin tabs
+            try {
+                const bc = new BroadcastChannel('dreamcraft_debug');
+                bc.onmessage = (event) => {
+                    handleDebugMessage(event.data);
+                };
+                updateConnectionStatus('connected', 'BroadcastChannel');
+                return;
+            } catch (e) {
+                console.log('BroadcastChannel not supported, trying WebSocket...');
+            }
+            
+            // Fallback to polling via localStorage
+            setupLocalStorageSync();
+        }
+        
+        function setupLocalStorageSync() {
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'dreamcraft_debug_state') {
+                    try {
+                        const data = JSON.parse(e.newValue);
+                        handleDebugMessage(data);
+                    } catch (err) {
+                        console.error('Failed to parse debug state:', err);
+                    }
+                }
+            });
+            updateConnectionStatus('polling', 'localStorage');
+        }
+        
+        function updateConnectionStatus(status, method) {
+            const el = document.getElementById('connection-status');
+            el.className = status === 'connected' ? '' : 'disconnected';
+            el.textContent = status === 'connected' ? `Connected (${method})` : 
+                            status === 'polling' ? `Polling (${method})` : 'Disconnected';
+            
+            const validateBtn = document.getElementById('validate-btn');
+            validateBtn.disabled = status === 'disconnected';
+        }
+        
+        function handleDebugMessage(data) {
+            gameState = data;
+            consoleHistory.push({
+                timestamp: new Date().toISOString(),
+                data: data
+            });
+            
+            // Keep only last 1000 entries
+            if (consoleHistory.length > 1000) {
+                consoleHistory.shift();
+            }
+            
+            updateStatePanel(data);
+            addConsoleEntry(data);
+            
+            // Auto-run validation on new state
+            if (document.getElementById('auto-validate').checked) {
+                runValidation();
+            }
+        }
+        
+        function updateStatePanel(state) {
+            const container = document.getElementById('state-content');
+            
+            let html = '';
+            
+            // Camera position
+            const cameraOk = Math.abs(state.camera_pos[0] - state.player_pos[0]) < 10 && 
+                           Math.abs(state.camera_pos[1] - state.player_pos[1]) < 10;
+            html += `
+                <div class="state-item ${cameraOk ? 'success' : 'error'}">
+                    <div class="state-key">Camera Position</div>
+                    <div class="state-value">X: ${state.camera_pos[0].toFixed(1)}, Y: ${state.camera_pos[1].toFixed(1)}</div>
+                </div>
+            `;
+            
+            // Player position
+            html += `
+                <div class="state-item">
+                    <div class="state-key">Player Position</div>
+                    <div class="state-value">X: ${state.player_pos[0].toFixed(1)}, Y: ${state.player_pos[1].toFixed(1)}</div>
+                </div>
+            `;
+            
+            // Player grid position
+            html += `
+                <div class="state-item">
+                    <div class="state-key">Player Grid</div>
+                    <div class="state-value">[${state.player_grid[0]}, ${state.player_grid[1]}]</div>
+                </div>
+            `;
+            
+            // Waypoint progress
+            const waypointProgress = ((state.current_waypoint / state.total_waypoints) * 100).toFixed(0);
+            html += `
+                <div class="state-item">
+                    <div class="state-key">Waypoint Progress</div>
+                    <div class="state-value">${state.current_waypoint}/${state.total_waypoints} (${waypointProgress}%)</div>
+                </div>
+            `;
+            
+            // Level complete
+            html += `
+                <div class="state-item ${state.level_complete ? 'success' : ''}">
+                    <div class="state-key">Level Complete</div>
+                    <div class="state-value">${state.level_complete ? '✅ YES' : '⏳ In Progress'}</div>
+                </div>
+            `;
+            
+            // Frame counter
+            html += `
+                <div class="state-item">
+                    <div class="state-key">Frame</div>
+                    <div class="state-value">${state.frame}</div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        function addConsoleEntry(data) {
+            const container = document.getElementById('console-content');
+            
+            // Remove empty state if present
+            if (container.querySelector('.empty-state')) {
+                container.innerHTML = '';
+            }
+            
+            const entry = document.createElement('div');
+            entry.className = 'console-entry debug';
+            entry.innerHTML = `
+                <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+                <span>${JSON.stringify(data)}</span>
+            `;
+            
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+            
+            // Keep only last 100 entries visible
+            while (container.children.length > 100) {
+                container.removeChild(container.firstChild);
+            }
+        }
+        
+        function runValidation() {
+            if (!gameState) {
+                showValidation('fail', 'No game state available');
+                return;
+            }
+            
+            const results = [];
+            
+            // Validation 1: Camera is focused on player
+            const cameraDist = Math.sqrt(
+                Math.pow(gameState.camera_pos[0] - gameState.player_pos[0], 2) +
+                Math.pow(gameState.camera_pos[1] - gameState.player_pos[1], 2)
+            );
+            results.push({
+                name: 'Camera focused on player',
+                pass: cameraDist < 10,
+                detail: `Distance: ${cameraDist.toFixed(1)}`
+            });
+            
+            // Validation 2: Player is on grid
+            results.push({
+                name: 'Player has valid grid position',
+                pass: gameState.player_grid[0] >= 0 && gameState.player_grid[1] >= 0,
+                detail: `Grid: [${gameState.player_grid[0]}, ${gameState.player_grid[1]}]`
+            });
+            
+            // Validation 3: Waypoints are progressing
+            results.push({
+                name: 'Waypoints initialized',
+                pass: gameState.total_waypoints > 0,
+                detail: `Total: ${gameState.total_waypoints}`
+            });
+            
+            // Validation 4: Game is running (frame counter advancing)
+            const lastEntry = consoleHistory[consoleHistory.length - 2];
+            results.push({
+                name: 'Game is running',
+                pass: lastEntry && gameState.frame > lastEntry.data.frame,
+                detail: `Frame: ${gameState.frame}`
+            });
+            
+            // Validation 5: Level completion check
+            results.push({
+                name: 'Level completion state',
+                pass: !gameState.level_complete, // Should not be complete at start
+                detail: gameState.level_complete ? 'Level already complete!' : 'In progress'
+            });
+            
+            displayValidationResults(results);
+        }
+        
+        function displayValidationResults(results) {
+            const container = document.getElementById('validation-content');
+            
+            const allPassed = results.every(r => r.pass);
+            let html = '';
+            
+            results.forEach(result => {
+                const icon = result.pass ? '✅' : '❌';
+                html += `
+                    <div class="validation-item ${result.pass ? 'pass' : 'fail'}">
+                        ${icon} ${result.name}: ${result.detail}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function showValidation(status, message) {
+            const container = document.getElementById('validation-content');
+            container.innerHTML = `<div class="validation-item ${status}">${status === 'fail' ? '❌' : '✅'} ${message}</div>`;
+        }
+        
+        function clearConsole() {
+            document.getElementById('console-content').innerHTML = '<div class="empty-state">Console cleared</div>';
+            consoleHistory = [];
+        }
+        
+        function exportData() {
+            if (consoleHistory.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            const data = {
+                exportTime: new Date().toISOString(),
+                totalEntries: consoleHistory.length,
+                entries: consoleHistory
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dreamcraft-debug-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Add auto-validate checkbox
+        const controls = document.getElementById('controls');
+        const autoValidate = document.createElement('label');
+        autoValidate.style.cssText = 'display: flex; align-items: center; gap: 8px; color: #7cb87c; font-size: 12px; margin-left: 16px;';
+        autoValidate.innerHTML = `
+            <input type="checkbox" id="auto-validate" style="cursor: pointer;">
+            Auto-validate on update
+        `;
+        controls.appendChild(autoValidate);
+        
+        // Initialize
+        connectToGame();
+        
+        // Also listen for console messages from same tab (for testing)
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'DREAMCRAFT_DEBUG') {
+                handleDebugMessage(e.data.payload);
+            }
+        });
+    </script>
+</body>
+</html>
