@@ -61,6 +61,7 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 - [x] Goal marker (gold circle)
 - [x] Border (green)
 - [x] Independent of camera movement (screen-space rendering)
+- [x] Left-click on minimap re-centers main camera to clicked map location
 
 #### Agent Console (React overlay)
 - [ ] Toggle with backtick (`` ` ``) key
@@ -124,6 +125,7 @@ dreamcraft/
 ### Controls
 - **Right-Click**: Move unit to location (A* pathfinding)
 - **WASD/Arrows**: Pan camera
+- **Left-Click Minimap**: Center camera on clicked map position
 - **Backtick (`` ` ``)**: Toggle Agent Console
 
 ### Tech Stack

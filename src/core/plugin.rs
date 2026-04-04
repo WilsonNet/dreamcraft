@@ -7,7 +7,10 @@ use crate::minimap;
 use crate::units::{self};
 use bevy::prelude::*;
 
-use super::{FogWaypoints, GameState, GridConfig, MinimapConfig};
+use super::{
+    FogWaypoints, GameState, GridConfig, MinimapBackground, MinimapCameraViewport,
+    MinimapClickArea, MinimapConfig, MinimapEntity, MinimapSprite, PlayerMinimapMarker,
+};
 
 pub struct DreamCraftPlugin;
 
@@ -22,7 +25,9 @@ impl Plugin for DreamCraftPlugin {
             .register_type::<MinimapEntity>()
             .register_type::<MinimapSprite>()
             .register_type::<MinimapBackground>()
+            .register_type::<MinimapClickArea>()
             .register_type::<PlayerMinimapMarker>()
+            .register_type::<MinimapCameraViewport>()
             .insert_resource(ClearColor(Color::srgb(0.02, 0.04, 0.02)))
             .add_systems(Startup, grid::setup_tutorial_level)
             .add_systems(
@@ -35,6 +40,8 @@ impl Plugin for DreamCraftPlugin {
                     units::read_stdin_commands,
                     units::unit_movement,
                     input::camera_controls,
+                    #[cfg(not(target_arch = "wasm32"))]
+                    minimap::handle_minimap_click,
                     units::check_goal,
                     units::draw_path,
                     grid::update_visibility,
@@ -47,6 +54,7 @@ impl Plugin for DreamCraftPlugin {
                     (
                         minimap::update_native_minimap,
                         minimap::update_minimap_visibility,
+                        minimap::update_camera_viewport_on_minimap,
                     ),
                     units::debug_console_output,
                 ),

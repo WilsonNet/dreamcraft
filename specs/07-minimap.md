@@ -11,6 +11,7 @@ StarCraft: Brood War style minimap — bottom-left corner, always visible.
 - **Update Rate**: Player marker updates every 5 frames
 - **Size**: 200x125 pixels (scaled cells for 80x50 grid)
 - **Position**: Fixed screen-space at `left: 20px, bottom: 30px`
+- **Interaction**: Left-click support via `Interaction` + `RelativeCursorPosition`
 
 ### Why Bevy UI (not React or Camera)
 
@@ -100,6 +101,18 @@ Fog cells are static at spawn. To update fog visibility dynamically:
 
 Current implementation: Cells spawned with initial fog state, updates require system to query and modify `BackgroundColor` components.
 
+### Minimap Click Navigation
+
+System `handle_minimap_click` recenters the main camera when left-clicking inside the minimap area:
+
+- Inner minimap node includes `Interaction`, `RelativeCursorPosition`, and `FocusPolicy::Block`
+- On `MouseButton::Left` press, normalized cursor coordinates are read from minimap
+- Coordinates are mapped to grid:
+  - `x = (normalized.x + 0.5)`
+  - `y = 1.0 - (normalized.y + 0.5)` (invert UI Y)
+- Grid position converts to world space via `grid_to_world`
+- Main camera transform is updated and clamped to map bounds
+
 ## Position
 
 ```
@@ -118,4 +131,4 @@ Current implementation: Cells spawned with initial fog state, updates require sy
 - Independent of camera position
 - Independent of window size (always bottom-left)
 - Rendered on top of game view via Bevy UI camera (order: -1)
-- Does not capture input (no `Interaction` component)
+- Captures left-click on minimap for camera recentering

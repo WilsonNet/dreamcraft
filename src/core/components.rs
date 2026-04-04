@@ -43,10 +43,20 @@ pub struct MinimapSprite;
 #[reflect(Component)]
 pub struct MinimapBackground;
 
+/// Interactive minimap area marker
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub struct MinimapClickArea;
+
 /// Player marker on minimap
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct PlayerMinimapMarker;
+
+/// Camera viewport marker on minimap
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub struct MinimapCameraViewport;
 
 /// Minimap entity marker
 #[derive(Component, Reflect)]
