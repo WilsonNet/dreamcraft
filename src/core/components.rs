@@ -7,7 +7,8 @@ use bevy::prelude::*;
 pub struct PlayerUnit;
 
 /// Marker for enemy units
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub struct EnemyUnit;
 
 /// Marker for selected units

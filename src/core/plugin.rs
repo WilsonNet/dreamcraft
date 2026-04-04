@@ -8,7 +8,7 @@ use crate::units::{self};
 use bevy::prelude::*;
 
 use super::{
-    FogWaypoints, GameState, GridConfig, MinimapBackground, MinimapCameraViewport,
+    EnemyUnit, FogWaypoints, GameState, GridConfig, MinimapBackground, MinimapCameraViewport,
     MinimapClickArea, MinimapConfig, MinimapEntity, MinimapSprite, PlayerMinimapMarker,
 };
 
@@ -28,6 +28,7 @@ impl Plugin for DreamCraftPlugin {
             .register_type::<MinimapClickArea>()
             .register_type::<PlayerMinimapMarker>()
             .register_type::<MinimapCameraViewport>()
+            .register_type::<EnemyUnit>()
             .insert_resource(ClearColor(Color::srgb(0.02, 0.04, 0.02)))
             .add_systems(Startup, grid::setup_tutorial_level)
             .add_systems(
@@ -46,6 +47,7 @@ impl Plugin for DreamCraftPlugin {
                     units::draw_path,
                     grid::update_visibility,
                     grid::update_fog,
+                    units::update_enemy_visibility,
                     units::draw_waypoints,
                     units::check_waypoint_reached,
                     #[cfg(target_arch = "wasm32")]

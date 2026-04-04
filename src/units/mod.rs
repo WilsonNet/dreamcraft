@@ -52,7 +52,7 @@ pub fn spawn_unit(
     if is_player {
         entity.insert((PlayerUnit, Selected));
     } else {
-        entity.insert(EnemyUnit);
+        entity.insert((EnemyUnit, Visibility::Hidden));
     }
 
     entity.with_children(|p| {
@@ -106,6 +106,36 @@ pub fn check_goal(
     for unit in query.iter() {
         if unit.grid_x >= grid.grid_width - 3 {
             state.level_complete = true;
+        }
+    }
+}
+
+/// Update enemy visibility based on player vision radius
+pub fn update_enemy_visibility(
+    player: Query<&Unit, With<PlayerUnit>>,
+    mut enemies: Query<(&Unit, &mut Visibility), With<EnemyUnit>>,
+    visibility_grid: Res<VisibilityGrid>,
+) {
+    let Ok(player_unit) = player.single() else {
+        return;
+    };
+
+    for (enemy_unit, mut visibility) in enemies.iter_mut() {
+        let dx = (enemy_unit.grid_x as i32 - player_unit.grid_x as i32).abs();
+        let dy = (enemy_unit.grid_y as i32 - player_unit.grid_y as i32).abs();
+        let distance_sq = dx * dx + dy * dy;
+        let radius = visibility_grid.view_radius as i32;
+        let in_vision = distance_sq <= radius * radius;
+
+        // Also check if the cell is currently visible (not just explored)
+        let cell_visible = enemy_unit.grid_x < visibility_grid.cells.len()
+            && enemy_unit.grid_y < visibility_grid.cells[0].len()
+            && visibility_grid.cells[enemy_unit.grid_x][enemy_unit.grid_y] == 2;
+
+        if in_vision && cell_visible {
+            *visibility = Visibility::Visible;
+        } else {
+            *visibility = Visibility::Hidden;
         }
     }
 }

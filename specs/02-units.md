@@ -59,6 +59,8 @@ struct Selected;
 
 ## Fog of War Visibility
 
+### Grid States
+
 - **3-state system**:
   - `0 = Unexplored`: Black, never seen
   - `1 = Explored`: Dark, was visible but now out of range
@@ -66,4 +68,18 @@ struct Selected;
 
 - **Vision range**: 6 cell radius (circular)
 
-- **Enemy hidden in fog**: Enemy units only visible when within player's vision range
+### Enemy Visibility (Line of Sight)
+
+Enemies are hidden by default and only become visible when:
+1. Within player's vision radius (6 cells, circular)
+2. The enemy's cell is currently marked as "Visible" (state 2) in the visibility grid
+
+This creates a true Fog of War experience where enemies can hide in unexplored or dark areas.
+
+**Implementation**:
+- System: `update_enemy_visibility` runs in Update schedule
+- Enemy spawns with `Visibility::Hidden`
+- System checks distance between player and enemy using grid coordinates
+- Uses Euclidean distance: `sqrt(dx² + dy²) <= vision_radius`
+- Only shows enemy when both distance AND fog state allow visibility
+- Enemy immediately hidden when player moves out of range
