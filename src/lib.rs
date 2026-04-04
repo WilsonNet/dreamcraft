@@ -44,14 +44,14 @@ impl Plugin for DreamCraftPlugin {
                     #[cfg(target_arch = "wasm32")]
                     broadcast_minimap_data,
                     #[cfg(not(target_arch = "wasm32"))]
-                    update_native_minimap,
-                    #[cfg(not(target_arch = "wasm32"))]
-                    update_minimap_visibility,
+                    (update_native_minimap, update_minimap_visibility),
                     debug_console_output,
                 ),
             );
     }
 }
+
+// ==================== Resources ====================
 
 #[derive(Resource, Default)]
 pub struct GameState {
@@ -85,7 +85,7 @@ pub struct ObstacleGrid {
 
 #[derive(Resource)]
 pub struct VisibilityGrid {
-    pub cells: Vec<Vec<u8>>, // 0=unexplored, 1=explored, 2=visible
+    pub cells: Vec<Vec<u8>>,
     pub view_radius: usize,
 }
 
@@ -102,21 +102,6 @@ impl Default for VisibilityGrid {
 pub struct FogWaypoints {
     pub waypoints: Vec<(usize, usize)>,
     pub current_target: usize,
-}
-
-#[derive(Resource)]
-pub struct MinimapConfig {
-    pub width: f32,
-    pub height: f32,
-}
-
-impl Default for MinimapConfig {
-    fn default() -> Self {
-        Self {
-            width: 200.0,
-            height: 125.0,
-        }
-    }
 }
 
 impl Default for FogWaypoints {
@@ -136,6 +121,23 @@ impl Default for FogWaypoints {
         }
     }
 }
+
+#[derive(Resource)]
+pub struct MinimapConfig {
+    pub width: f32,
+    pub height: f32,
+}
+
+impl Default for MinimapConfig {
+    fn default() -> Self {
+        Self {
+            width: 200.0,
+            height: 125.0,
+        }
+    }
+}
+
+// ==================== Components ====================
 
 #[derive(Component)]
 pub struct Unit {
@@ -180,6 +182,17 @@ pub struct MinimapSprite;
 #[derive(Component)]
 pub struct MinimapCamera;
 
+#[derive(Component)]
+struct MinimapEntity;
+
+#[derive(Component)]
+struct MinimapBackground;
+
+#[derive(Component)]
+struct PlayerMinimapMarker;
+
+// ==================== Constants ====================
+
 const TREE_CLUSTERS: [[(i32, i32); 6]; 30] = [
     [(8, 20), (9, 20), (8, 21), (9, 21), (10, 20), (10, 21)],
     [(15, 10), (16, 10), (15, 11), (16, 11), (0, 0), (0, 0)],
@@ -213,6 +226,8 @@ const TREE_CLUSTERS: [[(i32, i32); 6]; 30] = [
     [(12, 35), (13, 35), (12, 36), (13, 36), (0, 0), (0, 0)],
 ];
 
+// ==================== Startup Systems ====================
+
 fn setup_tutorial_level(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -225,208 +240,275 @@ fn setup_tutorial_level(
 ) {
     let start_x = 2;
     let start_y = grid.grid_height / 2;
-    let start_world_pos = grid_to_world(start_x, start_y, &grid);
+    let start_pos = grid_to_world(start_x, start_y, &grid);
 
-    // Spawn camera first, then spawn minimap as children
-    let camera_entity = commands
+    let camera = spawn_camera(&mut commands, start_pos);
+    initialize_grids(
+        &mut obstacle_grid,
+        &mut visibility_grid,
+        &grid,
+        start_x,
+        start_y,
+    );
+
+    #[cfg(not(target_arch = "wasm32"))]
+    spawn_minimap(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &obstacle_grid,
+        &visibility_grid,
+        &fog_waypoints,
+        &grid,
+        &minimap_config,
+        camera,
+    );
+
+    spawn_ground(&mut commands, &mut meshes, &mut materials, &grid);
+    spawn_fog(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &visibility_grid,
+        &grid,
+    );
+    spawn_waypoints(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &fog_waypoints,
+        &grid,
+    );
+    spawn_trees(&mut commands, &mut meshes, &mut materials, &grid);
+    spawn_goal(&mut commands, &mut meshes, &mut materials, &grid);
+    spawn_player(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        start_x,
+        start_y,
+        &grid,
+    );
+    spawn_enemy(&mut commands, &mut meshes, &mut materials, 50, 25, &grid);
+}
+
+fn spawn_camera(commands: &mut Commands, position: Vec2) -> Entity {
+    commands
         .spawn((
             Camera2d,
             Name::new("MainCamera"),
-            Transform::from_xyz(start_world_pos.x, start_world_pos.y, 100.0),
+            Transform::from_xyz(position.x, position.y, 100.0),
         ))
-        .id();
+        .id()
+}
 
-    obstacle_grid.cells = vec![vec![false; grid.grid_height]; grid.grid_width];
-
-    // Initialize trees in obstacle grid first
+fn initialize_grids(
+    obstacles: &mut ObstacleGrid,
+    visibility: &mut VisibilityGrid,
+    grid: &GridConfig,
+    start_x: usize,
+    start_y: usize,
+) {
+    obstacles.cells = vec![vec![false; grid.grid_height]; grid.grid_width];
     for cluster in TREE_CLUSTERS.iter() {
         for &(gx, gy) in cluster {
             if gx > 0 && gx < grid.grid_width as i32 && gy < grid.grid_height as i32 {
-                let gx = gx as usize;
-                let gy = gy as usize;
-                obstacle_grid.cells[gx][gy] = true;
+                obstacles.cells[gx as usize][gy as usize] = true;
             }
         }
     }
 
-    // Initialize visibility grid: 0=unexplored, 1=explored, 2=visible
-    visibility_grid.cells = vec![vec![0u8; grid.grid_height]; grid.grid_width];
-    visibility_grid.view_radius = 6;
+    visibility.cells = vec![vec![0u8; grid.grid_height]; grid.grid_width];
+    visibility.view_radius = 6;
+    reveal_area(start_x, start_y, visibility, grid);
+}
 
-    let start_x = 2;
-    let start_y = grid.grid_height / 2;
-    reveal_area(start_x, start_y, &mut visibility_grid, &grid);
+#[cfg(not(target_arch = "wasm32"))]
+fn spawn_minimap(
+    commands: &mut Commands,
+    _meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    obstacles: &ObstacleGrid,
+    visibility: &VisibilityGrid,
+    waypoints: &FogWaypoints,
+    grid: &GridConfig,
+    cfg: &MinimapConfig,
+    camera: Entity,
+) {
+    let cell_w = cfg.width / grid.grid_width as f32;
+    let cell_h = cfg.height / grid.grid_height as f32;
 
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        // Spawn minimap UI using Bevy UI for fixed screen positioning
-        // Minimap will be positioned at left: 20px, bottom: 30px (CSS-like)
-        commands
-            .spawn((
+    commands.entity(camera).with_children(|p| {
+        p.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(20.0),
+                bottom: Val::Px(30.0),
+                width: Val::Px(cfg.width),
+                height: Val::Px(cfg.height),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.9)),
+            MinimapEntity,
+            MinimapBackground,
+        ))
+        .with_children(|border| {
+            border.spawn((
                 Node {
                     position_type: PositionType::Absolute,
-                    left: Val::Px(20.0),
-                    bottom: Val::Px(30.0),
-                    width: Val::Px(minimap_config.width),
-                    height: Val::Px(minimap_config.height),
+                    left: Val::Px(-4.0),
+                    right: Val::Px(-4.0),
+                    top: Val::Px(-4.0),
+                    bottom: Val::Px(-4.0),
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.9)),
+                BackgroundColor(Color::srgb(0.3, 0.5, 0.3)),
                 MinimapEntity,
-                MinimapBackground,
-            ))
-            .with_children(|parent| {
-                // Border
-                parent.spawn((
+            ));
+        });
+
+        for gx in 0..grid.grid_width {
+            for gy in 0..grid.grid_height {
+                let color = if obstacles.cells[gx][gy] {
+                    Color::srgba(0.2, 0.6, 0.2, 1.0)
+                } else {
+                    match visibility.cells[gx][gy] {
+                        0 => Color::srgba(0.02, 0.03, 0.02, 1.0),
+                        1 => Color::srgba(0.1, 0.15, 0.1, 1.0),
+                        _ => Color::srgba(0.25, 0.4, 0.25, 1.0),
+                    }
+                };
+
+                p.spawn((
                     Node {
                         position_type: PositionType::Absolute,
-                        left: Val::Px(-4.0),
-                        right: Val::Px(-4.0),
-                        top: Val::Px(-4.0),
-                        bottom: Val::Px(-4.0),
+                        left: Val::Px(gx as f32 * cell_w),
+                        bottom: Val::Px(gy as f32 * cell_h),
+                        width: Val::Px(cell_w.max(1.0)),
+                        height: Val::Px(cell_h.max(1.0)),
                         ..default()
                     },
-                    BackgroundColor(Color::srgb(0.3, 0.5, 0.3)),
-                    MinimapEntity,
-                ));
-
-                // Minimap content grid - spawn individual cell indicators
-                let cell_width = minimap_config.width / grid.grid_width as f32;
-                let cell_height = minimap_config.height / grid.grid_height as f32;
-
-                for gx in 0..grid.grid_width {
-                    for gy in 0..grid.grid_height {
-                        let color = if obstacle_grid.cells[gx][gy] {
-                            Color::srgba(0.2, 0.6, 0.2, 1.0) // Tree
-                        } else if visibility_grid.cells[gx][gy] == 0 {
-                            Color::srgba(0.02, 0.03, 0.02, 1.0) // Unexplored (black)
-                        } else if visibility_grid.cells[gx][gy] == 1 {
-                            Color::srgba(0.1, 0.15, 0.1, 1.0) // Explored but not visible (dark)
-                        } else {
-                            Color::srgba(0.25, 0.4, 0.25, 1.0) // Currently visible (bright)
-                        };
-
-                        parent.spawn((
-                            Node {
-                                position_type: PositionType::Absolute,
-                                left: Val::Px(gx as f32 * cell_width),
-                                bottom: Val::Px(gy as f32 * cell_height),
-                                width: Val::Px(cell_width.max(1.0)),
-                                height: Val::Px(cell_height.max(1.0)),
-                                ..default()
-                            },
-                            BackgroundColor(color),
-                            MinimapEntity,
-                            MinimapSprite,
-                        ));
-                    }
-                }
-
-                // Waypoints
-                for (i, &(wx, wy)) in fog_waypoints.waypoints.iter().enumerate() {
-                    if i > 0 {
-                        let color = if i == fog_waypoints.current_target {
-                            Color::srgba(1.0, 0.9, 0.2, 1.0)
-                        } else {
-                            Color::srgba(0.8, 0.7, 0.1, 0.7)
-                        };
-
-                        parent.spawn((
-                            Node {
-                                position_type: PositionType::Absolute,
-                                left: Val::Px(wx as f32 * cell_width),
-                                bottom: Val::Px(wy as f32 * cell_height),
-                                width: Val::Px(8.0),
-                                height: Val::Px(8.0),
-                                ..default()
-                            },
-                            BackgroundColor(color),
-                            MinimapEntity,
-                            MinimapSprite,
-                        ));
-                    }
-                }
-
-                // Goal marker
-                let goal_x = grid.grid_width - 2;
-                let goal_y = grid.grid_height / 2;
-                parent.spawn((
-                    Node {
-                        position_type: PositionType::Absolute,
-                        left: Val::Px(goal_x as f32 * cell_width),
-                        bottom: Val::Px(goal_y as f32 * cell_height),
-                        width: Val::Px(10.0),
-                        height: Val::Px(10.0),
-                        ..default()
-                    },
-                    BackgroundColor(Color::srgba(0.9, 0.8, 0.2, 1.0)),
+                    BackgroundColor(color),
                     MinimapEntity,
                     MinimapSprite,
                 ));
+            }
+        }
 
-                // Player marker
-                parent.spawn((
+        for (i, &(wx, wy)) in waypoints.waypoints.iter().enumerate() {
+            if i > 0 {
+                let color = if i == waypoints.current_target {
+                    Color::srgba(1.0, 0.9, 0.2, 1.0)
+                } else {
+                    Color::srgba(0.8, 0.7, 0.1, 0.7)
+                };
+                p.spawn((
                     Node {
                         position_type: PositionType::Absolute,
-                        left: Val::Px(2.0 * cell_width),
-                        bottom: Val::Px((grid.grid_height / 2) as f32 * cell_height),
-                        width: Val::Px(12.0),
-                        height: Val::Px(12.0),
+                        left: Val::Px(wx as f32 * cell_w),
+                        bottom: Val::Px(wy as f32 * cell_h),
+                        width: Val::Px(8.0),
+                        height: Val::Px(8.0),
                         ..default()
                     },
-                    BackgroundColor(Color::srgb(0.3, 0.6, 0.9)),
+                    BackgroundColor(color),
                     MinimapEntity,
-                    PlayerMinimapMarker,
+                    MinimapSprite,
                 ));
-            });
-    }
+            }
+        }
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        // Minimap is rendered as HTML canvas overlay (see index.html)
-    }
+        p.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px((grid.grid_width - 2) as f32 * cell_w),
+                bottom: Val::Px((grid.grid_height / 2) as f32 * cell_h),
+                width: Val::Px(10.0),
+                height: Val::Px(10.0),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.9, 0.8, 0.2, 1.0)),
+            MinimapEntity,
+            MinimapSprite,
+        ));
 
-    let ground_color = materials.add(Color::srgb(0.12, 0.2, 0.12));
+        p.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(2.0 * cell_w),
+                bottom: Val::Px((grid.grid_height / 2) as f32 * cell_h),
+                width: Val::Px(12.0),
+                height: Val::Px(12.0),
+                ..default()
+            },
+            BackgroundColor(Color::srgb(0.3, 0.6, 0.9)),
+            MinimapEntity,
+            PlayerMinimapMarker,
+        ));
+    });
+}
+
+fn spawn_ground(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    grid: &GridConfig,
+) {
     let ground = meshes.add(Rectangle::new(
         grid.cell_size * grid.grid_width as f32,
         grid.cell_size * grid.grid_height as f32,
     ));
     commands.spawn((
         Mesh2d(ground),
-        MeshMaterial2d(ground_color),
+        MeshMaterial2d(materials.add(Color::srgb(0.12, 0.2, 0.12))),
         Transform::from_xyz(0.0, 0.0, -2.0),
     ));
+}
 
-    let fog_color = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.95));
+fn spawn_fog(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    visibility: &VisibilityGrid,
+    grid: &GridConfig,
+) {
     let fog_mesh = meshes.add(Rectangle::new(grid.cell_size, grid.cell_size));
+    let fog_color = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.95));
 
     for gx in 0..grid.grid_width {
         for gy in 0..grid.grid_height {
-            if visibility_grid.cells[gx][gy] == 0 {
-                let world_pos = grid_to_world(gx, gy, &grid);
+            if visibility.cells[gx][gy] == 0 {
+                let pos = grid_to_world(gx, gy, grid);
                 commands.spawn((
                     Mesh2d(fog_mesh.clone()),
                     MeshMaterial2d(fog_color.clone()),
-                    Transform::from_xyz(world_pos.x, world_pos.y, 10.0),
+                    Transform::from_xyz(pos.x, pos.y, 10.0),
                     FogCell,
                 ));
             }
         }
     }
+}
 
-    for (i, &(wp_x, wp_y)) in fog_waypoints.waypoints.iter().enumerate() {
+fn spawn_waypoints(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    waypoints: &FogWaypoints,
+    grid: &GridConfig,
+) {
+    for (i, &(wx, wy)) in waypoints.waypoints.iter().enumerate() {
         if i > 0 {
-            let world_pos = grid_to_world(wp_x, wp_y, &grid);
-            let waypoint_color = if i == fog_waypoints.current_target {
+            let pos = grid_to_world(wx, wy, grid);
+            let color = if i == waypoints.current_target {
                 materials.add(Color::srgba(1.0, 0.85, 0.2, 0.9))
             } else {
                 materials.add(Color::srgba(0.6, 0.5, 0.1, 0.4))
             };
-            let waypoint_mesh = meshes.add(Circle::new(18.0));
             commands.spawn((
-                Mesh2d(waypoint_mesh),
-                MeshMaterial2d(waypoint_color),
-                Transform::from_xyz(world_pos.x, world_pos.y, 3.0),
+                Mesh2d(meshes.add(Circle::new(18.0))),
+                MeshMaterial2d(color),
+                Transform::from_xyz(pos.x, pos.y, 3.0),
                 WaypointMarker {
                     index: i,
                     reached: false,
@@ -434,78 +516,102 @@ fn setup_tutorial_level(
             ));
         }
     }
+}
 
-    let tree_trunk_color = materials.add(Color::srgb(0.4, 0.25, 0.1));
-    let tree_leaves_color = materials.add(Color::srgb(0.1, 0.5, 0.2));
+fn spawn_trees(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    grid: &GridConfig,
+) {
     let trunk_mesh = meshes.add(Rectangle::new(12.0, 20.0));
     let leaves_mesh = meshes.add(Circle::new(18.0));
+    let trunk_mat = materials.add(Color::srgb(0.4, 0.25, 0.1));
+    let leaves_mat = materials.add(Color::srgb(0.1, 0.5, 0.2));
 
     for cluster in TREE_CLUSTERS.iter() {
         for &(gx, gy) in cluster {
             if gx > 0 && gx < grid.grid_width as i32 && gy < grid.grid_height as i32 {
-                let gx = gx as usize;
-                let gy = gy as usize;
-
-                let world_pos = grid_to_world(gx, gy, &grid);
-
+                let pos = grid_to_world(gx as usize, gy as usize, grid);
                 commands.spawn((
                     Mesh2d(trunk_mesh.clone()),
-                    MeshMaterial2d(tree_trunk_color.clone()),
-                    Transform::from_xyz(world_pos.x, world_pos.y - 5.0, 1.0),
+                    MeshMaterial2d(trunk_mat.clone()),
+                    Transform::from_xyz(pos.x, pos.y - 5.0, 1.0),
                     Tree,
                 ));
-
                 commands.spawn((
                     Mesh2d(leaves_mesh.clone()),
-                    MeshMaterial2d(tree_leaves_color.clone()),
-                    Transform::from_xyz(world_pos.x, world_pos.y + 10.0, 2.0),
+                    MeshMaterial2d(leaves_mat.clone()),
+                    Transform::from_xyz(pos.x, pos.y + 10.0, 2.0),
                     Tree,
                 ));
             }
         }
     }
+}
 
-    let goal_color = materials.add(Color::srgb(0.9, 0.8, 0.2));
-    let goal_mesh = meshes.add(Rectangle::new(
+fn spawn_goal(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    grid: &GridConfig,
+) {
+    let goal = meshes.add(Rectangle::new(
         grid.cell_size * 3.0,
         grid.cell_size * grid.grid_height as f32,
     ));
-    let goal_x = grid_to_world(grid.grid_width - 2, grid.grid_height / 2, &grid).x;
+    let pos_x = grid_to_world(grid.grid_width - 2, grid.grid_height / 2, grid).x;
     commands.spawn((
-        Mesh2d(goal_mesh),
-        MeshMaterial2d(goal_color),
-        Transform::from_xyz(goal_x, 0.0, 0.0),
+        Mesh2d(goal),
+        MeshMaterial2d(materials.add(Color::srgb(0.9, 0.8, 0.2))),
+        Transform::from_xyz(pos_x, 0.0, 0.0),
         GoalZone,
     ));
+}
 
+fn spawn_player(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    grid_x: usize,
+    grid_y: usize,
+    grid: &GridConfig,
+) {
     spawn_unit(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        start_x,
-        start_y,
+        commands,
+        meshes,
+        materials,
+        grid_x,
+        grid_y,
         150.0,
         Color::srgb(0.3, 0.6, 0.9),
-        PlayerUnit,
         true,
-        &grid,
-    );
-
-    spawn_unit(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        50,
-        25,
-        80.0,
-        Color::srgb(0.9, 0.3, 0.3),
-        EnemyUnit,
-        false,
-        &grid,
+        grid,
     );
 }
 
-fn spawn_unit<T: Component>(
+fn spawn_enemy(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    grid_x: usize,
+    grid_y: usize,
+    grid: &GridConfig,
+) {
+    spawn_unit(
+        commands,
+        meshes,
+        materials,
+        grid_x,
+        grid_y,
+        80.0,
+        Color::srgb(0.9, 0.3, 0.3),
+        false,
+        grid,
+    );
+}
+
+fn spawn_unit(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
@@ -513,17 +619,14 @@ fn spawn_unit<T: Component>(
     grid_y: usize,
     speed: f32,
     color: Color,
-    unit_type: T,
     is_player: bool,
     grid: &GridConfig,
 ) {
-    let world_pos = grid_to_world(grid_x, grid_y, &grid);
-    let mesh = meshes.add(Circle::new(12.0));
-
+    let pos = grid_to_world(grid_x, grid_y, grid);
     let mut entity = commands.spawn((
-        Mesh2d(mesh),
+        Mesh2d(meshes.add(Circle::new(12.0))),
         MeshMaterial2d(materials.add(color)),
-        Transform::from_xyz(world_pos.x, world_pos.y, 5.0),
+        Transform::from_xyz(pos.x, pos.y, 5.0),
         Unit {
             speed,
             grid_x,
@@ -533,15 +636,16 @@ fn spawn_unit<T: Component>(
             path: Vec::new(),
             path_index: 0,
         },
-        unit_type,
     ));
 
     if is_player {
-        entity.insert(Selected);
+        entity.insert((PlayerUnit, Selected));
+    } else {
+        entity.insert(EnemyUnit);
     }
 
-    entity.with_children(|parent| {
-        parent.spawn((
+    entity.with_children(|p| {
+        p.spawn((
             Text2d::new("M"),
             TextFont {
                 font_size: 18.0,
@@ -553,18 +657,17 @@ fn spawn_unit<T: Component>(
     });
 }
 
+// ==================== Visibility Systems ====================
+
 fn reveal_area(cx: usize, cy: usize, visibility: &mut VisibilityGrid, grid: &GridConfig) {
     let r = visibility.view_radius as i32;
-    let cx = cx as i32;
-    let cy = cy as i32;
     for dx in -r..=r {
         for dy in -r..=r {
             if dx * dx + dy * dy <= r * r {
-                let nx = cx + dx;
-                let ny = cy + dy;
+                let nx = cx as i32 + dx;
+                let ny = cy as i32 + dy;
                 if nx >= 0 && nx < grid.grid_width as i32 && ny >= 0 && ny < grid.grid_height as i32
                 {
-                    // Mark as visible (2), which also means explored
                     visibility.cells[nx as usize][ny as usize] = 2;
                 }
             }
@@ -572,7 +675,6 @@ fn reveal_area(cx: usize, cy: usize, visibility: &mut VisibilityGrid, grid: &Gri
     }
 }
 
-// Clear visibility - set all visible (2) cells back to explored (1)
 fn clear_visibility(visibility: &mut VisibilityGrid) {
     for row in visibility.cells.iter_mut() {
         for cell in row.iter_mut() {
@@ -583,22 +685,620 @@ fn clear_visibility(visibility: &mut VisibilityGrid) {
     }
 }
 
-pub fn grid_to_world(gx: usize, gy: usize, grid: &GridConfig) -> Vec2 {
-    Vec2::new(
-        grid.offset.x + (gx as f32 + 0.5) * grid.cell_size,
-        grid.offset.y + (gy as f32 + 0.5) * grid.cell_size,
-    )
+fn update_visibility(
+    query: Query<&Unit, With<PlayerUnit>>,
+    mut visibility: ResMut<VisibilityGrid>,
+    grid: Res<GridConfig>,
+) {
+    for unit in query.iter() {
+        clear_visibility(&mut visibility);
+        reveal_area(unit.grid_x, unit.grid_y, &mut visibility, &grid);
+    }
 }
 
-fn world_to_grid(world_pos: Vec2, grid: &GridConfig) -> (usize, usize) {
-    let gx = ((world_pos.x - grid.offset.x) / grid.cell_size).floor() as i32;
-    let gy = ((world_pos.y - grid.offset.y) / grid.cell_size).floor() as i32;
+fn update_fog(
+    visibility: Res<VisibilityGrid>,
+    grid: Res<GridConfig>,
+    mut query: Query<(&mut MeshMaterial2d<ColorMaterial>, &Transform), With<FogCell>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    if !visibility.is_changed() {
+        return;
+    }
 
-    let gx = gx.clamp(0, grid.grid_width as i32 - 1) as usize;
-    let gy = gy.clamp(0, grid.grid_height as i32 - 1) as usize;
+    let visible = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.0));
+    let explored = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.5));
+    let unexplored = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.95));
 
-    (gx, gy)
+    for (mut mat, transform) in query.iter_mut() {
+        let (gx, gy) = world_to_grid(transform.translation.truncate(), &grid);
+        mat.0 = match visibility.cells[gx][gy] {
+            0 => unexplored.clone(),
+            1 => explored.clone(),
+            _ => visible.clone(),
+        };
+    }
 }
+
+// ==================== Input & Movement Systems ====================
+
+fn handle_input(
+    mouse: Res<ButtonInput<MouseButton>>,
+    window: Single<&Window>,
+    camera: Single<(&Camera, &GlobalTransform)>,
+    grid: Res<GridConfig>,
+    obstacles: Res<ObstacleGrid>,
+    mut query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
+) {
+    let (cam, cam_transform) = *camera;
+    if let Some(cursor) = window.cursor_position() {
+        if let Ok(world) = cam.viewport_to_world_2d(cam_transform, cursor) {
+            let (gx, gy) = world_to_grid(world, &grid);
+            if mouse.just_pressed(MouseButton::Right) {
+                for (unit, mut target) in query.iter_mut() {
+                    let path = find_path(
+                        (unit.grid_x, unit.grid_y),
+                        (gx, gy),
+                        &obstacles.cells,
+                        grid.grid_width,
+                        grid.grid_height,
+                    );
+                    if !path.is_empty() {
+                        target.path = path;
+                        target.path_index = 0;
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn unit_movement(
+    mut query: Query<(&mut Unit, &mut Target, &mut Transform), With<PlayerUnit>>,
+    grid: Res<GridConfig>,
+    time: Res<Time>,
+) {
+    for (mut unit, mut target, mut transform) in query.iter_mut() {
+        if target.path_index < target.path.len() {
+            let (nx, ny) = target.path[target.path_index];
+            let target_pos = grid_to_world(nx, ny, &grid);
+            let dir = target_pos - transform.translation.truncate();
+            let dist = dir.length();
+
+            if dist < 5.0 {
+                unit.grid_x = nx;
+                unit.grid_y = ny;
+                target.path_index += 1;
+            } else {
+                let vel = dir.normalize() * unit.speed * time.delta_secs();
+                transform.translation.x += vel.x;
+                transform.translation.y += vel.y;
+            }
+        }
+    }
+}
+
+fn camera_controls(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut query: Query<&mut Transform, (With<Camera2d>, Without<MinimapCamera>)>,
+    time: Res<Time>,
+    grid: Res<GridConfig>,
+) {
+    if let Ok(mut t) = query.single_mut() {
+        let speed = 400.0;
+        let mut vel = Vec3::ZERO;
+        if keys.pressed(KeyCode::KeyW) || keys.pressed(KeyCode::ArrowUp) {
+            vel.y += speed;
+        }
+        if keys.pressed(KeyCode::KeyS) || keys.pressed(KeyCode::ArrowDown) {
+            vel.y -= speed;
+        }
+        if keys.pressed(KeyCode::KeyA) || keys.pressed(KeyCode::ArrowLeft) {
+            vel.x -= speed;
+        }
+        if keys.pressed(KeyCode::KeyD) || keys.pressed(KeyCode::ArrowRight) {
+            vel.x += speed;
+        }
+        t.translation += vel * time.delta_secs();
+
+        let hw = grid.cell_size * grid.grid_width as f32 / 2.0 + 200.0;
+        let hh = grid.cell_size * grid.grid_height as f32 / 2.0 + 200.0;
+        t.translation.x = t.translation.x.clamp(-hw, hw);
+        t.translation.y = t.translation.y.clamp(-hh, hh);
+    }
+}
+
+// ==================== Game Logic Systems ====================
+
+fn check_goal(
+    query: Query<&Unit, With<PlayerUnit>>,
+    grid: Res<GridConfig>,
+    mut state: ResMut<GameState>,
+) {
+    if state.level_complete {
+        return;
+    }
+    for unit in query.iter() {
+        if unit.grid_x >= grid.grid_width - 3 {
+            state.level_complete = true;
+        }
+    }
+}
+
+fn draw_path(query: Query<&Target, With<PlayerUnit>>, grid: Res<GridConfig>, mut gizmos: Gizmos) {
+    for target in query.iter() {
+        if target.path.is_empty() {
+            continue;
+        }
+        let mut prev: Option<Vec2> = None;
+        for (i, &(gx, gy)) in target.path.iter().enumerate() {
+            if i < target.path_index {
+                continue;
+            }
+            let pos = grid_to_world(gx, gy, &grid);
+            if i == target.path_index {
+                gizmos.circle_2d(pos, 8.0, Color::srgb(0.3, 0.8, 1.0));
+            } else if i < target.path_index + 10 {
+                let a = 1.0 - (i - target.path_index) as f32 * 0.08;
+                gizmos.circle_2d(pos, 5.0, Color::srgba(0.6, 0.9, 0.6, a));
+            }
+            if let Some(p) = prev {
+                gizmos.line_2d(p, pos, Color::srgba(0.4, 0.8, 0.4, 0.3));
+            }
+            prev = Some(pos);
+        }
+    }
+}
+
+fn draw_waypoints(
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    waypoints: Res<FogWaypoints>,
+    mut query: Query<(&mut WaypointMarker, &mut MeshMaterial2d<ColorMaterial>)>,
+) {
+    for (marker, mut mat) in query.iter_mut() {
+        let color = if marker.reached {
+            Color::srgba(0.3, 0.8, 0.3, 0.3)
+        } else if marker.index == waypoints.current_target {
+            Color::srgba(1.0, 0.9, 0.3, 0.9)
+        } else {
+            Color::srgba(0.6, 0.5, 0.1, 0.3)
+        };
+        mat.0 = materials.add(color);
+    }
+}
+
+fn check_waypoint_reached(
+    query: Query<&Unit, With<PlayerUnit>>,
+    mut waypoints: ResMut<FogWaypoints>,
+    mut marker_query: Query<&mut WaypointMarker>,
+    grid: Res<GridConfig>,
+    mut visibility: ResMut<VisibilityGrid>,
+) {
+    if waypoints.current_target >= waypoints.waypoints.len() {
+        return;
+    }
+    let (tx, ty) = waypoints.waypoints[waypoints.current_target];
+
+    for unit in query.iter() {
+        let dist = ((unit.grid_x as i32 - tx as i32).abs() + (unit.grid_y as i32 - ty as i32).abs())
+            as usize;
+        if dist <= 3 {
+            let next = waypoints.current_target + 1;
+            if next < waypoints.waypoints.len() {
+                waypoints.current_target = next;
+                let (rx, ry) = waypoints.waypoints[next];
+                for dx in -10..=10 {
+                    for dy in -10..=10 {
+                        if dx * dx + dy * dy <= 100 {
+                            let nx = rx as i32 + dx;
+                            let ny = ry as i32 + dy;
+                            if nx >= 0
+                                && nx < grid.grid_width as i32
+                                && ny >= 0
+                                && ny < grid.grid_height as i32
+                            {
+                                visibility.cells[nx as usize][ny as usize] = 2;
+                            }
+                        }
+                    }
+                }
+                for mut m in marker_query.iter_mut() {
+                    if m.index == next - 1 {
+                        m.reached = true;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== Minimap Update Systems ====================
+
+#[cfg(not(target_arch = "wasm32"))]
+fn update_native_minimap(
+    grid: Res<GridConfig>,
+    player: Query<&Unit, With<PlayerUnit>>,
+    mut marker: Query<&mut Node, With<PlayerMinimapMarker>>,
+    cfg: Res<MinimapConfig>,
+    mut frame: Local<u64>,
+) {
+    *frame += 1;
+    if *frame % 5 != 0 {
+        return;
+    }
+    let unit = player.single().unwrap();
+    let cw = cfg.width / grid.grid_width as f32;
+    let ch = cfg.height / grid.grid_height as f32;
+
+    for mut node in marker.iter_mut() {
+        node.left = Val::Px(unit.grid_x as f32 * cw);
+        node.bottom = Val::Px(unit.grid_y as f32 * ch);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn update_minimap_visibility(
+    visibility: Res<VisibilityGrid>,
+    obstacles: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+    cfg: Res<MinimapConfig>,
+    mut query: Query<
+        (&mut BackgroundColor, &Node),
+        (With<MinimapSprite>, Without<PlayerMinimapMarker>),
+    >,
+    mut frame: Local<u64>,
+) {
+    if !visibility.is_changed() {
+        return;
+    }
+    *frame += 1;
+    if *frame % 10 != 0 {
+        return;
+    }
+
+    let cw = cfg.width / grid.grid_width as f32;
+    let ch = cfg.height / grid.grid_height as f32;
+
+    for (mut bg, node) in query.iter_mut() {
+        let gx = match node.left {
+            Val::Px(x) => (x / cw).round() as usize,
+            _ => continue,
+        };
+        let gy = match node.bottom {
+            Val::Px(y) => (y / ch).round() as usize,
+            _ => continue,
+        };
+        if gx >= grid.grid_width || gy >= grid.grid_height {
+            continue;
+        }
+
+        let color = if obstacles.cells[gx][gy] {
+            Color::srgba(0.2, 0.6, 0.2, 1.0)
+        } else {
+            match visibility.cells[gx][gy] {
+                0 => Color::srgba(0.02, 0.03, 0.02, 1.0),
+                1 => Color::srgba(0.1, 0.15, 0.1, 1.0),
+                _ => Color::srgba(0.25, 0.4, 0.25, 1.0),
+            }
+        };
+        *bg = BackgroundColor(color);
+    }
+}
+
+// ==================== Debug & Console Systems ====================
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DebugState {
+    frame: u64,
+    camera_pos: [f32; 2],
+    player_pos: [f32; 2],
+    player_grid: [usize; 2],
+    current_waypoint: usize,
+    total_waypoints: usize,
+    waypoints: Vec<(usize, usize)>,
+    level_complete: bool,
+    is_selected: bool,
+    has_target: bool,
+    path_length: usize,
+    revealed_cells: usize,
+    total_cells: usize,
+    fog_coverage_pct: f32,
+    obstacle_count: usize,
+    grid_width: usize,
+    grid_height: usize,
+    player_visible: bool,
+    player_in_fog: bool,
+    camera_distance: f32,
+    warnings: Vec<String>,
+}
+
+fn debug_console_output(
+    camera: Query<&Transform, (With<Camera2d>, Without<MinimapCamera>)>,
+    player: Query<(&Unit, &Transform, &Target, Option<&Selected>), With<PlayerUnit>>,
+    waypoints: Res<FogWaypoints>,
+    state: Res<GameState>,
+    visibility: Res<VisibilityGrid>,
+    obstacles: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+    mut frame: Local<u64>,
+) {
+    *frame += 1;
+    if *frame % 30 != 0 {
+        return;
+    }
+
+    let cam_pos = camera
+        .single()
+        .map(|t| t.translation.truncate())
+        .unwrap_or(Vec2::ZERO);
+    let (unit, transform, target, selected) = player.single().unwrap();
+
+    let total = grid.grid_width * grid.grid_height;
+    let revealed = visibility
+        .cells
+        .iter()
+        .flat_map(|c| c.iter())
+        .filter(|&&v| v >= 1)
+        .count();
+    let obs = obstacles
+        .cells
+        .iter()
+        .flat_map(|c| c.iter())
+        .filter(|&&v| v)
+        .count();
+
+    let dist = ((cam_pos.x - transform.translation.x).powi(2)
+        + (cam_pos.y - transform.translation.y).powi(2))
+    .sqrt();
+    let in_fog = unit.grid_x < grid.grid_width
+        && unit.grid_y < grid.grid_height
+        && visibility.cells[unit.grid_x][unit.grid_y] != 2;
+    let visible = (transform.translation.x - cam_pos.x).abs() < 640.0
+        && (transform.translation.y - cam_pos.y).abs() < 360.0
+        && !in_fog;
+
+    let mut warnings = Vec::new();
+    if !visible {
+        warnings.push("Player not visible!".into());
+    }
+    if in_fog {
+        warnings.push("Player in fog!".into());
+    }
+    if dist > 800.0 {
+        warnings.push(format!("Camera far from player ({:.0}px)", dist));
+    }
+    if selected.is_none() {
+        warnings.push("Player not selected!".into());
+    }
+
+    let debug = DebugState {
+        frame: *frame,
+        camera_pos: [cam_pos.x, cam_pos.y],
+        player_pos: [transform.translation.x, transform.translation.y],
+        player_grid: [unit.grid_x, unit.grid_y],
+        current_waypoint: waypoints.current_target,
+        total_waypoints: waypoints.waypoints.len(),
+        waypoints: waypoints.waypoints.clone(),
+        level_complete: state.level_complete,
+        is_selected: selected.is_some(),
+        has_target: !target.path.is_empty() && target.path_index < target.path.len(),
+        path_length: target.path.len().saturating_sub(target.path_index),
+        revealed_cells: revealed,
+        total_cells: total,
+        fog_coverage_pct: ((total - revealed) as f32 / total as f32) * 100.0,
+        obstacle_count: obs,
+        grid_width: grid.grid_width,
+        grid_height: grid.grid_height,
+        player_visible: visible,
+        player_in_fog: in_fog,
+        camera_distance: dist,
+        warnings,
+    };
+
+    broadcast_debug_state(&serde_json::to_string(&debug).unwrap_or_default());
+}
+
+#[cfg(target_arch = "wasm32")]
+fn broadcast_debug_state(json: &str) {
+    setItem("dreamcraft_debug_state", json);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn broadcast_debug_state(_json: &str) {}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = localStorage)]
+    fn setItem(key: &str, value: &str);
+    #[wasm_bindgen(js_namespace = localStorage)]
+    fn getItem(key: &str) -> Option<String>;
+    #[wasm_bindgen(js_namespace = localStorage)]
+    fn removeItem(key: &str);
+}
+
+#[derive(Deserialize, Debug)]
+struct ConsoleCommand {
+    cmd: String,
+    x: Option<usize>,
+    y: Option<usize>,
+    verify: Option<VerifyCommand>,
+}
+
+#[derive(Deserialize, Debug)]
+struct VerifyCommand {
+    #[serde(rename = "type")]
+    verify_type: String,
+    x: Option<usize>,
+    y: Option<usize>,
+}
+
+#[cfg(target_arch = "wasm32")]
+fn read_console_commands(
+    mut query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
+    obstacles: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+    state: Res<GameState>,
+) {
+    let cmd_str = match getItem("dreamcraft_command") {
+        Some(s) if !s.is_empty() => s,
+        _ => return,
+    };
+    removeItem("dreamcraft_command");
+
+    if let Ok(cmd) = serde_json::from_str(&cmd_str) {
+        let result = handle_headless_command(&mut query, &obstacles, &grid, &state, cmd);
+        setItem("dreamcraft_command_result", &result.to_string());
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn read_stdin_commands(
+    mut query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
+    obstacles: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+    state: Res<GameState>,
+    mut frame: Local<u64>,
+) {
+    *frame += 1;
+    if *frame % 30 != 0 {
+        return;
+    }
+
+    let path = std::path::Path::new("headless_command.json");
+    if !path.exists() {
+        return;
+    }
+
+    if let Ok(buffer) = std::fs::read_to_string(path) {
+        let _ = std::fs::remove_file(path);
+        if let Ok(cmd) = serde_json::from_str(&buffer) {
+            let result = handle_headless_command(&mut query, &obstacles, &grid, &state, cmd);
+            let _ = std::fs::write("headless_result.json", result.to_string());
+            println!("RESULT: {}", result);
+        }
+    }
+}
+
+fn handle_headless_command(
+    query: &mut Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
+    obstacles: &ObstacleGrid,
+    grid: &GridConfig,
+    state: &GameState,
+    cmd: ConsoleCommand,
+) -> serde_json::Value {
+    match cmd.cmd.as_str() {
+        "goto" => {
+            let (x, y) = (cmd.x.unwrap_or(0), cmd.y.unwrap_or(0));
+            for (unit, mut target) in query.iter_mut() {
+                let path = find_path(
+                    (unit.grid_x, unit.grid_y),
+                    (x, y),
+                    &obstacles.cells,
+                    grid.grid_width,
+                    grid.grid_height,
+                );
+                if !path.is_empty() {
+                    target.path = path;
+                    target.path_index = 0;
+                    return serde_json::json!({"ok": true, "msg": format!("Moving to ({},{})", x, y)});
+                }
+            }
+            serde_json::json!({"ok": false, "msg": "No path found"})
+        }
+        "status" => {
+            let (unit, _) = query.single().unwrap();
+            serde_json::json!({
+                "ok": true,
+                "msg": format!("Player at ({}, {})", unit.grid_x, unit.grid_y),
+                "player_grid": [unit.grid_x, unit.grid_y]
+            })
+        }
+        "verify" => {
+            if let Some(v) = cmd.verify {
+                match v.verify_type.as_str() {
+                    "player_at" => {
+                        let (unit, _) = query.single().unwrap();
+                        let (vx, vy) = (v.x.unwrap_or(0), v.y.unwrap_or(0));
+                        let ok = unit.grid_x == vx && unit.grid_y == vy;
+                        let msg = if ok {
+                            "Player at expected position".into()
+                        } else {
+                            format!(
+                                "Player at ({}, {}), expected ({}, {})",
+                                unit.grid_x, unit.grid_y, vx, vy
+                            )
+                        };
+                        serde_json::json!({"ok": ok, "msg": msg})
+                    }
+                    "level_complete" => serde_json::json!({
+                        "ok": state.level_complete,
+                        "msg": if state.level_complete { "Level complete" } else { "Level not complete" }
+                    }),
+                    _ => serde_json::json!({"ok": false, "msg": "Unknown verify type"}),
+                }
+            } else {
+                serde_json::json!({"ok": false, "msg": "No verify spec"})
+            }
+        }
+        _ => serde_json::json!({"ok": false, "msg": format!("Unknown command: {}", cmd.cmd)}),
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn broadcast_minimap_data(
+    visibility: Res<VisibilityGrid>,
+    obstacles: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+    player: Query<&Unit, With<PlayerUnit>>,
+    waypoints: Res<FogWaypoints>,
+    mut frame: Local<u64>,
+) {
+    *frame += 1;
+    if *frame % 30 != 0 {
+        return;
+    }
+    let unit = player.single().unwrap();
+
+    let mut map = String::with_capacity(grid.grid_width * grid.grid_height + grid.grid_height);
+    for gy in 0..grid.grid_height {
+        for gx in 0..grid.grid_width {
+            let ch = if gx == unit.grid_x && gy == unit.grid_y {
+                'P'
+            } else if waypoints
+                .waypoints
+                .get(waypoints.current_target)
+                .map_or(false, |&(wx, wy)| gx == wx && gy == wy)
+            {
+                'W'
+            } else if waypoints
+                .waypoints
+                .iter()
+                .any(|&(wx, wy)| gx == wx && gy == wy)
+            {
+                'w'
+            } else if visibility.cells[gx][gy] == 0 {
+                '.'
+            } else if obstacles.cells[gx][gy] {
+                '#'
+            } else {
+                ' '
+            };
+            map.push(ch);
+        }
+        map.push('\n');
+    }
+
+    setItem("dreamcraft_minimap", &map);
+    let meta = serde_json::json!({
+        "width": grid.grid_width,
+        "height": grid.grid_height,
+        "player": [unit.grid_x, unit.grid_y],
+    });
+    setItem("dreamcraft_minimap_meta", &meta.to_string());
+}
+
+// ==================== Pathfinding ====================
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 struct AStarNode {
@@ -635,26 +1335,25 @@ pub fn find_path(
         return Vec::new();
     }
 
-    let mut open_set = BinaryHeap::new();
+    let mut open = BinaryHeap::new();
     let mut came_from = vec![vec![None; height]; width];
     let mut g_score = vec![vec![u32::MAX; height]; width];
     let mut closed = vec![vec![false; height]; width];
 
     g_score[start.0][start.1] = 0;
-
     let h =
         ((goal.0 as i32 - start.0 as i32).abs() + (goal.1 as i32 - start.1 as i32).abs()) as u32;
-    open_set.push(AStarNode {
+    open.push(AStarNode {
         x: start.0,
         y: start.1,
         f: h,
         g: 0,
     });
 
-    let directions: [(i32, i32); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+    let dirs: [(i32, i32); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
 
-    while let Some(current) = open_set.pop() {
-        if current.x == goal.0 && current.y == goal.1 {
+    while let Some(cur) = open.pop() {
+        if cur.x == goal.0 && cur.y == goal.1 {
             let mut path = vec![goal];
             let mut pos = goal;
             while let Some(prev) = came_from[pos.0][pos.1] {
@@ -665,771 +1364,55 @@ pub fn find_path(
             return path;
         }
 
-        if closed[current.x][current.y] {
+        if closed[cur.x][cur.y] {
             continue;
         }
-        closed[current.x][current.y] = true;
+        closed[cur.x][cur.y] = true;
 
-        for (dx, dy) in directions {
-            let nx = current.x as i32 + dx;
-            let ny = current.y as i32 + dy;
-
+        for (dx, dy) in dirs {
+            let nx = cur.x as i32 + dx;
+            let ny = cur.y as i32 + dy;
             if nx < 0 || nx >= width as i32 || ny < 0 || ny >= height as i32 {
                 continue;
             }
-
-            let nx = nx as usize;
-            let ny = ny as usize;
-
+            let (nx, ny) = (nx as usize, ny as usize);
             if obstacles[nx][ny] || closed[nx][ny] {
                 continue;
             }
 
-            let tentative_g = current.g + 1;
-
-            if tentative_g < g_score[nx][ny] {
-                came_from[nx][ny] = Some((current.x, current.y));
-                g_score[nx][ny] = tentative_g;
-
+            let tentative = cur.g + 1;
+            if tentative < g_score[nx][ny] {
+                came_from[nx][ny] = Some((cur.x, cur.y));
+                g_score[nx][ny] = tentative;
                 let h =
                     ((goal.0 as i32 - nx as i32).abs() + (goal.1 as i32 - ny as i32).abs()) as u32;
-                open_set.push(AStarNode {
+                open.push(AStarNode {
                     x: nx,
                     y: ny,
-                    f: tentative_g + h,
-                    g: tentative_g,
+                    f: tentative + h,
+                    g: tentative,
                 });
             }
         }
     }
-
     Vec::new()
 }
 
-fn handle_input(
-    mouse: Res<ButtonInput<MouseButton>>,
-    window: Single<&Window>,
-    camera: Single<(&Camera, &GlobalTransform)>,
-    grid: Res<GridConfig>,
-    obstacle_grid: Res<ObstacleGrid>,
-    mut query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
-) {
-    let (camera, camera_transform) = *camera;
-
-    if let Some(cursor_pos) = window.cursor_position() {
-        if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) {
-            let (click_gx, click_gy) = world_to_grid(world_pos, &grid);
-
-            if mouse.just_pressed(MouseButton::Right) {
-                for (unit, mut target) in query.iter_mut() {
-                    let path = find_path(
-                        (unit.grid_x, unit.grid_y),
-                        (click_gx, click_gy),
-                        &obstacle_grid.cells,
-                        grid.grid_width,
-                        grid.grid_height,
-                    );
-
-                    if !path.is_empty() {
-                        target.path = path;
-                        target.path_index = 0;
-                    }
-                }
-            }
-        }
-    }
+pub fn grid_to_world(gx: usize, gy: usize, grid: &GridConfig) -> Vec2 {
+    Vec2::new(
+        grid.offset.x + (gx as f32 + 0.5) * grid.cell_size,
+        grid.offset.y + (gy as f32 + 0.5) * grid.cell_size,
+    )
 }
 
-fn unit_movement(
-    mut query: Query<(&mut Unit, &mut Target, &mut Transform), With<PlayerUnit>>,
-    grid: Res<GridConfig>,
-    time: Res<Time>,
-) {
-    for (mut unit, mut target, mut transform) in query.iter_mut() {
-        if target.path_index < target.path.len() {
-            let (next_gx, next_gy) = target.path[target.path_index];
-            let target_world = grid_to_world(next_gx, next_gy, &grid);
-
-            let current_pos = transform.translation.truncate();
-            let direction = target_world - current_pos;
-            let distance = direction.length();
-
-            if distance < 5.0 {
-                unit.grid_x = next_gx;
-                unit.grid_y = next_gy;
-                target.path_index += 1;
-            } else {
-                let velocity = direction.normalize() * unit.speed * time.delta_secs();
-                transform.translation.x += velocity.x;
-                transform.translation.y += velocity.y;
-            }
-        }
-    }
+fn world_to_grid(world: Vec2, grid: &GridConfig) -> (usize, usize) {
+    let gx = ((world.x - grid.offset.x) / grid.cell_size).floor() as i32;
+    let gy = ((world.y - grid.offset.y) / grid.cell_size).floor() as i32;
+    (
+        gx.clamp(0, grid.grid_width as i32 - 1) as usize,
+        gy.clamp(0, grid.grid_height as i32 - 1) as usize,
+    )
 }
-
-fn camera_controls(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<MinimapCamera>)>,
-    time: Res<Time>,
-    grid: Res<GridConfig>,
-) {
-    if let Ok(mut camera_transform) = camera_query.single_mut() {
-        let speed = 400.0;
-        let mut velocity = Vec3::ZERO;
-
-        if keys.pressed(KeyCode::KeyW) || keys.pressed(KeyCode::ArrowUp) {
-            velocity.y += speed;
-        }
-        if keys.pressed(KeyCode::KeyS) || keys.pressed(KeyCode::ArrowDown) {
-            velocity.y -= speed;
-        }
-        if keys.pressed(KeyCode::KeyA) || keys.pressed(KeyCode::ArrowLeft) {
-            velocity.x -= speed;
-        }
-        if keys.pressed(KeyCode::KeyD) || keys.pressed(KeyCode::ArrowRight) {
-            velocity.x += speed;
-        }
-
-        camera_transform.translation += velocity * time.delta_secs();
-
-        let half_width = grid.cell_size * grid.grid_width as f32 / 2.0 + 200.0;
-        let half_height = grid.cell_size * grid.grid_height as f32 / 2.0 + 200.0;
-
-        camera_transform.translation.x = camera_transform
-            .translation
-            .x
-            .clamp(-half_width, half_width);
-        camera_transform.translation.y = camera_transform
-            .translation
-            .y
-            .clamp(-half_height, half_height);
-    }
-}
-
-fn check_goal(
-    query: Query<&Unit, With<PlayerUnit>>,
-    grid: Res<GridConfig>,
-    mut game_state: ResMut<GameState>,
-) {
-    if game_state.level_complete {
-        return;
-    }
-
-    for unit in query.iter() {
-        if unit.grid_x >= grid.grid_width - 3 {
-            game_state.level_complete = true;
-        }
-    }
-}
-
-fn draw_path(query: Query<&Target, With<PlayerUnit>>, grid: Res<GridConfig>, mut gizmos: Gizmos) {
-    for target in query.iter() {
-        if target.path.is_empty() {
-            continue;
-        }
-
-        let mut prev_pos: Option<Vec2> = None;
-
-        for (i, &(gx, gy)) in target.path.iter().enumerate() {
-            if i < target.path_index {
-                continue;
-            }
-
-            let world_pos = grid_to_world(gx, gy, &grid);
-
-            if i == target.path_index {
-                gizmos.circle_2d(world_pos, 8.0, Color::srgb(0.3, 0.8, 1.0));
-            } else if i < target.path_index + 10 {
-                let alpha = 1.0 - (i - target.path_index) as f32 * 0.08;
-                gizmos.circle_2d(world_pos, 5.0, Color::srgba(0.6, 0.9, 0.6, alpha));
-            }
-
-            if let Some(prev) = prev_pos {
-                gizmos.line_2d(prev, world_pos, Color::srgba(0.4, 0.8, 0.4, 0.3));
-            }
-            prev_pos = Some(world_pos);
-        }
-    }
-}
-
-fn update_visibility(
-    query: Query<&Unit, With<PlayerUnit>>,
-    mut visibility: ResMut<VisibilityGrid>,
-    grid: Res<GridConfig>,
-) {
-    for unit in query.iter() {
-        // First clear all visible cells to explored
-        clear_visibility(&mut visibility);
-        // Then reveal area around player
-        reveal_area(unit.grid_x, unit.grid_y, &mut visibility, &grid);
-    }
-}
-
-fn update_fog(
-    _query: Query<&Transform, With<FogCell>>,
-    visibility: Res<VisibilityGrid>,
-    grid: Res<GridConfig>,
-    mut fog_query: Query<(&mut MeshMaterial2d<ColorMaterial>, &Transform), With<FogCell>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    if !visibility.is_changed() {
-        return;
-    }
-
-    let fog_color_visible = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.0));
-    let fog_color_explored = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.5));
-
-    for (mut mat2d, transform) in fog_query.iter_mut() {
-        let (gx, gy) = world_to_grid(transform.translation.truncate(), &grid);
-        if visibility.cells[gx][gy] == 0 {
-            // Unexplored - full fog
-            mat2d.0 = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.95));
-        } else if visibility.cells[gx][gy] == 1 {
-            // Explored but not visible - semi-transparent fog
-            mat2d.0 = fog_color_explored.clone();
-        } else {
-            // Currently visible - no fog
-            mat2d.0 = fog_color_visible.clone();
-        }
-    }
-}
-
-fn draw_waypoints(
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    fog_waypoints: Res<FogWaypoints>,
-    mut waypoint_query: Query<(&mut WaypointMarker, &mut MeshMaterial2d<ColorMaterial>)>,
-) {
-    for (marker, mut mat) in waypoint_query.iter_mut() {
-        let color = if marker.reached {
-            Color::srgba(0.3, 0.8, 0.3, 0.3)
-        } else if marker.index == fog_waypoints.current_target {
-            Color::srgba(1.0, 0.9, 0.3, 0.9)
-        } else {
-            Color::srgba(0.6, 0.5, 0.1, 0.3)
-        };
-        mat.0 = materials.add(color);
-    }
-}
-
-fn check_waypoint_reached(
-    query: Query<&Unit, With<PlayerUnit>>,
-    mut fog_waypoints: ResMut<FogWaypoints>,
-    mut waypoint_query: Query<&mut WaypointMarker>,
-    grid: Res<GridConfig>,
-    mut visibility: ResMut<VisibilityGrid>,
-) {
-    if fog_waypoints.current_target >= fog_waypoints.waypoints.len() {
-        return;
-    }
-
-    let (target_x, target_y) = fog_waypoints.waypoints[fog_waypoints.current_target];
-
-    for unit in query.iter() {
-        let dist = ((unit.grid_x as i32 - target_x as i32).abs()
-            + (unit.grid_y as i32 - target_y as i32).abs()) as usize;
-
-        if dist <= 3 {
-            let next_target = fog_waypoints.current_target + 1;
-            if next_target < fog_waypoints.waypoints.len() {
-                fog_waypoints.current_target = next_target;
-
-                let (reveal_x, reveal_y) = fog_waypoints.waypoints[next_target];
-                for dx in -10..=10 {
-                    for dy in -10..=10 {
-                        if dx * dx + dy * dy <= 100 {
-                            let nx = reveal_x as i32 + dx;
-                            let ny = reveal_y as i32 + dy;
-                            if nx >= 0
-                                && nx < grid.grid_width as i32
-                                && ny >= 0
-                                && ny < grid.grid_height as i32
-                            {
-                                visibility.cells[nx as usize][ny as usize] = 2;
-                            }
-                        }
-
-                        for mut marker in waypoint_query.iter_mut() {
-                            if marker.index == next_target - 1 {
-                                marker.reached = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn broadcast_minimap_data(
-    visibility_grid: Res<VisibilityGrid>,
-    obstacle_grid: Res<ObstacleGrid>,
-    grid: Res<GridConfig>,
-    player_query: Query<&Unit, With<PlayerUnit>>,
-    fog_waypoints: Res<FogWaypoints>,
-    mut frame_counter: Local<u64>,
-) {
-    *frame_counter += 1;
-    // Update minimap every 30 frames
-    if *frame_counter % 30 != 0 {
-        return;
-    }
-
-    let unit = player_query.single().unwrap();
-
-    // Encode minimap as a compact string: for each cell, one char
-    // '.' = unrevealed, ' ' = revealed empty, '#' = obstacle, 'P' = player, 'W' = waypoint target, 'w' = waypoint
-    let mut minimap = String::with_capacity(grid.grid_width * grid.grid_height + grid.grid_height);
-    for gy in 0..grid.grid_height {
-        for gx in 0..grid.grid_width {
-            if gx == unit.grid_x && gy == unit.grid_y {
-                minimap.push('P');
-            } else if fog_waypoints
-                .waypoints
-                .get(fog_waypoints.current_target)
-                .map_or(false, |&(wx, wy)| gx == wx && gy == wy)
-            {
-                minimap.push('W');
-            } else if fog_waypoints
-                .waypoints
-                .iter()
-                .any(|&(wx, wy)| gx == wx && gy == wy)
-            {
-                minimap.push('w');
-            } else if visibility_grid.cells.is_empty() || visibility_grid.cells[gx][gy] == 0 {
-                minimap.push('.');
-            } else if obstacle_grid.cells[gx][gy] {
-                minimap.push('#');
-            } else {
-                minimap.push(' ');
-            }
-        }
-        minimap.push('\n');
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        setItem("dreamcraft_minimap", &minimap);
-        let meta = serde_json::json!({
-            "width": grid.grid_width,
-            "height": grid.grid_height,
-            "player": [unit.grid_x, unit.grid_y],
-        });
-        setItem("dreamcraft_minimap_meta", &meta.to_string());
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct DebugState {
-    frame: u64,
-    camera_pos: [f32; 2],
-    player_pos: [f32; 2],
-    player_grid: [usize; 2],
-    current_waypoint: usize,
-    total_waypoints: usize,
-    waypoints: Vec<(usize, usize)>,
-    level_complete: bool,
-    is_selected: bool,
-    has_target: bool,
-    path_length: usize,
-    revealed_cells: usize,
-    total_cells: usize,
-    fog_coverage_pct: f32,
-    obstacle_count: usize,
-    grid_width: usize,
-    grid_height: usize,
-    // Diagnostics
-    player_visible: bool,
-    player_in_fog: bool,
-    camera_distance_to_player: f32,
-    warnings: Vec<String>,
-}
-
-fn debug_console_output(
-    camera_query: Query<&Transform, (With<Camera2d>, Without<MinimapCamera>)>,
-    player_query: Query<(&Unit, &Transform, &Target, Option<&Selected>), With<PlayerUnit>>,
-    fog_waypoints: Res<FogWaypoints>,
-    game_state: Res<GameState>,
-    visibility_grid: Res<VisibilityGrid>,
-    obstacle_grid: Res<ObstacleGrid>,
-    grid: Res<GridConfig>,
-    mut frame_counter: Local<u64>,
-) {
-    *frame_counter += 1;
-
-    if *frame_counter % 30 != 0 {
-        return;
-    }
-
-    let camera_pos = camera_query
-        .single()
-        .map(|t| t.translation.truncate())
-        .unwrap_or(Vec2::ZERO);
-    let (unit, player_transform, target, selected) = player_query.single().unwrap();
-
-    let total_cells = grid.grid_width * grid.grid_height;
-    let revealed_cells = visibility_grid
-        .cells
-        .iter()
-        .flat_map(|col| col.iter())
-        .filter(|&&v| v >= 1)
-        .count();
-    let obstacle_count = obstacle_grid
-        .cells
-        .iter()
-        .flat_map(|col| col.iter())
-        .filter(|&&v| v)
-        .count();
-    let fog_coverage_pct = ((total_cells - revealed_cells) as f32 / total_cells as f32) * 100.0;
-
-    // Diagnostics
-    let camera_distance = ((camera_pos.x - player_transform.translation.x).powi(2)
-        + (camera_pos.y - player_transform.translation.y).powi(2))
-    .sqrt();
-
-    let player_in_fog = if unit.grid_x < grid.grid_width && unit.grid_y < grid.grid_height {
-        visibility_grid.cells[unit.grid_x][unit.grid_y] != 2
-    } else {
-        true
-    };
-
-    // Check if player is within camera viewport (roughly 640px each side)
-    let half_vw = 640.0;
-    let half_vh = 360.0;
-    let player_visible = (player_transform.translation.x - camera_pos.x).abs() < half_vw
-        && (player_transform.translation.y - camera_pos.y).abs() < half_vh
-        && !player_in_fog;
-
-    let mut warnings = Vec::new();
-    if !player_visible {
-        warnings.push("Player not visible on screen!".to_string());
-    }
-    if player_in_fog {
-        warnings.push("Player hidden under fog of war!".to_string());
-    }
-    if camera_distance > 800.0 {
-        warnings.push(format!(
-            "Camera too far from player ({:.0}px)",
-            camera_distance
-        ));
-    }
-    if !selected.is_some() {
-        warnings.push("Player unit is not selected!".to_string());
-    }
-
-    let state = DebugState {
-        frame: *frame_counter,
-        camera_pos: [camera_pos.x, camera_pos.y],
-        player_pos: [
-            player_transform.translation.x,
-            player_transform.translation.y,
-        ],
-        player_grid: [unit.grid_x, unit.grid_y],
-        current_waypoint: fog_waypoints.current_target,
-        total_waypoints: fog_waypoints.waypoints.len(),
-        waypoints: fog_waypoints.waypoints.clone(),
-        level_complete: game_state.level_complete,
-        is_selected: selected.is_some(),
-        has_target: !target.path.is_empty() && target.path_index < target.path.len(),
-        path_length: target.path.len().saturating_sub(target.path_index),
-        revealed_cells,
-        total_cells,
-        fog_coverage_pct,
-        obstacle_count,
-        grid_width: grid.grid_width,
-        grid_height: grid.grid_height,
-        player_visible,
-        player_in_fog,
-        camera_distance_to_player: camera_distance,
-        warnings,
-    };
-
-    let json = serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
-    broadcast_debug_state(&json);
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = localStorage)]
-    fn setItem(key: &str, value: &str);
-
-    #[wasm_bindgen(js_namespace = localStorage)]
-    fn getItem(key: &str) -> Option<String>;
-
-    #[wasm_bindgen(js_namespace = localStorage)]
-    fn removeItem(key: &str);
-}
-
-#[cfg(target_arch = "wasm32")]
-fn broadcast_debug_state(json: &str) {
-    setItem("dreamcraft_debug_state", json);
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn broadcast_debug_state(_json: &str) {}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn set_command_result(_json: &str) {
-    println!("RESULT: {}", _json);
-}
-
-#[cfg(target_arch = "wasm32")]
-fn set_command_result(json: &str) {
-    setItem("dreamcraft_command_result", json);
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn clear_command() {}
-
-#[cfg(target_arch = "wasm32")]
-fn clear_command() {
-    removeItem("dreamcraft_command");
-}
-
-#[derive(Deserialize, Debug)]
-struct ConsoleCommand {
-    cmd: String,
-    x: Option<usize>,
-    y: Option<usize>,
-    verify: Option<VerifyCommand>,
-}
-
-#[derive(Deserialize, Debug)]
-struct VerifyCommand {
-    #[serde(rename = "type")]
-    verify_type: String,
-    x: Option<usize>,
-    y: Option<usize>,
-}
-
-#[cfg(target_arch = "wasm32")]
-fn read_console_commands(
-    mut player_query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
-    obstacle_grid: Res<ObstacleGrid>,
-    grid: Res<GridConfig>,
-    game_state: Res<GameState>,
-) {
-    let cmd_str = match getItem("dreamcraft_command") {
-        Some(s) if !s.is_empty() => s,
-        _ => return,
-    };
-
-    clear_command();
-
-    let cmd: ConsoleCommand = match serde_json::from_str(&cmd_str) {
-        Ok(c) => c,
-        Err(_) => return,
-    };
-
-    let result =
-        handle_headless_command(&mut player_query, &obstacle_grid, &grid, &game_state, cmd);
-    set_command_result(&result.to_string());
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn read_stdin_commands(
-    mut player_query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
-    obstacle_grid: Res<ObstacleGrid>,
-    grid: Res<GridConfig>,
-    game_state: Res<GameState>,
-    mut frame_counter: Local<u64>,
-) {
-    *frame_counter += 1;
-    if *frame_counter % 30 != 0 {
-        return;
-    }
-
-    let cmd_file = std::path::Path::new("headless_command.json");
-    if !cmd_file.exists() {
-        return;
-    }
-
-    let buffer = std::fs::read_to_string(cmd_file).unwrap_or_default();
-    let _ = std::fs::remove_file(cmd_file);
-
-    if buffer.trim().is_empty() {
-        return;
-    }
-
-    let cmd: ConsoleCommand = match serde_json::from_str(&buffer) {
-        Ok(c) => c,
-        Err(_) => {
-            write_result(&serde_json::json!({"ok": false, "msg": "Invalid JSON command"}));
-            return;
-        }
-    };
-
-    let result =
-        handle_headless_command(&mut player_query, &obstacle_grid, &grid, &game_state, cmd);
-    write_result(&result);
-}
-
-fn write_result(result: &serde_json::Value) {
-    let _ = std::fs::write("headless_result.json", result.to_string());
-    println!("RESULT: {}", result);
-}
-
-fn handle_headless_command(
-    player_query: &mut Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
-    obstacle_grid: &Res<ObstacleGrid>,
-    grid: &Res<GridConfig>,
-    game_state: &Res<GameState>,
-    cmd: ConsoleCommand,
-) -> serde_json::Value {
-    match cmd.cmd.as_str() {
-        "goto" => {
-            let mut updated = false;
-            for (unit, mut target) in player_query.iter_mut() {
-                let path = find_path(
-                    (unit.grid_x, unit.grid_y),
-                    (cmd.x.unwrap_or(0), cmd.y.unwrap_or(0)),
-                    &obstacle_grid.cells,
-                    grid.grid_width,
-                    grid.grid_height,
-                );
-                if !path.is_empty() {
-                    target.path = path;
-                    target.path_index = 0;
-                    updated = true;
-                }
-            }
-            if updated {
-                serde_json::json!({"ok": true, "msg": format!("Moving to ({},{})", cmd.x.unwrap_or(0), cmd.y.unwrap_or(0))})
-            } else {
-                serde_json::json!({"ok": false, "msg": "No path found"})
-            }
-        }
-        "status" => {
-            let (unit, _target) = player_query.single().unwrap();
-            serde_json::json!({
-                "ok": true,
-                "msg": format!("Player at ({}, {})", unit.grid_x, unit.grid_y),
-                "player_grid": [unit.grid_x, unit.grid_y]
-            })
-        }
-        "verify" => {
-            if let Some(v) = cmd.verify {
-                match v.verify_type.as_str() {
-                    "player_at" => {
-                        let (unit, _target) = player_query.single().unwrap();
-                        let matches =
-                            unit.grid_x == v.x.unwrap_or(0) && unit.grid_y == v.y.unwrap_or(0);
-                        let msg = if matches {
-                            "Player at expected position".to_string()
-                        } else {
-                            format!(
-                                "Player at ({}, {}), expected ({}, {})",
-                                unit.grid_x,
-                                unit.grid_y,
-                                v.x.unwrap_or(0),
-                                v.y.unwrap_or(0)
-                            )
-                        };
-                        serde_json::json!({"ok": matches, "msg": msg})
-                    }
-                    "level_complete" => {
-                        serde_json::json!({"ok": game_state.level_complete, "msg": if game_state.level_complete { "Level complete" } else { "Level not complete" }})
-                    }
-                    "waypoint_reached" => {
-                        serde_json::json!({"ok": true, "msg": "Waypoint check not yet implemented"})
-                    }
-                    _ => serde_json::json!({"ok": false, "msg": "Unknown verify type"}),
-                }
-            } else {
-                serde_json::json!({"ok": false, "msg": "No verify spec provided"})
-            }
-        }
-        _ => {
-            serde_json::json!({"ok": false, "msg": format!("Unknown command: {}", cmd.cmd)})
-        }
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn update_native_minimap(
-    grid: Res<GridConfig>,
-    player_query: Query<&Unit, With<PlayerUnit>>,
-    mut player_marker_query: Query<&mut Node, With<PlayerMinimapMarker>>,
-    minimap_config: Res<MinimapConfig>,
-    mut frame_counter: Local<u64>,
-) {
-    *frame_counter += 1;
-    if *frame_counter % 5 != 0 {
-        return;
-    }
-
-    let unit = player_query.single().unwrap();
-
-    let cell_width = minimap_config.width / grid.grid_width as f32;
-    let cell_height = minimap_config.height / grid.grid_height as f32;
-
-    let player_left = unit.grid_x as f32 * cell_width;
-    let player_bottom = unit.grid_y as f32 * cell_height;
-
-    for mut node in player_marker_query.iter_mut() {
-        node.left = Val::Px(player_left);
-        node.bottom = Val::Px(player_bottom);
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn update_minimap_visibility(
-    visibility: Res<VisibilityGrid>,
-    obstacle_grid: Res<ObstacleGrid>,
-    grid: Res<GridConfig>,
-    minimap_config: Res<MinimapConfig>,
-    mut minimap_query: Query<
-        (&mut BackgroundColor, &Node),
-        (With<MinimapSprite>, Without<PlayerMinimapMarker>),
-    >,
-    mut frame_counter: Local<u64>,
-) {
-    if !visibility.is_changed() {
-        return;
-    }
-
-    *frame_counter += 1;
-    if *frame_counter % 10 != 0 {
-        return;
-    }
-
-    let cell_width = minimap_config.width / grid.grid_width as f32;
-    let cell_height = minimap_config.height / grid.grid_height as f32;
-
-    for (mut bg_color, node) in minimap_query.iter_mut() {
-        let gx = match node.left {
-            Val::Px(x) => (x / cell_width).round() as usize,
-            _ => continue,
-        };
-        let gy = match node.bottom {
-            Val::Px(y) => (y / cell_height).round() as usize,
-            _ => continue,
-        };
-
-        if gx >= grid.grid_width || gy >= grid.grid_height {
-            continue;
-        }
-
-        let new_color = if obstacle_grid.cells[gx][gy] {
-            Color::srgba(0.2, 0.6, 0.2, 1.0) // Tree
-        } else if visibility.cells[gx][gy] == 0 {
-            Color::srgba(0.02, 0.03, 0.02, 1.0) // Unexplored (black)
-        } else if visibility.cells[gx][gy] == 1 {
-            Color::srgba(0.1, 0.15, 0.1, 1.0) // Explored but not visible (dark)
-        } else {
-            Color::srgba(0.25, 0.4, 0.25, 1.0) // Currently visible (bright)
-        };
-
-        *bg_color = BackgroundColor(new_color);
-    }
-}
-
-#[derive(Component)]
-struct MinimapEntity;
-#[derive(Component)]
-struct MinimapBackground;
-#[derive(Component)]
-struct PlayerMinimapMarker;
 
 pub fn run() {
     App::new()
