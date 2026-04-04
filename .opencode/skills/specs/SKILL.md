@@ -1,9 +1,28 @@
 ---
 name: specs
-description: Keeping specs/ folder updated with new features
+description: Keeping specs/ folder updated with new features - NEVER FORGET SPECS!
 ---
 
 # Specs Update Skill
+
+## ⚠️ CRITICAL RULE: NEVER FORGET SPECS!
+
+**Before ANY implementation:**
+1. Check `specs/` folder for existing specs
+2. Read relevant spec files
+3. Understand the design intent
+
+**After ANY implementation:**
+1. Update relevant spec files IMMEDIATELY
+2. Mark features `[x]` completed
+3. Add new sections if needed
+4. Commit specs with code changes
+
+**Why this matters:**
+- Specs are the SINGLE SOURCE OF TRUTH
+- Future developers/agents rely on accurate specs
+- Prevents inconsistent implementations
+- Tracks what's done vs. planned
 
 ## Purpose
 

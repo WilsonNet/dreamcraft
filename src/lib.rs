@@ -45,6 +45,8 @@ impl Plugin for DreamCraftPlugin {
                     broadcast_minimap_data,
                     #[cfg(not(target_arch = "wasm32"))]
                     update_native_minimap,
+                    #[cfg(not(target_arch = "wasm32"))]
+                    update_minimap_visibility,
                     debug_console_output,
                 ),
             );
@@ -83,14 +85,14 @@ pub struct ObstacleGrid {
 
 #[derive(Resource)]
 pub struct VisibilityGrid {
-    pub revealed: Vec<Vec<bool>>,
+    pub cells: Vec<Vec<u8>>, // 0=unexplored, 1=explored, 2=visible
     pub view_radius: usize,
 }
 
 impl Default for VisibilityGrid {
     fn default() -> Self {
         Self {
-            revealed: Vec::new(),
+            cells: Vec::new(),
             view_radius: 5,
         }
     }
@@ -159,6 +161,9 @@ pub struct GoalZone;
 
 #[derive(Component)]
 pub struct PlayerUnit;
+
+#[derive(Component)]
+pub struct EnemyUnit;
 
 #[derive(Component)]
 pub struct FogCell;
@@ -244,7 +249,8 @@ fn setup_tutorial_level(
         }
     }
 
-    visibility_grid.revealed = vec![vec![false; grid.grid_height]; grid.grid_width];
+    // Initialize visibility grid: 0=unexplored, 1=explored, 2=visible
+    visibility_grid.cells = vec![vec![0u8; grid.grid_height]; grid.grid_width];
     visibility_grid.view_radius = 6;
 
     let start_x = 2;
@@ -292,10 +298,12 @@ fn setup_tutorial_level(
                     for gy in 0..grid.grid_height {
                         let color = if obstacle_grid.cells[gx][gy] {
                             Color::srgba(0.2, 0.6, 0.2, 1.0) // Tree
-                        } else if !visibility_grid.revealed[gx][gy] {
-                            Color::srgba(0.05, 0.08, 0.05, 1.0) // Fog
+                        } else if visibility_grid.cells[gx][gy] == 0 {
+                            Color::srgba(0.02, 0.03, 0.02, 1.0) // Unexplored (black)
+                        } else if visibility_grid.cells[gx][gy] == 1 {
+                            Color::srgba(0.1, 0.15, 0.1, 1.0) // Explored but not visible (dark)
                         } else {
-                            Color::srgba(0.25, 0.4, 0.25, 1.0) // Ground
+                            Color::srgba(0.25, 0.4, 0.25, 1.0) // Currently visible (bright)
                         };
 
                         parent.spawn((
@@ -389,19 +397,12 @@ fn setup_tutorial_level(
         Transform::from_xyz(0.0, 0.0, -2.0),
     ));
 
-    visibility_grid.revealed = vec![vec![false; grid.grid_height]; grid.grid_width];
-    visibility_grid.view_radius = 6;
-
-    let start_x = 2;
-    let start_y = grid.grid_height / 2;
-    reveal_area(start_x, start_y, &mut visibility_grid, &grid);
-
     let fog_color = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.95));
     let fog_mesh = meshes.add(Rectangle::new(grid.cell_size, grid.cell_size));
 
     for gx in 0..grid.grid_width {
         for gy in 0..grid.grid_height {
-            if !visibility_grid.revealed[gx][gy] {
+            if visibility_grid.cells[gx][gy] == 0 {
                 let world_pos = grid_to_world(gx, gy, &grid);
                 commands.spawn((
                     Mesh2d(fog_mesh.clone()),
@@ -510,6 +511,41 @@ fn setup_tutorial_level(
                 Transform::from_xyz(0.0, -1.0, 6.0),
             ));
         });
+
+    // Spawn enemy unit in fog (at position 50, 25 - far from player start)
+    let enemy_x = 50;
+    let enemy_y = 25;
+    let enemy_world_pos = grid_to_world(enemy_x, enemy_y, &grid);
+    let enemy_color = materials.add(Color::srgb(0.9, 0.3, 0.3));
+    let enemy_mesh = meshes.add(Circle::new(12.0));
+
+    commands
+        .spawn((
+            Mesh2d(enemy_mesh),
+            MeshMaterial2d(enemy_color),
+            Transform::from_xyz(enemy_world_pos.x, enemy_world_pos.y, 5.0),
+            Unit {
+                speed: 80.0,
+                grid_x: enemy_x,
+                grid_y: enemy_y,
+            },
+            Target {
+                path: Vec::new(),
+                path_index: 0,
+            },
+            EnemyUnit,
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Text2d::new("M"),
+                TextFont {
+                    font_size: 18.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+                Transform::from_xyz(0.0, -1.0, 6.0),
+            ));
+        });
 }
 
 fn reveal_area(cx: usize, cy: usize, visibility: &mut VisibilityGrid, grid: &GridConfig) {
@@ -523,8 +559,20 @@ fn reveal_area(cx: usize, cy: usize, visibility: &mut VisibilityGrid, grid: &Gri
                 let ny = cy + dy;
                 if nx >= 0 && nx < grid.grid_width as i32 && ny >= 0 && ny < grid.grid_height as i32
                 {
-                    visibility.revealed[nx as usize][ny as usize] = true;
+                    // Mark as visible (2), which also means explored
+                    visibility.cells[nx as usize][ny as usize] = 2;
                 }
+            }
+        }
+    }
+}
+
+// Clear visibility - set all visible (2) cells back to explored (1)
+fn clear_visibility(visibility: &mut VisibilityGrid) {
+    for row in visibility.cells.iter_mut() {
+        for cell in row.iter_mut() {
+            if *cell == 2 {
+                *cell = 1;
             }
         }
     }
@@ -805,6 +853,9 @@ fn update_visibility(
     grid: Res<GridConfig>,
 ) {
     for unit in query.iter() {
+        // First clear all visible cells to explored
+        clear_visibility(&mut visibility);
+        // Then reveal area around player
         reveal_area(unit.grid_x, unit.grid_y, &mut visibility, &grid);
     }
 }
@@ -820,12 +871,20 @@ fn update_fog(
         return;
     }
 
-    let fog_color_revealed = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.0));
+    let fog_color_visible = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.0));
+    let fog_color_explored = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.5));
 
     for (mut mat2d, transform) in fog_query.iter_mut() {
         let (gx, gy) = world_to_grid(transform.translation.truncate(), &grid);
-        if visibility.revealed[gx][gy] {
-            mat2d.0 = fog_color_revealed.clone();
+        if visibility.cells[gx][gy] == 0 {
+            // Unexplored - full fog
+            mat2d.0 = materials.add(Color::srgba(0.02, 0.03, 0.02, 0.95));
+        } else if visibility.cells[gx][gy] == 1 {
+            // Explored but not visible - semi-transparent fog
+            mat2d.0 = fog_color_explored.clone();
+        } else {
+            // Currently visible - no fog
+            mat2d.0 = fog_color_visible.clone();
         }
     }
 }
@@ -880,7 +939,7 @@ fn check_waypoint_reached(
                                 && ny >= 0
                                 && ny < grid.grid_height as i32
                             {
-                                visibility.revealed[nx as usize][ny as usize] = true;
+                                visibility.cells[nx as usize][ny as usize] = 2;
                             }
                         }
 
@@ -931,7 +990,7 @@ fn broadcast_minimap_data(
                 .any(|&(wx, wy)| gx == wx && gy == wy)
             {
                 minimap.push('w');
-            } else if !visibility_grid.revealed.is_empty() && !visibility_grid.revealed[gx][gy] {
+            } else if visibility_grid.cells.is_empty() || visibility_grid.cells[gx][gy] == 0 {
                 minimap.push('.');
             } else if obstacle_grid.cells[gx][gy] {
                 minimap.push('#');
@@ -1004,10 +1063,10 @@ fn debug_console_output(
 
     let total_cells = grid.grid_width * grid.grid_height;
     let revealed_cells = visibility_grid
-        .revealed
+        .cells
         .iter()
         .flat_map(|col| col.iter())
-        .filter(|&&v| v)
+        .filter(|&&v| v >= 1)
         .count();
     let obstacle_count = obstacle_grid
         .cells
@@ -1023,7 +1082,7 @@ fn debug_console_output(
     .sqrt();
 
     let player_in_fog = if unit.grid_x < grid.grid_width && unit.grid_y < grid.grid_height {
-        !visibility_grid.revealed[unit.grid_x][unit.grid_y]
+        visibility_grid.cells[unit.grid_x][unit.grid_y] != 2
     } else {
         true
     };
@@ -1305,6 +1364,58 @@ fn update_native_minimap(
     for mut node in player_marker_query.iter_mut() {
         node.left = Val::Px(player_left);
         node.bottom = Val::Px(player_bottom);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn update_minimap_visibility(
+    visibility: Res<VisibilityGrid>,
+    obstacle_grid: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+    minimap_config: Res<MinimapConfig>,
+    mut minimap_query: Query<
+        (&mut BackgroundColor, &Node),
+        (With<MinimapSprite>, Without<PlayerMinimapMarker>),
+    >,
+    mut frame_counter: Local<u64>,
+) {
+    if !visibility.is_changed() {
+        return;
+    }
+
+    *frame_counter += 1;
+    if *frame_counter % 10 != 0 {
+        return;
+    }
+
+    let cell_width = minimap_config.width / grid.grid_width as f32;
+    let cell_height = minimap_config.height / grid.grid_height as f32;
+
+    for (mut bg_color, node) in minimap_query.iter_mut() {
+        let gx = match node.left {
+            Val::Px(x) => (x / cell_width).round() as usize,
+            _ => continue,
+        };
+        let gy = match node.bottom {
+            Val::Px(y) => (y / cell_height).round() as usize,
+            _ => continue,
+        };
+
+        if gx >= grid.grid_width || gy >= grid.grid_height {
+            continue;
+        }
+
+        let new_color = if obstacle_grid.cells[gx][gy] {
+            Color::srgba(0.2, 0.6, 0.2, 1.0) // Tree
+        } else if visibility.cells[gx][gy] == 0 {
+            Color::srgba(0.02, 0.03, 0.02, 1.0) // Unexplored (black)
+        } else if visibility.cells[gx][gy] == 1 {
+            Color::srgba(0.1, 0.15, 0.1, 1.0) // Explored but not visible (dark)
+        } else {
+            Color::srgba(0.25, 0.4, 0.25, 1.0) // Currently visible (bright)
+        };
+
+        *bg_color = BackgroundColor(new_color);
     }
 }
 

@@ -28,7 +28,8 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 
 #### Tutorial Level 1: "Through the Woods"
 - [x] Grid-based level (80x50 cells, 32px per cell)
-- [x] Blue player unit (circle) with right-click movement
+- [x] Blue player unit (circle with "M" label) with right-click movement
+- [x] Red enemy unit (circle with "M" label) at (50, 25) - hidden in fog
 - [x] Tree clusters (30 clusters, 132 obstacle cells)
 - [x] Golden goal zone on the right side
 - [x] A* pathfinding (Rust implementation using BinaryHeap)
@@ -37,10 +38,13 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 - [x] Tutorial UI overlay (HUD)
 - [x] Level complete detection (player reaches grid_x >= 77)
 - [x] Context menu suppressed (right-click doesn't open browser menu)
-- [x] Fog of War system
-  - [x] Dark fog overlay covering unexplored areas (z=10)
-  - [x] Player vision radius (6 cells, circular reveal)
-  - [x] Progressive fog reveal on waypoint reach
+- [x] Fog of War system (StarCraft-style, 3-state)
+  - [x] Unexplored (black) - never seen by player
+  - [x] Explored (dark) - was visible, now out of vision range
+  - [x] Visible (bright) - currently within player vision radius
+  - [x] Player vision radius (6 cells, circular)
+  - [x] Dynamic fog update every frame
+  - [x] Fog entities fade when area becomes visible
 - [x] Waypoint system
   - [x] 8 waypoints guiding player through fog
   - [x] Golden waypoint markers for current target
@@ -48,32 +52,37 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
   - [x] Large area reveal (10-cell radius) when reaching waypoint
 
 #### Minimap (StarCraft-style, bottom-left)
-- [x] 200x125 pixel React canvas component
-- [x] Shows terrain, obstacles (trees), fog of war
-- [x] Player position indicator (blue dot)
+- [x] Native Bevy UI implementation (no React)
+- [x] Fixed screen position: left: 20px, bottom: 30px (CSS-like)
+- [x] 200x125 pixel size
+- [x] Shows terrain with 3-state fog colors
+- [x] Player position indicator (blue dot, real-time updates)
 - [x] Waypoint markers (yellow = current, dim = others)
-- [x] Camera viewport rectangle (white outline)
-- [x] Updated every 30 frames via localStorage bridge
+- [x] Goal marker (gold circle)
+- [x] Border (green)
+- [x] Independent of camera movement (screen-space rendering)
 
 #### Agent Console (React overlay)
-- [x] Toggle with backtick (`` ` ``) key
-- [x] Connected status indicator (green/red)
-- [x] Live status bar: position, waypoint, fog %, selection, movement, completion
-- [x] Commands: status, fog, waypoints, goto, next, autoplay, reset, watch, help, clear
-- [x] Bidirectional Bevy<->React communication via localStorage
-- [x] Automatic diagnostics/warnings:
-  - Player visibility check (camera viewport)
-  - Fog coverage check
-  - Camera-player distance check
-  - Selection state check
-- [x] Warning banner (red) when issues detected
-- [x] Headless API (`window.dreamcraftConsole`) for Playwright testing
+- [ ] Toggle with backtick (`` ` ``) key
+- [ ] Connected status indicator (green/red)
+- [ ] Live status bar: position, waypoint, fog %, selection, movement, completion
+- [ ] Commands: status, fog, waypoints, goto, next, autoplay, reset, watch, help, clear
+- [ ] Bidirectional Bevy<->React communication via localStorage
+- [ ] Automatic diagnostics/warnings:
+  - [ ] Player visibility check (camera viewport)
+  - [ ] Fog coverage check
+  - [ ] Camera-player distance check
+  - [ ] Selection state check
+- [ ] Warning banner (red) when issues detected
+- [ ] Headless API (`window.dreamcraftConsole`) for Playwright testing
 
 #### Headless/Agentic Testing
 - [x] Full game state observable via `dreamcraft_debug_state` localStorage key
 - [x] Commands injectable via `dreamcraft_command` localStorage key
 - [x] Playwright MCP integration for automated validation
 - [x] Level completable headlessly (goto waypoints, verify state)
+- [x] Native headless mode with file-based commands (`headless_command.json`)
+- [x] BRP (Bevy Remote Protocol) support for MCP tools
 
 ### Known Issues
 - [ ] Waypoint 3 at (40,20) collides with tree cluster 7 — pathfinding skips it

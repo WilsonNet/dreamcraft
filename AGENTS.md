@@ -2,6 +2,36 @@
 
 Spiritual successor to StarCraft: Brood War, built for the modern web.
 
+## ⚠️ CRITICAL: Specs Files (Read First!)
+
+**BEFORE implementing ANY feature, ALWAYS check:**
+1. `specs/` folder for existing specifications
+2. `.opencode/skills/specs/SKILL.md` for update guidelines
+
+**AFTER completing ANY feature, ALWAYS:**
+1. Update relevant spec files in `specs/`
+2. Mark features as `[x]` completed in `specs/01-overview.md`
+3. Update unit specs, input specs, or other relevant docs
+
+**Why specs matter:**
+- Single source of truth for game design
+- Ensures consistency across implementations
+- Documents decisions for future developers/agents
+- Tracks implementation progress
+
+**Spec files:**
+| File | Purpose |
+|------|---------|
+| `specs/01-overview.md` | Game vision, features, implementation status, architecture |
+| `specs/02-units.md` | Unit types, stats, abilities, behaviors |
+| `specs/03-isometric.md` | Grid rendering, coordinate systems |
+| `specs/04-input.md` | Control schemes, input handling |
+| `specs/05-networking.md` | Multiplayer architecture, sync protocols |
+| `specs/06-agent-console.md` | Agent Console commands, diagnostics, headless API |
+| `specs/07-minimap.md` | StarCraft-style minimap implementation |
+
+---
+
 ## Skills Map
 
 Skills are located in `.opencode/skills/` and `.claude/skills/` and provide specialized instructions:
