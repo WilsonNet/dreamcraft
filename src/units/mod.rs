@@ -12,6 +12,7 @@ pub enum UnitState {
     #[default]
     Idle,
     Moving,
+    Patrol,
 }
 
 /// Unit component with movement data
@@ -46,6 +47,16 @@ pub struct Target {
     pub path_index: usize,
 }
 
+/// Patrol route state for point A <-> B loops
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct PatrolRoute {
+    pub active: bool,
+    pub point_a: (usize, usize),
+    pub point_b: (usize, usize),
+    pub go_to_b_next: bool,
+}
+
 /// Health bar marker
 #[derive(Component)]
 pub struct HealthBar;
@@ -58,6 +69,7 @@ pub struct MeleeUnit {
     pub health: Health,
     pub state: UnitStateMachine,
     pub target: Target,
+    pub patrol: PatrolRoute,
 }
 
 impl MeleeUnit {
@@ -76,6 +88,7 @@ impl MeleeUnit {
             },
             state: UnitStateMachine::default(),
             target: Target::default(),
+            patrol: PatrolRoute::default(),
         }
     }
 }
@@ -253,6 +266,43 @@ pub fn enemy_ai_chase(
                 target.path = path;
                 target.path_index = 0;
             }
+        }
+    }
+}
+
+/// Continue active patrol loops by assigning next leg when a leg completes
+pub fn patrol_loop(
+    mut query: Query<
+        (&Unit, &mut Target, &mut UnitStateMachine, &mut PatrolRoute),
+        With<PlayerUnit>,
+    >,
+    obstacles: Res<ObstacleGrid>,
+    grid: Res<GridConfig>,
+) {
+    for (unit, mut target, mut state_machine, mut patrol) in query.iter_mut() {
+        if !patrol.active || target.path_index < target.path.len() {
+            continue;
+        }
+
+        let destination = if patrol.go_to_b_next {
+            patrol.point_b
+        } else {
+            patrol.point_a
+        };
+
+        let path = find_path(
+            (unit.grid_x, unit.grid_y),
+            destination,
+            &obstacles.cells,
+            grid.grid_width,
+            grid.grid_height,
+        );
+
+        if !path.is_empty() {
+            target.path = path;
+            target.path_index = 0;
+            state_machine.state = UnitState::Patrol;
+            patrol.go_to_b_next = !patrol.go_to_b_next;
         }
     }
 }

@@ -33,7 +33,7 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 - [x] Team/race semantics clarified: available races are `Basic`, `Akana`, `Gorg`; Level 1 uses `Basic` for both teams; color indicates team, `M` indicates Melee type
 - [x] Tree clusters (30 clusters, 132 obstacle cells)
 - [x] Golden goal zone on the right side
-- [x] A* pathfinding (Rust implementation using BinaryHeap)
+- [x] A* pathfinding (Rust implementation using BinaryHeap, 8-direction movement)
 - [x] Path visualization with gizmos
 - [x] WASD/Arrow camera controls (speed: 400)
 - [x] Tutorial UI overlay (HUD)
@@ -69,7 +69,10 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 - [x] Bottom-screen RTS HUD bar placeholder
 - [x] HUD height increased to exceed minimap top edge by ~10px (170px HUD vs minimap top at 159px)
 - [x] Clickable Move command button (`Mo` placeholder), small size, anchored bottom-right
+- [x] Clickable Patrol command button (`Pt` placeholder), stacked above Move
 - [x] Move command mode cursor feedback (changes to move cursor)
+- [x] Patrol mode supports two-point selection (A then B) and loops unit between points
+- [x] Patrol loop breaks on explicit move commands (right-click move or Move button order)
 - [x] Left-click world to issue move order, then cursor resets to default
 - [x] Ordered unit enters `Moving` state while following command path
 - [x] Bottom center reserved for future control group UI

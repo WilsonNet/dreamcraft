@@ -5,7 +5,7 @@ use crate::grid::{self};
 use crate::input;
 use crate::minimap;
 use crate::ui;
-use crate::units::{self, Health, Target, Unit, UnitStateMachine};
+use crate::units::{self, Health, PatrolRoute, Target, Unit, UnitStateMachine};
 use bevy::prelude::*;
 
 use super::{
@@ -35,9 +35,10 @@ impl Plugin for DreamCraftPlugin {
             .register_type::<Unit>()
             .register_type::<Target>()
             .register_type::<Health>()
+            .register_type::<PatrolRoute>()
             .register_type::<UnitStateMachine>()
-            .register_type::<ui::CommandUiState>()
             .register_type::<ui::MoveCommandButton>()
+            .register_type::<ui::PatrolCommandButton>()
             .insert_resource(ClearColor(Color::srgb(0.02, 0.04, 0.02)))
             .add_systems(Startup, (grid::setup_tutorial_level, ui::spawn_rts_hud))
             .add_systems(
@@ -50,6 +51,7 @@ impl Plugin for DreamCraftPlugin {
                     #[cfg(not(target_arch = "wasm32"))]
                     units::read_stdin_commands,
                     units::enemy_ai_chase,
+                    units::patrol_loop,
                     units::unit_movement,
                     input::camera_controls,
                     #[cfg(not(target_arch = "wasm32"))]

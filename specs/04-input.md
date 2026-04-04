@@ -9,6 +9,9 @@
 | Right Click | Move selected units |
 | Left Click on `Mo` HUD button (bottom-right) | Enter Move command mode |
 | Left Click on terrain (while Move mode active) | Issue move command and exit Move mode |
+| Left Click on `Pt` HUD button (bottom-right stack) | Enter Patrol command mode |
+| First Left Click on terrain (Patrol mode) | Set patrol point A |
+| Second Left Click on terrain (Patrol mode) | Set patrol point B and start A↔B loop |
 | Left Click on Minimap | Center main camera to clicked map location |
 | Right Click on Enemy | Attack |
 | Shift + Click | Add to selection |
@@ -24,9 +27,16 @@
 - Right-click sets target position
 - `Mo` command mode allows left-click movement orders from the lower RTS HUD
 - A* pathfinding calculates route
+- Pathfinding supports 8-direction movement (including diagonals)
 - Units follow path waypoints
 - Stop at destination
 - Unit state becomes `Moving` while traversing an active path
+
+## Patrol
+- `Pt` command mode uses two clicks to define patrol points A and B
+- After both points are set, unit loops between A and B indefinitely
+- Patrol uses pathfinding for each leg (A->B then B->A)
+- Patrol is cancelled by explicit move orders (`Right Click` or `Mo` order)
 
 ## Command Cursor
 - Clicking `Mo` changes cursor to a move-style cursor

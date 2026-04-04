@@ -61,6 +61,7 @@ Universal state machine for all units (player and AI):
 **States**:
 - `Idle`: Default state, no active behavior
 - `Moving`: Unit has an active movement path
+- `Patrol`: Unit is executing a repeating A↔B patrol route
 
 ## Component Structure
 
@@ -88,6 +89,7 @@ struct MeleeUnit {
     health: Health,
     state: UnitStateMachine,
     target: Target,
+    patrol: PatrolRoute,
 }
 
 impl MeleeUnit {
@@ -109,6 +111,13 @@ struct Target {
 struct PlayerUnit;
 struct EnemyUnit;
 struct Selected;
+
+struct PatrolRoute {
+    active: bool,
+    point_a: (usize, usize),
+    point_b: (usize, usize),
+    go_to_b_next: bool,
+}
 ```
 
 ## Fog of War Visibility
