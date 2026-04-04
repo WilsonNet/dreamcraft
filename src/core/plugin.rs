@@ -9,7 +9,7 @@ use bevy::prelude::*;
 
 use super::{
     FogWaypoints, GameState, GridConfig, MinimapBackground, MinimapCameraViewport,
-    MinimapClickArea, MinimapConfig, MinimapEntity, MinimapSprite, PlayerMinimapMarker, Team,
+    MinimapClickArea, MinimapConfig, MinimapEntity, MinimapSprite, PlayerMinimapMarker, Race, Team,
 };
 
 pub struct DreamCraftPlugin;
@@ -29,6 +29,7 @@ impl Plugin for DreamCraftPlugin {
             .register_type::<PlayerMinimapMarker>()
             .register_type::<MinimapCameraViewport>()
             .register_type::<Team>()
+            .register_type::<Race>()
             .register_type::<Unit>()
             .register_type::<Target>()
             .register_type::<Health>()

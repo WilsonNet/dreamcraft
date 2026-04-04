@@ -24,7 +24,7 @@
   - Controlled via right-click movement
   - Health: 100 HP with health bar above unit
    
-- **Enemy Unit**: Red circle with "E" label
+- **Enemy Unit**: Red circle with "M" label
   - Speed: 150.0 (world units/sec)
   - Same race as player (melee unit)
   - Hidden in fog until revealed
@@ -33,6 +33,14 @@
     - Chases player when player enters enemy view radius
     - Stops chasing when player leaves enemy view radius
     - Re-paths to current player position as needed
+
+### Race And Team Semantics
+
+- Available races: `Basic`, `Akana`, `Gorg`.
+- Tutorial Level 1 uses `Basic` race for both teams.
+- The **shape** (currently circle placeholder) represents race art placeholder, not team.
+- The **letter** represents unit type (`M` = Melee), not team.
+- Team is represented by `Team` ownership and color tint (blue player / red enemy).
 
 ### Health Bars
 
@@ -68,12 +76,22 @@ struct Unit {
     grid_y: usize,
 }
 
+enum Race {
+    Basic,
+    Akana,
+    Gorg,
+}
+
 #[derive(Bundle)]
 struct MeleeUnit {
     unit: Unit,
     health: Health,
     state: UnitStateMachine,
     target: Target,
+}
+
+impl MeleeUnit {
+    const LABEL: &'static str = "M";
 }
 
 struct UnitTransform {

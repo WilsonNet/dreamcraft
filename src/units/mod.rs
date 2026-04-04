@@ -61,6 +61,8 @@ pub struct MeleeUnit {
 }
 
 impl MeleeUnit {
+    pub const LABEL: &'static str = "M";
+
     pub fn new(grid_x: usize, grid_y: usize) -> Self {
         Self {
             unit: Unit {
@@ -93,10 +95,7 @@ pub fn spawn_unit(
         Team::Player => Color::srgb(0.3, 0.5, 0.9),
         Team::Enemy => Color::srgb(0.9, 0.3, 0.3),
     };
-    let label = match team {
-        Team::Player => "M",
-        Team::Enemy => "E",
-    };
+    let label = MeleeUnit::LABEL;
 
     // Spawn MeleeUnit bundle - identical for both player and enemy
     let mut entity = commands.spawn((
@@ -105,6 +104,7 @@ pub fn spawn_unit(
         Transform::from_xyz(pos.x, pos.y, 5.0),
         MeleeUnit::new(grid_x, grid_y),
         team,
+        Race::Basic,
     ));
 
     if team == Team::Player {

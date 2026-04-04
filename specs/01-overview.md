@@ -30,6 +30,7 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 - [x] Grid-based level (80x50 cells, 32px per cell)
 - [x] Blue player unit (circle with "M" label) with right-click movement
 - [x] Red enemy unit (circle with "M" label) at (50, 25) - hidden in fog
+- [x] Team/race semantics clarified: available races are `Basic`, `Akana`, `Gorg`; Level 1 uses `Basic` for both teams; color indicates team, `M` indicates Melee type
 - [x] Tree clusters (30 clusters, 132 obstacle cells)
 - [x] Golden goal zone on the right side
 - [x] A* pathfinding (Rust implementation using BinaryHeap)

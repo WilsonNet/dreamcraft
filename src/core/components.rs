@@ -14,6 +14,18 @@ pub enum Team {
     Enemy,
 }
 
+/// Unit race/faction identity (independent from team ownership)
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize, Component,
+)]
+#[reflect(Component, Serialize, Deserialize)]
+pub enum Race {
+    #[default]
+    Basic,
+    Akana,
+    Gorg,
+}
+
 /// Marker for player-controlled units (same as Team::Player)
 #[derive(Component)]
 pub struct PlayerUnit;
