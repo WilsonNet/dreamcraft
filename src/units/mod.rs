@@ -1,5 +1,6 @@
 //! Unit systems: movement, commands, goal detection
 
+use crate::combat::{AttackTarget, CombatStats};
 use crate::core::*;
 use crate::grid::grid_to_world;
 use crate::pathfinding::find_path;
@@ -61,6 +62,10 @@ pub struct PatrolRoute {
 #[derive(Component)]
 pub struct HealthBar;
 
+/// Health bar fill marker (the animated part)
+#[derive(Component)]
+pub struct HealthBarFill;
+
 /// MeleeUnit bundle - all melee units share these components
 /// Player and Enemy are identical units, differentiated only by Team
 #[derive(Bundle, Default)]
@@ -70,6 +75,8 @@ pub struct MeleeUnit {
     pub state: UnitStateMachine,
     pub target: Target,
     pub patrol: PatrolRoute,
+    pub combat_stats: CombatStats,
+    pub attack_target: AttackTarget,
 }
 
 impl MeleeUnit {
@@ -89,6 +96,8 @@ impl MeleeUnit {
             state: UnitStateMachine::default(),
             target: Target::default(),
             patrol: PatrolRoute::default(),
+            combat_stats: CombatStats::melee(),
+            attack_target: AttackTarget::default(),
         }
     }
 }
@@ -186,9 +195,39 @@ pub fn spawn_health_bars(mut commands: Commands, units: Query<(Entity, &Health),
                     ..default()
                 },
                 Transform::from_xyz(-12.0 + 12.0 * health_percent, 18.0, 8.0),
-                HealthBar,
+                HealthBarFill,
             ));
         });
+    }
+}
+
+/// Update health bar fills when unit health changes
+pub fn update_health_bars(
+    units: Query<(Entity, &Health), Changed<Health>>,
+    children: Query<&Children>,
+    mut bar_sprites: Query<(&mut Sprite, &mut Transform), With<HealthBarFill>>,
+) {
+    for (entity, health) in units.iter() {
+        let health_percent = health.current as f32 / health.max as f32;
+        let fill_width = 24.0 * health_percent;
+        let fill_x = -12.0 + 12.0 * health_percent;
+        let color = if health_percent > 0.5 {
+            Color::srgb(0.2, 0.8, 0.2)
+        } else if health_percent > 0.25 {
+            Color::srgb(0.9, 0.7, 0.1)
+        } else {
+            Color::srgb(0.9, 0.2, 0.2)
+        };
+
+        if let Ok(unit_children) = children.get(entity) {
+            for child in unit_children.iter() {
+                if let Ok((mut sprite, mut transform)) = bar_sprites.get_mut(child) {
+                    sprite.custom_size = Some(Vec2::new(fill_width, 4.0));
+                    sprite.color = color;
+                    transform.translation.x = fill_x;
+                }
+            }
+        }
     }
 }
 
@@ -221,52 +260,30 @@ pub fn update_enemy_visibility(
 }
 
 /// Enemy AI - chase player when in vision range
-/// Enemy is an identical unit to player - same speed, same class
-/// Only chases while player is within enemy view radius
+/// Sets AttackTarget so combat systems handle pathfinding and damage
 pub fn enemy_ai_chase(
-    player: Query<(&Unit, &Transform), With<PlayerUnit>>,
-    mut enemies: Query<(&Unit, &mut Target, &Transform), With<EnemyUnit>>,
-    grid: Res<GridConfig>,
-    obstacles: Res<ObstacleGrid>,
+    player: Query<(Entity, &Unit, &Transform), With<PlayerUnit>>,
+    mut enemies: Query<(&Unit, &mut Target, &Transform, &mut AttackTarget), With<EnemyUnit>>,
     visibility_grid: Res<VisibilityGrid>,
+    grid: Res<GridConfig>,
 ) {
-    let Ok((player_unit, player_transform)) = player.single() else {
+    let Ok((player_entity, _, player_transform)) = player.single() else {
         return;
     };
 
-    let player_world = player_transform.translation.truncate();
+    let vision_radius = visibility_grid.view_radius as f32 * grid.cell_size;
 
-    for (enemy_unit, mut target, enemy_transform) in enemies.iter_mut() {
-        let enemy_world = enemy_transform.translation.truncate();
-        let dist = (player_world - enemy_world).length();
-        let vision_radius = visibility_grid.view_radius as f32 * grid.cell_size;
+    for (_, mut target, enemy_transform, mut attack_target) in enemies.iter_mut() {
+        let dist = (player_transform.translation - enemy_transform.translation).length();
 
-        // Always agro while player is inside view radius
         if dist > vision_radius {
             target.path.clear();
             target.path_index = 0;
+            attack_target.0 = None;
             continue;
         }
 
-        let destination = (player_unit.grid_x, player_unit.grid_y);
-        let needs_repath = target.path.is_empty()
-            || target.path_index >= target.path.len()
-            || target.path.last().copied() != Some(destination);
-
-        if needs_repath {
-            let path = find_path(
-                (enemy_unit.grid_x, enemy_unit.grid_y),
-                destination,
-                &obstacles.cells,
-                grid.grid_width,
-                grid.grid_height,
-            );
-
-            if !path.is_empty() {
-                target.path = path;
-                target.path_index = 0;
-            }
-        }
+        attack_target.0 = Some(player_entity);
     }
 }
 
@@ -494,14 +511,25 @@ pub fn read_console_commands(
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn read_stdin_commands(
-    mut query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
-    obstacles: Res<ObstacleGrid>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut obstacle_grid: ResMut<ObstacleGrid>,
+    mut visibility_grid: ResMut<VisibilityGrid>,
+    mut fog_waypoints: ResMut<FogWaypoints>,
+    mut game_state: ResMut<GameState>,
     grid: Res<GridConfig>,
-    state: Res<GameState>,
+    minimap_config: Res<MinimapConfig>,
+    mut query: Query<(&mut Unit, &mut Target), With<PlayerUnit>>,
+    mut unit_query: Query<Entity, Or<(With<PlayerUnit>, With<EnemyUnit>)>>,
+    mut fog_query: Query<Entity, With<FogCell>>,
+    mut tree_query: Query<Entity, With<Tree>>,
+    mut waypoint_query: Query<Entity, With<WaypointMarker>>,
+    mut goal_query: Query<Entity, With<GoalZone>>,
     mut frame: Local<u64>,
 ) {
     *frame += 1;
-    if *frame % 30 != 0 {
+    if *frame % 15 != 0 {
         return;
     }
 
@@ -512,8 +540,34 @@ pub fn read_stdin_commands(
 
     if let Ok(buffer) = std::fs::read_to_string(path) {
         let _ = std::fs::remove_file(path);
-        if let Ok(cmd) = serde_json::from_str(&buffer) {
-            let result = handle_command(&mut query, &obstacles, &grid, &state, cmd);
+        if let Ok(cmd) = serde_json::from_str::<ConsoleCommand>(&buffer) {
+            if cmd.cmd == "reset" {
+                crate::grid::cleanup_level(
+                    &mut commands,
+                    &mut unit_query,
+                    &mut fog_query,
+                    &mut tree_query,
+                    &mut waypoint_query,
+                    &mut goal_query,
+                );
+                crate::grid::respawn_level(
+                    &mut commands,
+                    &mut meshes,
+                    &mut materials,
+                    &mut obstacle_grid,
+                    &mut visibility_grid,
+                    &mut fog_waypoints,
+                    &grid,
+                    #[cfg(not(target_arch = "wasm32"))]
+                    &minimap_config,
+                );
+                game_state.level_complete = false;
+                let result = serde_json::json!({"ok": true, "msg": "Level reset"});
+                let _ = std::fs::write("headless_result.json", result.to_string());
+                println!("RESULT: {}", result);
+                return;
+            }
+            let result = handle_command(&mut query, &obstacle_grid, &grid, &game_state, cmd);
             let _ = std::fs::write("headless_result.json", result.to_string());
             println!("RESULT: {}", result);
         }
@@ -547,7 +601,9 @@ fn handle_command(
             serde_json::json!({"ok": false, "msg": "No path found"})
         }
         "status" => {
-            let (unit, _) = query.single().unwrap();
+            let Ok((unit, _)) = query.single() else {
+                return serde_json::json!({"ok": false, "msg": "Player is dead"});
+            };
             serde_json::json!({
                 "ok": true,
                 "msg": format!("Player at ({}, {})", unit.grid_x, unit.grid_y),
@@ -558,7 +614,9 @@ fn handle_command(
             if let Some(v) = cmd.verify {
                 match v.verify_type.as_str() {
                     "player_at" => {
-                        let (unit, _) = query.single().unwrap();
+                        let Ok((unit, _)) = query.single() else {
+                            return serde_json::json!({"ok": false, "msg": "Player is dead"});
+                        };
                         let (vx, vy) = (v.x.unwrap_or(0), v.y.unwrap_or(0));
                         let ok = unit.grid_x == vx && unit.grid_y == vy;
                         let msg = if ok {
@@ -631,7 +689,9 @@ pub fn debug_console_output(
         .single()
         .map(|t| t.translation.truncate())
         .unwrap_or(Vec2::ZERO);
-    let (unit, transform, target, selected) = player.single().unwrap();
+    let Ok((unit, transform, target, selected)) = player.single() else {
+        return;
+    };
 
     let total = grid.grid_width * grid.grid_height;
     let revealed = visibility
@@ -732,7 +792,9 @@ pub fn broadcast_minimap_data(
     if *frame % 30 != 0 {
         return;
     }
-    let unit = player.single().unwrap();
+    let Ok(unit) = player.single() else {
+        return;
+    };
 
     let mut map = String::with_capacity(grid.grid_width * grid.grid_height + grid.grid_height);
     for gy in 0..grid.grid_height {

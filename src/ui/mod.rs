@@ -1,5 +1,7 @@
 //! RTS HUD and command UI systems
 
+use crate::core::*;
+use crate::grid;
 use bevy::prelude::*;
 use bevy::window::{CursorIcon, SystemCursorIcon};
 
@@ -177,4 +179,203 @@ fn is_over_button(cursor: Vec2, window_width: f32, window_height: f32, bottom_ma
     let y_max = window_height - bottom_margin;
     let y_min = y_max - BUTTON_HEIGHT;
     cursor.x >= x_min && cursor.x <= x_max && cursor.y >= y_min && cursor.y <= y_max
+}
+
+// ── Escape Menu ──────────────────────────────────────────────────────────────
+
+#[derive(Resource, Default)]
+pub struct PauseMenu {
+    pub open: bool,
+    pub retry_requested: bool,
+}
+
+#[derive(Component)]
+pub struct EscapeMenuRoot;
+
+#[derive(Component)]
+pub struct RetryButton;
+
+#[derive(Component)]
+pub struct ResumeButton;
+
+pub fn spawn_escape_menu(mut commands: Commands) {
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                right: Val::Px(0.0),
+                top: Val::Px(0.0),
+                bottom: Val::Px(0.0),
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.65)),
+            Visibility::Hidden,
+            GlobalZIndex(10),
+            EscapeMenuRoot,
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn((
+                    Node {
+                        width: Val::Px(280.0),
+                        padding: UiRect::all(Val::Px(24.0)),
+                        flex_direction: FlexDirection::Column,
+                        row_gap: Val::Px(14.0),
+                        align_items: AlignItems::Center,
+                        border: UiRect::all(Val::Px(1.0)),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgb(0.08, 0.1, 0.12)),
+                    BorderColor::all(Color::srgb(0.35, 0.35, 0.4)),
+                ))
+                .with_children(|panel| {
+                    panel.spawn((
+                        Text::new("Paused"),
+                        TextFont {
+                            font_size: 28.0,
+                            ..default()
+                        },
+                        TextColor(Color::srgb(0.9, 0.9, 0.95)),
+                    ));
+
+                    panel
+                        .spawn((
+                            Button,
+                            Node {
+                                width: Val::Px(200.0),
+                                height: Val::Px(42.0),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            BackgroundColor(Color::srgb(0.18, 0.25, 0.18)),
+                            RetryButton,
+                        ))
+                        .with_children(|b| {
+                            b.spawn((
+                                Text::new("Retry Level"),
+                                TextFont {
+                                    font_size: 18.0,
+                                    ..default()
+                                },
+                                TextColor(Color::srgb(0.7, 1.0, 0.7)),
+                            ));
+                        });
+
+                    panel
+                        .spawn((
+                            Button,
+                            Node {
+                                width: Val::Px(200.0),
+                                height: Val::Px(42.0),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            BackgroundColor(Color::srgb(0.22, 0.22, 0.28)),
+                            ResumeButton,
+                        ))
+                        .with_children(|b| {
+                            b.spawn((
+                                Text::new("Resume"),
+                                TextFont {
+                                    font_size: 18.0,
+                                    ..default()
+                                },
+                                TextColor(Color::srgb(0.9, 0.9, 1.0)),
+                            ));
+                        });
+                });
+        });
+}
+
+pub fn toggle_escape_menu(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut pause_menu: ResMut<PauseMenu>,
+    mut menu_query: Query<&mut Visibility, With<EscapeMenuRoot>>,
+) {
+    if !keys.just_pressed(KeyCode::Escape) {
+        return;
+    }
+    pause_menu.open = !pause_menu.open;
+    if let Ok(mut vis) = menu_query.single_mut() {
+        *vis = if pause_menu.open {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        };
+    }
+}
+
+pub fn handle_escape_menu_buttons(
+    mut pause_menu: ResMut<PauseMenu>,
+    retry_query: Query<&Interaction, (With<RetryButton>, Changed<Interaction>)>,
+    resume_query: Query<&Interaction, (With<ResumeButton>, Changed<Interaction>)>,
+    mut menu_query: Query<&mut Visibility, With<EscapeMenuRoot>>,
+) {
+    for interaction in retry_query.iter() {
+        if *interaction == Interaction::Pressed {
+            pause_menu.retry_requested = true;
+            if let Ok(mut vis) = menu_query.single_mut() {
+                *vis = Visibility::Hidden;
+            }
+            pause_menu.open = false;
+        }
+    }
+    for interaction in resume_query.iter() {
+        if *interaction == Interaction::Pressed {
+            if let Ok(mut vis) = menu_query.single_mut() {
+                *vis = Visibility::Hidden;
+            }
+            pause_menu.open = false;
+        }
+    }
+}
+
+pub fn execute_retry(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut obstacle_grid: ResMut<ObstacleGrid>,
+    mut visibility_grid: ResMut<VisibilityGrid>,
+    mut fog_waypoints: ResMut<FogWaypoints>,
+    mut game_state: ResMut<GameState>,
+    grid: Res<GridConfig>,
+    #[cfg(not(target_arch = "wasm32"))] minimap_config: Res<MinimapConfig>,
+    mut pause_menu: ResMut<PauseMenu>,
+    mut unit_query: Query<Entity, Or<(With<PlayerUnit>, With<EnemyUnit>)>>,
+    mut fog_query: Query<Entity, With<FogCell>>,
+    mut tree_query: Query<Entity, With<Tree>>,
+    mut waypoint_query: Query<Entity, With<WaypointMarker>>,
+    mut goal_query: Query<Entity, With<GoalZone>>,
+) {
+    if !pause_menu.retry_requested {
+        return;
+    }
+    pause_menu.retry_requested = false;
+
+    grid::cleanup_level(
+        &mut commands,
+        &mut unit_query,
+        &mut fog_query,
+        &mut tree_query,
+        &mut waypoint_query,
+        &mut goal_query,
+    );
+    grid::respawn_level(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &mut obstacle_grid,
+        &mut visibility_grid,
+        &mut fog_waypoints,
+        &grid,
+        #[cfg(not(target_arch = "wasm32"))]
+        &minimap_config,
+    );
+    game_state.level_complete = false;
 }

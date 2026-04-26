@@ -22,17 +22,20 @@
   - Speed: 150.0 (world units/sec)
   - Vision range: 6 cells (radius)
   - Controlled via right-click movement
+  - Right-click on enemy = attack
   - Health: 100 HP with health bar above unit
-   
+  - Combat: 15 damage, 3-cell range, 1s cooldown
+    
 - **Enemy Unit**: Red circle with "M" label
   - Speed: 150.0 (world units/sec)
   - Same race as player (melee unit)
   - Hidden in fog until revealed
   - Health: 100 HP with health bar above unit
+  - Combat: 15 damage, 3-cell range, 1s cooldown
   - AI Behavior:
     - Chases player when player enters enemy view radius
+    - Attacks player on cooldown when in melee range
     - Stops chasing when player leaves enemy view radius
-    - Re-paths to current player position as needed
 
 ### Race And Team Semantics
 
@@ -53,6 +56,28 @@ All units have StarCraft-style health bars:
   - Red (< 25%)
 - Background: dark gray
 - Auto-spawned when unit is created
+- Health bar updates dynamically when damage is taken
+
+### Combat System
+
+**Melee Combat**:
+- All units have `CombatStats` (damage: 15, range: 3 cells, cooldown: 1s)
+- Units with `AttackTarget(entity)` pathfind toward target and attack when in range
+- Attack cooldown timer decrements each frame; attacks fire when timer reaches 0
+- Damage is applied instantly (no projectile animation yet)
+- Units despawn when health reaches 0
+
+**Right-Click to Attack**:
+- Right-clicking on an enemy unit sets `AttackTarget` for the player unit
+- Player unit pathfinds to enemy and attacks on cooldown
+- Issuing a move order clears `AttackTarget`
+- Move and Patrol commands always override combat targeting
+
+**Enemy AI Combat**:
+- `enemy_ai_chase` sets `AttackTarget(player_entity)` when player is within vision radius
+- `attack_movement` handles pathfinding toward the attack target
+- `combat_tick` applies damage when in range
+- Enemies stop chasing (clear `AttackTarget`) when player leaves vision radius
 
 ### Unit State Machine
 
@@ -118,7 +143,22 @@ struct PatrolRoute {
     point_b: (usize, usize),
     go_to_b_next: bool,
 }
+
+struct CombatStats {
+    damage: u32,
+    attack_range: f32,
+    cooldown_timer: f32,
+}
+
+struct AttackTarget(Option<Entity>);
 ```
+
+## Systems
+
+### Combat Systems (in `combat/`)
+- `attack_movement` — Pathfind toward attack target; stop when in range
+- `combat_tick` — Apply damage to target when in range and cooldown ready
+- `death_check` — Despawn entities with 0 HP
 
 ## Fog of War Visibility
 

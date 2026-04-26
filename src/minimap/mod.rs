@@ -273,7 +273,9 @@ pub fn update_native_minimap(
     if *frame % 5 != 0 {
         return;
     }
-    let unit = player.single().unwrap();
+    let Ok(unit) = player.single() else {
+        return;
+    };
     let cw = cfg.width / grid.grid_width as f32;
     let ch = cfg.height / grid.grid_height as f32;
 

@@ -1,10 +1,12 @@
 //! Core plugin registration
 
+use crate::combat;
+use crate::combat::{AttackTarget, CombatStats};
 use crate::core::{ObstacleGrid, VisibilityGrid};
 use crate::grid::{self};
 use crate::input;
 use crate::minimap;
-use crate::ui;
+use crate::ui::{self, PauseMenu};
 use crate::units::{self, Health, PatrolRoute, Target, Unit, UnitStateMachine};
 use bevy::prelude::*;
 
@@ -24,6 +26,7 @@ impl Plugin for DreamCraftPlugin {
             .init_resource::<FogWaypoints>()
             .init_resource::<MinimapConfig>()
             .init_resource::<ui::CommandUiState>()
+            .init_resource::<PauseMenu>()
             .register_type::<MinimapEntity>()
             .register_type::<MinimapSprite>()
             .register_type::<MinimapBackground>()
@@ -37,33 +40,61 @@ impl Plugin for DreamCraftPlugin {
             .register_type::<Health>()
             .register_type::<PatrolRoute>()
             .register_type::<UnitStateMachine>()
+            .register_type::<CombatStats>()
+            .register_type::<AttackTarget>()
             .register_type::<ui::MoveCommandButton>()
             .register_type::<ui::PatrolCommandButton>()
             .insert_resource(ClearColor(Color::srgb(0.02, 0.04, 0.02)))
-            .add_systems(Startup, (grid::setup_tutorial_level, ui::spawn_rts_hud))
+            .add_systems(
+                Startup,
+                (
+                    grid::setup_tutorial_level,
+                    ui::spawn_rts_hud,
+                    ui::spawn_escape_menu,
+                ),
+            )
             .add_systems(
                 Update,
                 (
                     ui::handle_move_button_interaction,
                     input::handle_input,
-                    #[cfg(target_arch = "wasm32")]
-                    units::read_console_commands,
-                    #[cfg(not(target_arch = "wasm32"))]
-                    units::read_stdin_commands,
                     units::enemy_ai_chase,
                     units::patrol_loop,
                     units::unit_movement,
                     input::camera_controls,
-                    #[cfg(not(target_arch = "wasm32"))]
-                    minimap::handle_minimap_click,
+                    input::screen_edge_scroll,
                     units::check_goal,
                     units::draw_path,
+                ),
+            )
+            .add_systems(
+                Update,
+                (
+                    units::spawn_health_bars,
+                    combat::attack_movement,
+                    combat::combat_tick,
+                    combat::death_check,
+                    units::update_health_bars,
                     grid::update_visibility,
                     grid::update_fog,
                     units::update_enemy_visibility,
-                    units::spawn_health_bars,
                     units::draw_waypoints,
                     units::check_waypoint_reached,
+                    units::debug_console_output,
+                ),
+            )
+            .add_systems(
+                Update,
+                (
+                    #[cfg(target_arch = "wasm32")]
+                    units::read_console_commands,
+                    #[cfg(not(target_arch = "wasm32"))]
+                    units::read_stdin_commands,
+                    ui::toggle_escape_menu,
+                    ui::handle_escape_menu_buttons,
+                    ui::execute_retry,
+                    #[cfg(not(target_arch = "wasm32"))]
+                    minimap::handle_minimap_click,
                     #[cfg(target_arch = "wasm32")]
                     units::broadcast_minimap_data,
                     #[cfg(not(target_arch = "wasm32"))]
@@ -72,7 +103,6 @@ impl Plugin for DreamCraftPlugin {
                         minimap::update_minimap_visibility,
                         minimap::update_camera_viewport_on_minimap,
                     ),
-                    units::debug_console_output,
                 ),
             );
     }

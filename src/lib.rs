@@ -9,6 +9,7 @@
 //! - pathfinding: A* pathfinding algorithm
 //! - ui: UI systems (placeholder)
 
+pub mod combat;
 pub mod core;
 pub mod grid;
 pub mod input;

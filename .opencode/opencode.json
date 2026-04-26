@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "bevy_brp": {
+      "type": "local",
+      "command": ["/home/wilsonn/.asdf/installs/rust/stable/bin/bevy_brp_mcp"],
+      "enabled": true
+    }
+  }
+}

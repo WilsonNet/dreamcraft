@@ -1,8 +1,8 @@
 //! Grid setup, visibility, and fog of war systems
 
 use crate::core::{
-    FogCell, FogWaypoints, GoalZone, GridConfig, MinimapConfig, ObstacleGrid, PlayerUnit, Team,
-    Tree, VisibilityGrid, WaypointMarker,
+    EnemyUnit, FogCell, FogWaypoints, GoalZone, GridConfig, MinimapConfig, ObstacleGrid,
+    PlayerUnit, Team, Tree, VisibilityGrid, WaypointMarker,
 };
 use crate::units::{spawn_unit, Unit};
 use bevy::prelude::*;
@@ -151,7 +151,7 @@ fn spawn_ground(
     ));
 }
 
-fn spawn_fog(
+pub fn spawn_fog(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
@@ -374,4 +374,55 @@ pub fn world_to_grid(world: Vec2, grid: &GridConfig) -> (usize, usize) {
         gx.clamp(0, grid.grid_width as i32 - 1) as usize,
         gy.clamp(0, grid.grid_height as i32 - 1) as usize,
     )
+}
+
+/// Reset the level to its initial state
+pub fn cleanup_level(
+    commands: &mut Commands,
+    units: &mut Query<Entity, Or<(With<PlayerUnit>, With<EnemyUnit>)>>,
+    fog: &mut Query<Entity, With<FogCell>>,
+    trees: &mut Query<Entity, With<Tree>>,
+    waypoints: &mut Query<Entity, With<WaypointMarker>>,
+    goal: &mut Query<Entity, With<GoalZone>>,
+) {
+    for e in units.iter_mut() {
+        commands.entity(e).despawn();
+    }
+    for e in fog.iter_mut() {
+        commands.entity(e).despawn();
+    }
+    for e in trees.iter_mut() {
+        commands.entity(e).despawn();
+    }
+    for e in waypoints.iter_mut() {
+        commands.entity(e).despawn();
+    }
+    for e in goal.iter_mut() {
+        commands.entity(e).despawn();
+    }
+}
+
+/// Reinitialize grids and respawn level entities
+pub fn respawn_level(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    obstacle_grid: &mut ResMut<ObstacleGrid>,
+    visibility_grid: &mut ResMut<VisibilityGrid>,
+    fog_waypoints: &mut ResMut<FogWaypoints>,
+    grid: &Res<GridConfig>,
+    #[cfg(not(target_arch = "wasm32"))] _minimap_config: &Res<MinimapConfig>,
+) {
+    let start_x = 2;
+    let start_y = grid.grid_height / 2;
+
+    fog_waypoints.current_target = 0;
+    initialize_grids(obstacle_grid, visibility_grid, grid, start_x, start_y);
+
+    spawn_fog(commands, meshes, materials, visibility_grid, grid);
+    spawn_waypoints(commands, meshes, materials, fog_waypoints, grid);
+    spawn_trees(commands, meshes, materials, grid);
+    spawn_goal(commands, meshes, materials, grid);
+    spawn_player(commands, meshes, materials, start_x, start_y, grid);
+    spawn_enemy(commands, meshes, materials, 50, 25, grid);
 }

@@ -99,10 +99,43 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 - [x] Native headless mode with file-based commands (`headless_command.json`)
 - [x] BRP (Bevy Remote Protocol) support for MCP tools
 
+#### Combat System
+- [x] Melee combat with damage and health
+- [x] Right-click enemy to attack
+- [x] Enemy AI chases and attacks player on sight
+- [x] Attack cooldown (1 second between attacks)
+- [x] Death system (units despawn at 0 HP)
+
+#### Screen Edge Scrolling
+- [x] Progressive scroll speed (faster closer to edge)
+- [x] 20px activation zone from screen edges
+- [x] Speed ramps from 200 to 600 px/sec
+- [x] Works alongside WASD camera controls
+
+#### Escape Menu
+- [x] Press Esc to open/close pause overlay
+- [x] Semi-transparent dark overlay with centered panel
+- [x] "Retry Level" button — resets level (respawning all entities at start)
+- [x] "Resume" button — closes menu
+- [x] Game simulation continues while paused (overlay only)
+- [x] Clicking Retry hides menu automatically
+
+#### Health Bar Updates
+- [x] Health bar fills resize/change color reactively when health changes
+- [x] Uses `Changed<Health>` query for efficient updates
+- [x] Color thresholds: green (>50%), yellow (25-50%), red (<25%)
+
 ### Known Issues
 - [ ] Waypoint 3 at (40,20) collides with tree cluster 7 — pathfinding skips it
 - [ ] Camera doesn't auto-follow player (must pan manually)
-- [ ] Native build broken (wasm-only extern blocks need cfg guards)
+
+### Controls
+- **Right-Click**: Move unit to location; right-click on enemy = attack
+- **WASD/Arrows**: Pan camera
+- **Screen Edge Scroll**: Mouse at screen edge pans camera (progressive speed)
+- **Left-Click Minimap**: Center camera on clicked map position
+- **Backtick (`` ` ``)**: Toggle Agent Console
+- **Escape**: Toggle pause menu (Retry / Resume)
 
 #### Waypoints for Level 1
 ```
@@ -116,31 +149,22 @@ Player starts at (2,25). Goal zone at x >= 77.
 ```
 dreamcraft/
 ├── src/
-│   ├── lib.rs              # Main game plugin (all ECS systems)
-│   │   ├── setup_tutorial_level  — spawns entities, grid, fog, waypoints
-│   │   ├── handle_input          — right-click movement via A* pathfinding
-│   │   ├── read_console_commands — reads commands from localStorage
-│   │   ├── unit_movement         — moves player along A* path
-│   │   ├── camera_controls       — WASD/arrow panning
-│   │   ├── check_goal            — level completion check
-│   │   ├── update_visibility     — reveals cells around player
-│   │   ├── update_fog            — fades fog cells when revealed
-│   │   ├── check_waypoint_reached — advances waypoint target
-│   │   ├── broadcast_minimap_data — sends minimap grid to localStorage
-│   │   └── debug_console_output  — sends full debug state to localStorage
-│   ├── main.rs             # Native entry point
-│   └── web.rs              # WASM entry point (minimal)
+│   ├── combat/              # Combat system (attacking, damage, death)
+│   ├── core/                # Core components, resources, plugin
+│   ├── grid/                # Grid setup, visibility, fog of war
+│   ├── input/               # Mouse/keyboard, camera pan, screen edge scroll
+│   ├── lib.rs               # Main game plugin (all ECS systems)
+│   ├── main.rs              # Native entry point
+│   ├── minimap/             # Minimap rendering
+│   ├── pathfinding/         # A* pathfinding algorithm
+│   ├── ui/                  # RTS HUD and command buttons
+│   ├── units/               # Unit movement, AI, health, patrol
+│   └── web.rs               # WASM entry point (minimal)
 ├── index.html              # Trunk entry — game + React console + React minimap
 ├── web/                    # Legacy Bun-based React UI (not primary)
 ├── specs/                  # Game specifications (this folder)
 └── bevy-docs/              # Bevy engine reference
 ```
-
-### Controls
-- **Right-Click**: Move unit to location (A* pathfinding)
-- **WASD/Arrows**: Pan camera
-- **Left-Click Minimap**: Center camera on clicked map position
-- **Backtick (`` ` ``)**: Toggle Agent Console
 
 ### Tech Stack
 - **Logic**: Rust + Bevy 0.18 ECS
@@ -157,9 +181,8 @@ dreamcraft/
 3. **Isometric View** - Diagonal 2:1 grid rendering
 4. **Additional Unit Types** - Gatherer, Scout, Melee, Ranged
 5. **Resource System** - Gold collection
-6. **Combat System** - Attack animations and damage
-7. **Multiplayer** - WebTransport networking
-8. **WebGPU Rendering** - High-performance shaders
+6. **Multiplayer** - WebTransport networking
+7. **WebGPU Rendering** - High-performance shaders
 
 ## Level Design Principles
 

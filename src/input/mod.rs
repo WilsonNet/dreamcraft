@@ -1,5 +1,6 @@
 //! Input handling: mouse, keyboard, camera controls
 
+use crate::combat::AttackTarget;
 use crate::core::*;
 use crate::grid::world_to_grid;
 use crate::pathfinding::find_path;
@@ -7,22 +8,26 @@ use crate::units::{PatrolRoute, Target, Unit, UnitState};
 use bevy::prelude::*;
 use bevy::window::{CursorIcon, SystemCursorIcon};
 
-/// Handle right-click movement commands
+/// Handle right-click movement commands and attack targeting
 pub fn handle_input(
     mouse: Res<ButtonInput<MouseButton>>,
     window: Single<&Window>,
     camera: Single<(&Camera, &GlobalTransform)>,
     grid: Res<GridConfig>,
     obstacles: Res<ObstacleGrid>,
-    mut query: Query<
-        (
-            &mut Unit,
-            &mut Target,
-            &mut crate::units::UnitStateMachine,
-            &mut PatrolRoute,
-        ),
-        With<PlayerUnit>,
-    >,
+    mut params: ParamSet<(
+        Query<(Entity, &Unit), With<EnemyUnit>>,
+        Query<
+            (
+                &mut Unit,
+                &mut Target,
+                &mut crate::units::UnitStateMachine,
+                &mut PatrolRoute,
+                &mut AttackTarget,
+            ),
+            With<PlayerUnit>,
+        >,
+    )>,
     mut command_ui: ResMut<crate::ui::CommandUiState>,
     mut cursor_icon: Single<&mut CursorIcon, With<Window>>,
 ) {
@@ -46,20 +51,38 @@ pub fn handle_input(
             let (gx, gy) = world_to_grid(world, &grid);
 
             if quick_move {
-                issue_move_order(&mut query, (gx, gy), &obstacles, &grid, true);
+                let enemy_hit = params
+                    .p0()
+                    .iter()
+                    .find(|(_, eu)| eu.grid_x == gx && eu.grid_y == gy)
+                    .map(|(e, _)| e);
+
+                if let Some(enemy_entity) = enemy_hit {
+                    for (_, _, _, _, mut attack_target) in params.p1().iter_mut() {
+                        attack_target.0 = Some(enemy_entity);
+                    }
+                } else {
+                    issue_move_order(
+                        &mut params.p1(),
+                        (gx, gy),
+                        &obstacles,
+                        &grid,
+                        true,
+                    );
+                }
                 reset_command_mode(&mut command_ui, &mut cursor_icon);
                 return;
             }
 
             if command_click {
-                issue_move_order(&mut query, (gx, gy), &obstacles, &grid, true);
+                issue_move_order(&mut params.p1(), (gx, gy), &obstacles, &grid, true);
                 reset_command_mode(&mut command_ui, &mut cursor_icon);
                 return;
             }
 
             if patrol_click {
                 if let Some(first) = command_ui.patrol_first_point {
-                    issue_patrol_order(&mut query, first, (gx, gy), &obstacles, &grid);
+                    issue_patrol_order(&mut params.p1(), first, (gx, gy), &obstacles, &grid);
                     reset_command_mode(&mut command_ui, &mut cursor_icon);
                 } else {
                     command_ui.patrol_first_point = Some((gx, gy));
@@ -77,6 +100,7 @@ fn issue_move_order(
             &mut Target,
             &mut crate::units::UnitStateMachine,
             &mut PatrolRoute,
+            &mut AttackTarget,
         ),
         With<PlayerUnit>,
     >,
@@ -85,7 +109,8 @@ fn issue_move_order(
     grid: &GridConfig,
     break_patrol: bool,
 ) {
-    for (unit, mut target, mut state_machine, mut patrol) in query.iter_mut() {
+    for (unit, mut target, mut state_machine, mut patrol, mut attack_target) in query.iter_mut() {
+        attack_target.0 = None;
         if break_patrol {
             patrol.active = false;
         }
@@ -113,6 +138,7 @@ fn issue_patrol_order(
             &mut Target,
             &mut crate::units::UnitStateMachine,
             &mut PatrolRoute,
+            &mut AttackTarget,
         ),
         With<PlayerUnit>,
     >,
@@ -121,7 +147,8 @@ fn issue_patrol_order(
     obstacles: &ObstacleGrid,
     grid: &GridConfig,
 ) {
-    for (unit, mut target, mut state_machine, mut patrol) in query.iter_mut() {
+    for (unit, mut target, mut state_machine, mut patrol, mut attack_target) in query.iter_mut() {
+        attack_target.0 = None;
         patrol.active = true;
         patrol.point_a = point_a;
         patrol.point_b = point_b;
@@ -181,5 +208,48 @@ pub fn camera_controls(
         let hh = grid.cell_size * grid.grid_height as f32 / 2.0 + 200.0;
         t.translation.x = t.translation.x.clamp(-hw, hw);
         t.translation.y = t.translation.y.clamp(-hh, hh);
+    }
+}
+
+/// Progressive screen edge scrolling (RTS standard)
+/// Scroll speed increases the closer the cursor is to the screen edge
+pub fn screen_edge_scroll(
+    window: Single<&Window>,
+    mut query: Query<&mut Transform, (With<Camera2d>, Without<MinimapCamera>)>,
+    time: Res<Time>,
+    grid: Res<GridConfig>,
+) {
+    const SCROLL_ZONE: f32 = 20.0;
+    const BASE_SPEED: f32 = 200.0;
+    const MAX_SPEED: f32 = 600.0;
+
+    if let Ok(mut t) = query.single_mut() {
+        if let Some(cursor) = window.cursor_position() {
+            let size = window.size();
+            let mut vel = Vec3::ZERO;
+
+            if cursor.x < SCROLL_ZONE {
+                let factor = 1.0 - (cursor.x / SCROLL_ZONE);
+                vel.x -= BASE_SPEED + (MAX_SPEED - BASE_SPEED) * factor;
+            } else if cursor.x > size.x - SCROLL_ZONE {
+                let factor = 1.0 - ((size.x - cursor.x) / SCROLL_ZONE);
+                vel.x += BASE_SPEED + (MAX_SPEED - BASE_SPEED) * factor;
+            }
+
+            if cursor.y < SCROLL_ZONE {
+                let factor = 1.0 - (cursor.y / SCROLL_ZONE);
+                vel.y += BASE_SPEED + (MAX_SPEED - BASE_SPEED) * factor;
+            } else if cursor.y > size.y - SCROLL_ZONE {
+                let factor = 1.0 - ((size.y - cursor.y) / SCROLL_ZONE);
+                vel.y -= BASE_SPEED + (MAX_SPEED - BASE_SPEED) * factor;
+            }
+
+            t.translation += vel * time.delta_secs();
+
+            let hw = grid.cell_size * grid.grid_width as f32 / 2.0 + 200.0;
+            let hh = grid.cell_size * grid.grid_height as f32 / 2.0 + 200.0;
+            t.translation.x = t.translation.x.clamp(-hw, hw);
+            t.translation.y = t.translation.y.clamp(-hh, hh);
+        }
     }
 }
