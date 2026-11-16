@@ -45,7 +45,7 @@ Build a fantasy RTS called **DreamCraft** with:
 - Browser WASM/canvas client with DOM HUD and `window.dreamcraft` API
 - Headless JSONL scripts, HTTP control server, hash-verified replays
 - Curve/state validation after every tick
-- 71 native tests + web WASM smoke: invariants, allocations, determinism,
+- 72 native tests + web WASM smoke: invariants, allocations, determinism,
   HTTP round trip, browser API
 - Bevy BRP MCP removed; control API replaces it
 

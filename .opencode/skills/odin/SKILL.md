@@ -129,6 +129,8 @@ node test_wasm.mjs
   `path[path_index]` (the cell being entered), not from `position`.
 - Validate the destination before mutating path or world fields. A rejected
   move must leave the current path intact.
+- Attack orders keep the path; `attack_movement` replans from the current
+  segment. In-range units finish the segment (`unit_stop_after_segment`).
 - Validator: `path[0] != position` is legal only while `progress > 0`.
 - Regression: re-order while moving, click a tree cell, re-order while routing
   past an obstacle. `world` must advance monotonically.

@@ -207,6 +207,18 @@ unit_between_cells :: proc(units: ^Units, index: int) -> bool {
 	return !cells_equal(next, units.position[index])
 }
 
+// Stop without teleporting: a unit between cells finishes the current segment
+// and then becomes idle. At a cell center it stops immediately.
+unit_stop_after_segment :: proc(units: ^Units, index: int) {
+	if unit_between_cells(units, index) {
+		units.path_len[index] = units.path_index[index] + 1
+		units.state[index] = .Moving
+		return
+	}
+	unit_clear_path(units, index)
+	units.state[index] = .Idle
+}
+
 unit_path_destination :: proc(units: ^Units, index: int) -> (Grid_Pos, bool) {
 	if units.path_len[index] == 0 {
 		return {}, false

@@ -18,8 +18,7 @@ attack_movement :: proc(game: ^Game) {
 		dfx := units.position[index].x - units.position[target_index].x
 		dfy := units.position[index].y - units.position[target_index].y
 		if dfx * dfx + dfy * dfy <= ATTACK_RANGE_SQUARED {
-			unit_clear_path(units, index)
-			units.state[index] = .Idle
+			unit_stop_after_segment(units, index)
 			continue
 		}
 

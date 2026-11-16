@@ -99,8 +99,12 @@ apply_attack :: proc(game: ^Game, index: int, target: Unit_Handle) {
 	units := &game.units
 	units.attack_target[index] = target
 	units.patrol_active[index] = false
-	unit_clear_path(units, index)
-	units.state[index] = .Idle
+	// Keep the current path. attack_movement replans from the segment the unit
+	// is already walking, so an attack order cannot snap it back to a cell
+	// center. If the target is already in range it stops after this segment.
+	if !unit_has_path(units, index) {
+		units.state[index] = .Idle
+	}
 }
 
 @(private)

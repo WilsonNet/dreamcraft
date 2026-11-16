@@ -39,7 +39,7 @@ capacity arrays.
 - [x] State hash for deterministic replay tests
 - [x] Native raylib 6.2 client: world, fog, units, paths, HUD, minimap
 - [x] Camera follow mode with manual override (`F`)
-- [x] Move re-orders keep mid-cell position (no teleport/rollback)
+- [x] Move/attack re-orders keep mid-cell position (no teleport/rollback)
 - [x] Browser build: Odin `js_wasm32` + HTML canvas + DOM HUD
 - [x] Headless runner: file polling, JSONL scripts, `--ticks`
 - [x] Replay files: `--record`, `--replay`, hash verification
@@ -48,7 +48,7 @@ capacity arrays.
   - [x] `POST /command`: move, patrol, attack, stop, run, reset, verify,
         select, spawn, kill, set_hp, teleport
   - [x] Every response carries `valid` + `validation`
-- [x] 71 unit/integration tests (game + control)
+- [x] 72 unit/integration tests (game + control)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator

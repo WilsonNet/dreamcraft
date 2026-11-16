@@ -12,7 +12,7 @@ Measured on this machine (Apple Silicon):
 |-------|------|
 | Odin client + headless, `-o:speed` | ~2.8 s total |
 | Bevy client, incremental | tens of seconds to minutes |
-| Odin unit tests (71 tests) | < 30 ms runtime |
+| Odin unit tests (72 tests) | < 30 ms runtime |
 
 ## Why Odin for an RTS
 
@@ -226,6 +226,9 @@ A move order must never teleport the unit.
 - When a move order arrives mid-segment, the new path is planned from
   `path[path_index]` (the cell being entered) and `progress`/`world` are kept.
   The unit keeps walking forward; it does not snap back to `position`.
+- Attack orders keep the current path; `attack_movement` replans from the
+  segment being walked. An in-range unit finishes the current segment before
+  stopping (`unit_stop_after_segment`).
 - Destination validation happens before any path or world field changes.
   An order to a blocked cell is rejected and the current path continues.
 - The validator allows `path[0] != position` only while `progress > 0`, which

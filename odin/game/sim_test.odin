@@ -279,3 +279,24 @@ reordering_past_obstacles_never_jumps :: proc(t: ^testing.T) {
 	// A diagonal tick moves at most one step on each axis.
 	testing.expect(t, max_step <= MOVE_STEP_PER_TICK * CELL_SIZE * 2)
 }
+
+@(test)
+attack_order_keeps_move_interpolation :: proc(t: ^testing.T) {
+	game := new(Game)
+	defer free(game)
+	game_init(game)
+	player, ok := game_player_index(game)
+	testing.expect(t, ok)
+	enemy, spawned := unit_spawn(&game.units, &game.grid, .Enemy, Grid_Pos{8, 25})
+	testing.expect(t, spawned)
+
+	testing.expect(t, game_issue_move(game, Grid_Pos{12, 25}))
+	sim_run(game, 6)
+	before := game.units.world[player]
+
+	testing.expect(t, game_issue_attack(game, enemy))
+	sim_tick(game)
+	after := game.units.world[player]
+	testing.expect_value(t, after.x - before.x, MOVE_STEP_PER_TICK * CELL_SIZE)
+	testing.expect_value(t, validate_game(game), Validation_Error.None)
+}
