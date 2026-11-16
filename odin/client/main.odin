@@ -43,9 +43,10 @@ App :: struct {
 app: App
 
 main :: proc() {
-	rl.SetConfigFlags({.VSYNC_HINT})
+	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
 	rl.InitWindow(1280, 720, "DreamCraft RTS - Tutorial Level 1 (Odin)")
 	defer rl.CloseWindow()
+	rl.SetWindowMinSize(800, 600)
 	rl.SetTargetFPS(60)
 	rl.SetExitKey(.KEY_NULL)
 

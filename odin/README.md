@@ -206,7 +206,7 @@ Allowed allocations outside hot paths:
 
 `client/` uses raylib:
 
-- 1280×720 window, 2D camera
+- 1280×720 window, resizable (min 800×600), 2D camera
 - ground, grid lines, goal zone, trees, waypoints
 - 3-state fog overlay
 - units with team color, label, health bars, selection ring
