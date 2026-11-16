@@ -53,7 +53,7 @@ validate_game :: proc(game: ^Game) -> Validation_Error {
 	if err := validate_commands(&game.commands); err != .None {
 		return err
 	}
-	if _, ok := game_player_index(game); !ok {
+	if _, ok := game_player_index(game); !ok && !game.game_over {
 		return .PlayerMissing
 	}
 	return .None

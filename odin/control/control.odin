@@ -34,6 +34,7 @@ Result :: struct {
 	player_alive: bool `json:"player_alive"`,
 	enemy_alive: bool `json:"enemy_alive"`,
 	level_complete: bool `json:"level_complete"`,
+	game_over: bool `json:"game_over"`,
 	waypoint: int `json:"waypoint"`,
 	waypoints_total: int `json:"waypoints_total"`,
 	fog_percent: f32 `json:"fog_percent"`,
@@ -143,6 +144,7 @@ kill_unit :: proc(game: ^g.Game, command: Command) -> Result {
 	for i in 0..<g.MAX_UNITS {
 		if game.units.alive[i] && g.cells_equal(game.units.position[i], position) {
 			g.unit_destroy(&game.units, i)
+			g.game_update_game_over(game)
 			return make_result(game, true, fmt.tprintf("Killed unit at (%d,%d)", command.x, command.y))
 		}
 	}

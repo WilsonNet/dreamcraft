@@ -10,6 +10,7 @@ package main
 import "core:encoding/json"
 import "core:fmt"
 import "core:os"
+import "core:strconv"
 import "core:strings"
 import "core:time"
 import control "../control"
@@ -21,6 +22,7 @@ Runner :: struct {
 	server: control.Server,
 	serving: bool,
 	paused: bool,
+	record: ^os.File,
 }
 
 main :: proc() {
@@ -28,13 +30,30 @@ main :: proc() {
 	g.game_init(&runner.game)
 
 	if path, ok := find_arg(os.args, "--script"); ok {
-		os.exit(run_script(&runner, path))
+		if record_path, record_ok := find_arg(os.args, "--record"); record_ok {
+			if !recording_start(&runner, record_path) {
+				os.exit(2)
+			}
+		}
+		code := run_script(&runner, path)
+		recording_finish(&runner)
+		os.exit(code)
 	}
 	if ticks, ok := find_ticks(os.args); ok {
+		if record_path, record_ok := find_arg(os.args, "--record"); record_ok {
+			if !recording_start(&runner, record_path) {
+				os.exit(2)
+			}
+		}
 		g.sim_run(&runner.game, ticks)
 		result := control.execute(&runner.game, control.Command{cmd = "status"})
 		write_result(&result)
+		recording_finish(&runner)
 		return
+	}
+	if path, ok := find_arg(os.args, "--replay"); ok {
+		code := run_script(&runner, path)
+		os.exit(code)
 	}
 	if port, ok := find_serve_port(os.args); ok {
 		if !control.server_start(&runner.server, &runner.game, port) {
@@ -43,10 +62,16 @@ main :: proc() {
 		runner.serving = true
 		runner.paused = has_arg(os.args, "--paused")
 	}
+	if record_path, record_ok := find_arg(os.args, "--record"); record_ok && runner.record == nil {
+		if !recording_start(&runner, record_path) {
+			os.exit(2)
+		}
+	}
 	defer if runner.serving {
 		control.server_close(&runner.server)
 	}
 	run_polling(&runner)
+	recording_finish(&runner)
 }
 
 find_arg :: proc(args: []string, name: string) -> (value: string, ok: bool) {
@@ -129,9 +154,21 @@ run_script :: proc(runner: ^Runner, path: string) -> int {
 	defer delete(data)
 
 	exit_code := 0
+	expected_hash: u64
+	has_expected := false
 	for line in strings.split_lines(string(data)) {
 		trimmed := strings.trim_space(line)
-		if len(trimmed) == 0 || trimmed[0] == '#' {
+		if len(trimmed) == 0 {
+			continue
+		}
+		if strings.has_prefix(trimmed, "# hash ") {
+			if parsed, ok := strconv.parse_u64(strings.trim_space(trimmed[len("# hash "):])); ok {
+				expected_hash = parsed
+				has_expected = true
+			}
+			continue
+		}
+		if trimmed[0] == '#' {
 			continue
 		}
 		command: control.Command
@@ -152,6 +189,15 @@ run_script :: proc(runner: ^Runner, path: string) -> int {
 		}
 		if runner.done {
 			break
+		}
+	}
+	if has_expected {
+		actual := u64(g.game_hash(&runner.game))
+		if actual == expected_hash {
+			fmt.printfln("REPLAY HASH OK: %d", actual)
+		} else {
+			fmt.eprintfln("REPLAY HASH MISMATCH: got %d expected %d", actual, expected_hash)
+			exit_code = 1
 		}
 	}
 	return exit_code
@@ -183,11 +229,47 @@ process_command_file :: proc(runner: ^Runner) {
 }
 
 execute_command :: proc(runner: ^Runner, command: control.Command) -> control.Result {
+	recording_append(runner, command)
 	if command.cmd == "quit" {
 		runner.done = true
 		return control.execute(&runner.game, control.Command{cmd = "status"})
 	}
 	return control.execute(&runner.game, command)
+}
+
+recording_start :: proc(runner: ^Runner, path: string) -> bool {
+	file, err := os.open(path, os.O_WRONLY | os.O_CREATE | os.O_TRUNC)
+	if err != nil {
+		fmt.eprintfln("cannot open record file %q: %v", path, err)
+		return false
+	}
+	runner.record = file
+	_, _ = os.write(file, transmute([]byte)string("# dreamcraft-replay v1\n"))
+	return true
+}
+
+recording_append :: proc(runner: ^Runner, command: control.Command) {
+	if runner.record == nil {
+		return
+	}
+	data, err := json.marshal(command)
+	if err != nil {
+		return
+	}
+	defer delete(data)
+	_, _ = os.write(runner.record, data)
+	_, _ = os.write(runner.record, transmute([]byte)string("\n"))
+}
+
+recording_finish :: proc(runner: ^Runner) {
+	if runner.record == nil {
+		return
+	}
+	buffer: [64]u8
+	text := fmt.bprintf(buffer[:], "# hash %d\n", u64(g.game_hash(&runner.game)))
+	_, _ = os.write(runner.record, transmute([]byte)text)
+	os.close(runner.record)
+	runner.record = nil
 }
 
 write_result :: proc(result: ^control.Result) {

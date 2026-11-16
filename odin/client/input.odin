@@ -26,6 +26,9 @@ handle_keyboard :: proc() {
 		app.command_mode = .None
 		app.dragging = false
 	}
+	if rl.IsKeyPressed(.F) {
+		app.camera_follow = !app.camera_follow
+	}
 }
 
 update_cursor :: proc() {
@@ -178,34 +181,47 @@ update_camera :: proc(dt: f64) {
 	delta := f32(dt)
 	speed := f32(400)
 	move := rl.Vector2{0, 0}
+	manual := false
 	if rl.IsKeyDown(.W) || rl.IsKeyDown(.UP) {
 		move.y += speed
+		manual = true
 	}
 	if rl.IsKeyDown(.S) || rl.IsKeyDown(.DOWN) {
 		move.y -= speed
+		manual = true
 	}
 	if rl.IsKeyDown(.A) || rl.IsKeyDown(.LEFT) {
 		move.x -= speed
+		manual = true
 	}
 	if rl.IsKeyDown(.D) || rl.IsKeyDown(.RIGHT) {
 		move.x += speed
+		manual = true
 	}
-	app.camera_pos.x += move.x * delta
-	app.camera_pos.y += move.y * delta
-	apply_edge_scroll(delta)
+	if move.x != 0 || move.y != 0 {
+		app.camera_pos.x += move.x * delta
+		app.camera_pos.y += move.y * delta
+		app.camera_follow = false
+	}
+	if apply_edge_scroll(delta) {
+		app.camera_follow = false
+	}
+	if app.camera_follow {
+		follow_player(delta)
+	}
 	app.camera_pos = clamp_camera(app.camera_pos)
 	app.camera.target = app.camera_pos
 }
 
-apply_edge_scroll :: proc(dt: f32) {
+apply_edge_scroll :: proc(dt: f32) -> bool {
 	if !rl.IsWindowFocused() || !rl.IsCursorOnScreen() {
-		return
+		return false
 	}
 	mouse := rl.GetMousePosition()
 	width := f32(rl.GetScreenWidth())
 	height := f32(rl.GetScreenHeight())
 	if mouse.x <= 0 || mouse.x >= width || mouse.y <= 0 || mouse.y >= height {
-		return
+		return false
 	}
 	ZONE :: f32(20)
 	BASE :: f32(200)
@@ -223,6 +239,19 @@ apply_edge_scroll :: proc(dt: f32) {
 	}
 	app.camera_pos.x += velocity.x * dt
 	app.camera_pos.y += velocity.y * dt
+	return velocity.x != 0 || velocity.y != 0
+}
+
+follow_player :: proc(dt: f32) {
+	position, ok := g.game_player_position(&app.game)
+	if !ok {
+		return
+	}
+	world := g.grid_to_world(position)
+	target := rl.Vector2{g.fp_to_f32(world.x), g.fp_to_f32(world.y)}
+	lerp := min(1.0, dt * 10.0)
+	app.camera_pos.x += (target.x - app.camera_pos.x) * lerp
+	app.camera_pos.y += (target.y - app.camera_pos.y) * lerp
 }
 
 handle_minimap_click :: proc(mouse: rl.Vector2) {
@@ -233,6 +262,7 @@ handle_minimap_click :: proc(mouse: rl.Vector2) {
 	world := g.grid_to_world(cell)
 	app.camera_pos = clamp_camera(rl.Vector2{g.fp_to_f32(world.x), g.fp_to_f32(world.y)})
 	app.camera.target = app.camera_pos
+	app.camera_follow = false
 }
 
 retry_level :: proc() {

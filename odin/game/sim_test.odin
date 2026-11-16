@@ -1,3 +1,4 @@
+#+build !js
 package game
 
 import "core:testing"
@@ -187,4 +188,17 @@ same_inputs_produce_same_state_hash :: proc(t: ^testing.T) {
 	hash_a := run_script(&a)
 	hash_b := run_script(&b)
 	testing.expect_value(t, hash_a, hash_b)
+}
+
+@(test)
+player_death_sets_game_over_and_stays_valid :: proc(t: ^testing.T) {
+	game: Game
+	game_init(&game)
+	player, _ := game_player_index(&game)
+	game.units.hp[player] = 0
+	sim_tick(&game)
+	testing.expect(t, game.game_over)
+	testing.expect_value(t, validate_game(&game), Validation_Error.None)
+	_, alive := game_player_index(&game)
+	testing.expect(t, !alive)
 }

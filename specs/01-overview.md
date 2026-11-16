@@ -24,7 +24,7 @@ A fantasy RTS — spiritual successor to StarCraft: Brood War. Current renderer 
 
 ## Implementation Status
 
-### Odin Port (Primary, native)
+### Odin Port (Primary)
 
 The Odin implementation in `odin/` is the active codebase. It compiles in
 roughly 1–3 seconds, uses no GC, and keeps all simulation state in fixed
@@ -38,13 +38,18 @@ capacity arrays.
 - [x] Runtime invariant checker (`validate_game`) after every tick
 - [x] State hash for deterministic replay tests
 - [x] Native raylib 6.2 client: world, fog, units, paths, HUD, minimap
+- [x] Camera follow mode with manual override (`F`)
+- [x] Browser build: Odin `js_wasm32` + HTML canvas + DOM HUD
 - [x] Headless runner: file polling, JSONL scripts, `--ticks`
+- [x] Replay files: `--record`, `--replay`, hash verification
 - [x] HTTP control API replacing Bevy BRP MCP
   - [x] `GET /state`, `/units`, `/fog`, `/screenshot`, `/health`
   - [x] `POST /command`: move, patrol, attack, stop, run, reset, verify,
         select, spawn, kill, set_hp, teleport
   - [x] Every response carries `valid` + `validation`
-- [x] 65 unit/integration tests (game + control)
+- [x] 68 unit/integration tests (game + control)
+- [x] Web WASM smoke test in Node
+- [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator
 - [x] Waypoint 3 relocated from (40,20) to (40,23)
 
@@ -153,8 +158,8 @@ capacity arrays.
 
 ### Known Issues
 - [x] Waypoint 3 at (40,20) collided with a tree — fixed to (40,23) in Odin
-- [ ] Camera doesn't auto-follow player (must pan manually)
-- [ ] Odin web/WASM build not started (native raylib only)
+- [x] Camera auto-follow with manual override
+- [x] Odin web/WASM build (canvas renderer, no Emscripten)
 
 ### Controls
 - **Right-Click**: Move unit to location; right-click on enemy = attack
@@ -215,13 +220,11 @@ bevy-docs/           # Bevy engine reference
 
 ## Upcoming Features
 
-1. **Camera Follow Mode** - Auto-follow player with manual override
-2. **Isometric View** - Diagonal 2:1 grid rendering
-3. **Additional Unit Types** - Gatherer, Scout, Melee, Ranged
-4. **Resource System** - Gold collection
-5. **Multiplayer** - WebTransport networking
-6. **Web/WASM Odin build** - raylib web backend or WebGPU
-7. **Replay files** - command log + state hash verification
+1. **Isometric View** - Diagonal 2:1 grid rendering
+2. **Additional Unit Types** - Gatherer, Scout, Melee, Ranged
+3. **Resource System** - Gold collection
+4. **Multiplayer** - WebTransport networking
+5. **WebGPU renderer** - replace canvas/raylib with GPU pipeline
 
 ## Level Design Principles
 

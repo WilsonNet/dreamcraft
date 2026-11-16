@@ -146,7 +146,7 @@ control_http_server_round_trip :: proc(t: ^testing.T) {
 	testing.expect(t, err == nil)
 	defer net.close(client)
 	_ = net.set_option(client, .Receive_Timeout, 1 * time.Second)
-	request := "GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n"
+	request := "GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
 	written, send_err := net.send_tcp(client, transmute([]byte)request)
 	testing.expect(t, send_err == .None)
 	testing.expect_value(t, written, len(request))
@@ -165,4 +165,25 @@ control_http_server_round_trip :: proc(t: ^testing.T) {
 	text := string(response[:length])
 	testing.expect(t, strings.contains(text, "HTTP/1.1 200 OK"))
 	testing.expect(t, strings.contains(text, `{"ok":true}`))
+}
+
+@(test)
+control_player_death_is_valid_game_over :: proc(t: ^testing.T) {
+	game: g.Game
+	g.game_init(&game)
+	result := execute(&game, Command{cmd = "kill", x = 2, y = 25})
+	testing.expect(t, result.ok)
+	testing.expect(t, result.game_over)
+	testing.expect(t, result.valid)
+	testing.expect_value(t, result.validation, "ok")
+}
+
+@(test)
+control_http_keep_alive_parser :: proc(t: ^testing.T) {
+	keep := "GET /state HTTP/1.1\r\nHost: x\r\n\r\n"
+	testing.expect(t, request_keep_alive(transmute([]byte)keep))
+	close := "GET /state HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n"
+	testing.expect(t, !request_keep_alive(transmute([]byte)close))
+	old := "GET /state HTTP/1.0\r\nHost: x\r\n\r\n"
+	testing.expect(t, !request_keep_alive(transmute([]byte)old))
 }

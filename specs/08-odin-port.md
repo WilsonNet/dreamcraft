@@ -12,7 +12,7 @@ Measured on this machine (Apple Silicon):
 |-------|------|
 | Odin client + headless, `-o:speed` | ~2.8 s total |
 | Bevy client, incremental | tens of seconds to minutes |
-| Odin unit tests (65 tests) | < 30 ms runtime |
+| Odin unit tests (68 tests) | < 30 ms runtime |
 
 ## Why Odin for an RTS
 
@@ -321,11 +321,55 @@ Layers:
 - Reuse scratch buffers instead of allocating per query.
 - Keep tick order explicit and documented; determinism depends on it.
 
+## Web Build
+
+`odin/web/` compiles the same `game` package to `js_wasm32`:
+
+```bash
+cd odin/web
+./build.sh
+./serve.sh 8080
+```
+
+- No Emscripten and no raylib web library.
+- Odin owns a 320×200 RGBA framebuffer (4×4 pixels per cell).
+- JS uploads it with `ImageData` and scales it to 960×600.
+- HUD, buttons, validation status and ASCII fog map are DOM.
+- `window.dreamcraft` mirrors the HTTP command API.
+- `web/test_wasm.mjs` loads the wasm in Node and checks movement, goal,
+  game-over, spawn/kill and fog output.
+- Test files carry `#+build !js` so `core:testing`/`core:os` are not pulled
+  into the wasm build.
+
+## Replay Files
+
+`headless` records and replays deterministic command logs:
+
+```bash
+./bin/headless --script tests/smoke.jsonl --record replay.jsonl
+./bin/headless --replay replay.jsonl
+```
+
+- Header: `# dreamcraft-replay v1`
+- One JSON command per line.
+- Final line: `# hash <u64>`.
+- `--replay` applies commands and verifies the final `game_hash`.
+- `tests/replay.jsonl` is a committed hash-verified replay.
+
+## Camera Follow
+
+Native client:
+
+- Follow mode is on by default.
+- Manual WASD/arrow/edge-scroll or minimap click switches to FREE.
+- `F` toggles FOLLOW.
+- HUD shows `CAM FOLLOW` or `CAM FREE`.
+
 ## Known Constraints
 
-- Native raylib client only; no Odin WASM/web build yet.
 - HTTP control server is single-threaded and handles up to 8 requests per
-  frame; no keep-alive.
-- Screenshot endpoint writes `control_screenshot.png` in the working directory
-  before serving it.
+  frame. Back-to-back keep-alive requests are supported with a 250 ms idle
+  timeout.
+- Web build uses a fixed full-map view (no web camera zoom/pan).
+- Web HUD is DOM; unit labels and health bars are simplified to pixel marks.
 - Rust/Bevy files remain as a legacy reference and are not built or tested.

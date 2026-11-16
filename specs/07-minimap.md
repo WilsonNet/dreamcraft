@@ -150,3 +150,7 @@ The Odin client renders the minimap into a single 80×50 `rl.Texture2D`:
 - Updating costs 4000 pixel writes plus one 16 KiB texture upload per frame.
 
 No per-cell UI entities are created.
+
+The web build renders the same 4×4-pixels-per-cell map into a 320×200 canvas
+framebuffer, scaled to 960×600 with nearest-neighbor filtering. Waypoints,
+units, fog and the goal use the same color logic.

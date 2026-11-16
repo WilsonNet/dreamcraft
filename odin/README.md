@@ -1,7 +1,7 @@
 # DreamCraft RTS — Odin
 
-Native, deterministic RTS prototype. Odin + raylib, no GC, fixed pools,
-Q16.16 fixed point.
+Deterministic RTS prototype. Odin native raylib client + browser WASM/canvas
+build. No GC, fixed pools, Q16.16 fixed point.
 
 ## Build & Run
 
@@ -10,6 +10,14 @@ Q16.16 fixed point.
 ./run.sh                   # build + launch client
 ./run.sh --control         # launch with HTTP control API on :7777
 ./run.sh --control=7780    # custom port
+```
+
+Web:
+
+```bash
+cd web
+./build.sh                 # main.wasm
+./serve.sh 8080            # http://localhost:8080/
 ```
 
 Requirements:
@@ -29,7 +37,9 @@ Runs:
 1. `odin test game` — simulation unit tests
 2. `odin test control` — command/HTTP tests
 3. headless JSONL smoke script
-4. HTTP control smoke test
+4. replay hash verification
+5. web wasm smoke test (Node)
+6. HTTP control smoke test
 
 Individual:
 
@@ -48,6 +58,8 @@ odin test control -vet -strict-style
 ./bin/headless --serve=7777            # JSON HTTP API + live simulation
 ./bin/headless --serve=7777 --paused   # API only; advance with run/tick
 ./bin/headless                         # poll headless_command.json
+./bin/headless --script tests/smoke.jsonl --record replay.jsonl
+./bin/headless --replay replay.jsonl   # verifies final hash
 ```
 
 File protocol:

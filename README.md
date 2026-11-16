@@ -2,9 +2,10 @@
 
 A deterministic fantasy RTS — spiritual successor to StarCraft: Brood War.
 
-The primary implementation is now **Odin + raylib** (`odin/`). It compiles in
-about 1–3 seconds, uses fixed-capacity data structures, and has no garbage
-collector. The original Rust/Bevy prototype remains in `src/` for reference.
+The primary implementation is **Odin** (`odin/`): native raylib client plus a
+browser WASM/canvas build. It compiles in seconds, uses fixed-capacity data
+structures, and has no garbage collector. The original Rust/Bevy prototype
+remains in `src/` for reference.
 
 ## Quick Start
 
@@ -15,8 +16,13 @@ cd odin
 ```
 
 ```bash
+cd odin/web
+./build.sh && ./serve.sh 8080   # browser build at http://localhost:8080
+```
+
+```bash
 cd odin
-./test.sh                # unit tests + headless script + HTTP control tests
+./test.sh                # unit + headless + replay + web + HTTP tests
 ./build.sh               # build client + headless binaries
 ```
 
@@ -24,7 +30,8 @@ cd odin
 
 - **Right-click**: move, or attack an enemy
 - **Left-click / drag**: select units
-- **WASD / Arrows**: pan camera
+- **WASD / Arrows**: pan camera (switches to FREE)
+- **F**: toggle camera FOLLOW / FREE
 - **Move / Patrol HUD buttons**: command modes
 - **Esc**: pause menu (Retry / Resume)
 
@@ -33,11 +40,11 @@ cd odin
 | Layer | Technology |
 |-------|-----------|
 | Simulation | Odin, Q16.16 fixed point, fixed-timestep 60 Hz |
-| Rendering | raylib 6.2 (native) |
+| Rendering | raylib 6.2 (native) / HTML canvas (web) |
 | Units | Struct-of-arrays, generation handles, fixed pools |
 | Pathfinding | Allocation-free A*, preallocated scratch |
 | Fog | Two bitsets (explored / visible) |
-| Testing | `core:testing`, headless scripts, HTTP control API |
+| Testing | `core:testing`, headless scripts, HTTP control API, Node WASM smoke |
 | Legacy | Rust + Bevy 0.18 (`src/`) |
 
 ## Odin Layout
@@ -47,8 +54,9 @@ odin/
 ├── game/        # pure deterministic simulation (no rendering, no allocation)
 ├── client/      # raylib native client, HUD, minimap, input
 ├── control/     # JSON control API + localhost HTTP server
-├── headless/    # file/script runner and --serve mode
-├── tests/       # smoke scripts
+├── headless/    # file/script runner, --serve, --record/--replay
+├── web/         # js_wasm32 build, canvas renderer, DOM HUD
+├── tests/       # smoke and replay scripts
 ├── build.sh
 ├── test.sh
 └── run.sh
@@ -71,7 +79,7 @@ localhost JSON API available in both binaries.
 | Endpoint | Purpose |
 |----------|---------|
 | `GET /health` | liveness |
-| `GET /state` | tick, player, enemy, fog %, hash, invariant status |
+| `GET /state` | tick, player, enemy, fog %, game_over, hash, invariant status |
 | `GET /units` | all units (position, hp, state, path, target) |
 | `GET /fog` | 80×50 ASCII map (`P`, `E`, `#`, `w`, `W`, `G`, `.`) |
 | `GET /screenshot` | PNG of the live client window |

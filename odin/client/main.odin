@@ -1,8 +1,10 @@
 // DreamCraft RTS - Odin + raylib native client.
 package main
 
+import "core:c"
 import "core:fmt"
 import "core:math"
+import "core:mem"
 import "core:os"
 import "core:strings"
 import rl "vendor:raylib"
@@ -33,6 +35,7 @@ App :: struct {
 	retry_button: rl.Rectangle,
 	resume_button: rl.Rectangle,
 	last_fps: int,
+	camera_follow: bool,
 	server: control.Server,
 	serving: bool,
 }
@@ -54,6 +57,7 @@ main :: proc() {
 		control.server_close(&app.server)
 	}
 	init_minimap_texture()
+	app.camera_follow = true
 	reset_camera()
 	update_layout()
 
@@ -87,6 +91,7 @@ reset_camera :: proc() {
 	}
 	world := g.grid_to_world(position)
 	app.camera_pos = rl.Vector2{g.fp_to_f32(world.x), g.fp_to_f32(world.y)}
+	app.camera_follow = true
 	app.camera = rl.Camera2D{
 		offset = rl.Vector2{0, 0},
 		target = app.camera_pos,
@@ -178,13 +183,14 @@ find_control_port :: proc(args: []string) -> (port: int, ok: bool) {
 capture_screenshot :: proc(_: rawptr) -> ([]byte, bool) {
 	image := rl.LoadImageFromScreen()
 	defer rl.UnloadImage(image)
-	path := cstring("control_screenshot.png")
-	if !rl.ExportImage(image, path) {
+	size: c.int
+	raw := rl.ExportImageToMemory(image, ".png", &size)
+	if raw == nil || size <= 0 {
 		return nil, false
 	}
-	data, err := os.read_entire_file(string(path), context.allocator)
-	if err != nil {
-		return nil, false
-	}
+	defer rl.MemFree(raw)
+	source := mem.slice_ptr(cast(^u8)raw, int(size))
+	data := make([]byte, len(source))
+	copy(data, source)
 	return data, true
 }

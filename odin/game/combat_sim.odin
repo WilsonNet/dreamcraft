@@ -79,4 +79,5 @@ death_check :: proc(game: ^Game) {
 	for i := 0; i < dead_count; i += 1 {
 		unit_destroy(units, int(dead[i]))
 	}
+	game_update_game_over(game)
 }

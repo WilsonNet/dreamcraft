@@ -54,6 +54,7 @@ game_hash :: proc(game: ^Game) -> State_Hash {
 	h := hash_init()
 	hash_u64(&h, game.tick)
 	hash_bool(&h, game.level_complete)
+	hash_bool(&h, game.game_over)
 	hash_bits(&h, &game.grid.obstacles)
 	hash_u16(&h, game.grid.obstacle_count)
 	hash_bits(&h, &game.fog.explored)

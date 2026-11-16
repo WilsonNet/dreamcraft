@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DreamCraft RTS - Odin Web</title>
+<style>
+  :root {
+    --bg: #070c07;
+    --panel: #0d160d;
+    --panel2: #111f11;
+    --line: #2c4a2c;
+    --text: #d7e6d7;
+    --muted: #8faa8f;
+    --gold: #e0c050;
+    --blue: #4a7ee8;
+    --red: #d9534f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 30% 10%, #122012, var(--bg) 60%);
+    color: var(--text);
+    font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(8, 14, 8, 0.85);
+  }
+  header h1 { margin: 0; font-size: 20px; color: var(--gold); letter-spacing: 1px; }
+  header span { color: var(--muted); }
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 960px) 300px;
+    gap: 16px;
+    padding: 16px 20px 24px;
+    justify-content: center;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  canvas {
+    width: 100%;
+    max-width: 960px;
+    aspect-ratio: 8 / 5;
+    image-rendering: pixelated;
+    background: #040704;
+    border: 2px solid var(--line);
+    box-shadow: 0 0 0 1px #000, 0 18px 48px rgba(0,0,0,0.5);
+  }
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  button {
+    background: var(--panel2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    font: inherit;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--gold); }
+  button.active { background: #3d3214; border-color: var(--gold); color: #fff3bf; }
+  #mode { color: var(--gold); margin-left: 4px; }
+  aside {
+    background: rgba(10, 18, 10, 0.9);
+    border: 1px solid var(--line);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  aside h2 { margin: 0 0 2px; font-size: 14px; color: var(--gold); letter-spacing: 1px; }
+  .row { color: var(--muted); }
+  .row b { color: var(--text); font-weight: normal; }
+  #valid.ok { color: #67d867; }
+  #valid.bad { color: var(--red); }
+  #level { color: var(--gold); font-size: 18px; letter-spacing: 2px; min-height: 24px; }
+  .hint { color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .hint kbd {
+    background: #1a2a1a;
+    border: 1px solid var(--line);
+    padding: 0 4px;
+    color: var(--text);
+  }
+  details { border-top: 1px solid var(--line); padding-top: 8px; }
+  details summary { cursor: pointer; color: var(--muted); }
+  pre#fog {
+    margin: 6px 0 0;
+    font-size: 3px;
+    line-height: 3px;
+    letter-spacing: 0;
+    color: #7f9f7f;
+    overflow: hidden;
+  }
+  @media (max-width: 1100px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    aside { order: 2; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>DREAMCRAFT RTS</h1>
+  <span>Tutorial Level 1 - Through the Woods / Odin + WebAssembly</span>
+</header>
+<main>
+  <section class="stage">
+    <canvas id="game" width="320" height="200" aria-label="DreamCraft game view"></canvas>
+    <div class="bar">
+      <button id="moveBtn">Move</button>
+      <button id="patrolBtn">Patrol</button>
+      <button id="stopBtn">Stop</button>
+      <button id="selectAllBtn">Select All</button>
+      <button id="resetBtn">Reset</button>
+      <span id="mode">Select</span>
+    </div>
+    <div class="bar">
+      <span class="row" id="stats"></span>
+    </div>
+  </section>
+  <aside>
+    <h2>STATUS</h2>
+    <div class="row" id="player"></div>
+    <div class="row" id="selection"></div>
+    <div class="row" id="valid"></div>
+    <div class="row" id="level"></div>
+    <div class="row" id="hash"></div>
+    <div class="hint">
+      <b>Controls</b><br>
+      Left click: select / command<br>
+      Right click: move or attack<br>
+      <kbd>Shift</kbd>+click: add selection<br>
+      <kbd>Esc</kbd>: cancel command mode<br>
+      <kbd>F</kbd>: select all players<br><br>
+      <b>Test API</b><br>
+      <code>dreamcraft.state()</code><br>
+      <code>dreamcraft.units()</code><br>
+      <code>dreamcraft.fog()</code><br>
+      <code>dreamcraft.command({cmd:"goto",x:10,y:25})</code><br>
+      <code>dreamcraft.command({cmd:"run",ticks:140})</code>
+    </div>
+    <details>
+      <summary>ASCII fog map</summary>
+      <pre id="fog"></pre>
+    </details>
+  </aside>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

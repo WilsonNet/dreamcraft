@@ -37,7 +37,8 @@ cd odin
 ./run.sh                    # build + run native client
 ./run.sh --control          # client + HTTP control API on :7777
 ./build.sh                  # build bin/dreamcraft + bin/headless
-./test.sh                   # unit tests + headless smoke + HTTP smoke
+./test.sh                   # unit + headless + replay + web + HTTP tests
+cd web && ./build.sh && ./serve.sh 8080   # browser build
 
 odin test game -vet -strict-style
 odin test control -vet -strict-style
@@ -52,6 +53,8 @@ echo '{"cmd":"status"}' > headless_command.json    # write, then read result
 ./bin/headless --script tests/smoke.jsonl          # deterministic script
 ./bin/headless --ticks 600                         # run fixed ticks
 ./bin/headless --serve=7777                        # HTTP control API
+./bin/headless --script tests/smoke.jsonl --record replay.jsonl
+./bin/headless --replay replay.jsonl               # verifies final hash
 ```
 
 ## Odin Project Structure
@@ -74,8 +77,9 @@ odin/
 │   └── *_test.odin      # unit tests
 ├── client/      # raylib rendering, input, HUD, minimap
 ├── control/     # JSON commands + localhost HTTP server
-├── headless/    # script runner, file polling, --serve
-└── tests/       # smoke scripts
+├── headless/    # script runner, polling, --serve, record/replay
+├── web/         # js_wasm32 canvas client + DOM HUD
+└── tests/       # smoke and replay scripts
 ```
 
 ## Architecture Rules
@@ -84,6 +88,8 @@ odin/
 - Simulation is integer-only: `Fp` Q16.16 fixed point, never `f32`.
 - Fixed 60 Hz tick, fixed system order in `game/sim.odin`.
 - No randomness in the simulation.
+- `game_over` is an explicit valid state; player death must not trip the
+  invariant checker.
 - Same command log must produce the same `game_hash`. Covered by tests.
 
 ### Memory
@@ -114,7 +120,13 @@ odin/
 - HTTP server is single-threaded and polled from the main loop. Commands
   mutate the same `Game` as rendering.
 - `bin/headless --script` is the CI path; `--serve` is the interactive path.
-- Client screenshot endpoint works in `--control` mode.
+- `--record` / `--replay` produce hash-verified deterministic command logs.
+- Client screenshot endpoint works in `--control` mode and returns PNG bytes
+  from memory (no temp file).
+- Web build exposes `window.dreamcraft`: `state()`, `units()`, `fog()`,
+  `command(obj)`, `reset()`.
+- Web test files must carry `#+build !js` so `core:testing`/`core:os` do not
+  enter the wasm build.
 
 ## Code Style Rules
 
@@ -145,6 +157,8 @@ responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 - Melee: 15 damage, range 3 cells, 1.0 s cooldown, 100 HP
 - Enemy chases within 6-cell vision and attacks on cooldown
 - Patrol loops A↔B until a move/stop command
+- Camera follow by default; manual pan switches to FREE (`F` toggles)
+- Browser build: 320×200 software framebuffer, DOM HUD, full-map view
 
 ## Skills Map
 

@@ -160,7 +160,10 @@ Endpoints:
 Commands: `status`, `goto`, `patrol`, `attack`, `stop`, `run`, `reset`,
 `verify`, `select`, `select_all`, `spawn`, `kill`, `set_hp`, `teleport`.
 
-Every response includes `valid` and `validation`, so agents can detect
-invariant violations without reading logs.
+Every response includes `valid` and `validation`, plus `game_over` when the
+player has died. Agents can detect invariant violations without reading logs.
+
+The web build exposes the same command set at `window.dreamcraft`:
+`state()`, `units()`, `fog()`, `command(obj)`, `reset()`.
 
 The old Agent Console / Bevy BRP MCP path is not used by the Odin client.

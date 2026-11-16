@@ -110,6 +110,7 @@ Game :: struct {
 	commands: Command_Queue,
 	waypoints: Waypoints,
 	level_complete: bool,
+	game_over: bool,
 }
 
 game_init :: proc(game: ^Game) {
@@ -135,6 +136,12 @@ game_reset :: proc(game: ^Game) {
 	fog_begin_tick(&game.fog)
 	fog_reveal(&game.fog, START_POS, VISION_RADIUS)
 	game.tick = 0
+	game.game_over = false
+}
+
+game_update_game_over :: proc(game: ^Game) {
+	_, ok := game_player_index(game)
+	game.game_over = !ok
 }
 
 game_player_index :: proc(game: ^Game) -> (index: int, ok: bool) {

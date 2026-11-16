@@ -10,6 +10,7 @@ State_View :: struct {
 	selected: int,
 	alive_units: int,
 	level_complete: bool,
+	game_over: bool,
 	waypoint_current: int,
 	waypoint_total: int,
 	fog_percent: f32,
@@ -24,6 +25,7 @@ state_view :: proc(game: ^Game) -> State_View {
 		selected = game.units.selected_count,
 		alive_units = game.units.alive_count,
 		level_complete = game.level_complete,
+		game_over = game.game_over,
 		waypoint_current = game.waypoints.current,
 		waypoint_total = game.waypoints.count,
 		fog_percent = fog_coverage_percent(&game.fog),
@@ -54,6 +56,7 @@ state_view_hash :: proc(view: ^State_View) -> State_Hash {
 	hash_u32(&h, u32(view.selected))
 	hash_u32(&h, u32(view.alive_units))
 	hash_bool(&h, view.level_complete)
+	hash_bool(&h, view.game_over)
 	hash_u32(&h, u32(view.waypoint_current))
 	hash_u32(&h, view.command_rejected)
 	hash_u64(&h, u64(view.state_hash))

@@ -71,6 +71,47 @@ my_test :: proc(t: ^testing.T) {
   file bytes from the control server.
 - Minimap: one 80×50 texture, scale to 200×125, negative source height flips Y.
 
+## Web / WASM
+
+```bash
+cd odin/web
+./build.sh      # main.wasm
+./serve.sh 8080
+node test_wasm.mjs
+```
+
+- Target: `odin build . -target:js_wasm32`.
+- `wasm-ld` comes from `lld`; add `/opt/homebrew/opt/lld@22/bin` to PATH.
+- Browser loader needs `odin_env.write` and `odin_env.rand_bytes` stubs.
+- Export `@(export)` procs; JS can call them directly.
+- JS reads wasm memory with `new Uint8Array(ex.memory.buffer, ptr, len)`.
+- Test files in the simulation package must start with `#+build !js`, otherwise
+  `core:testing` pulls `core:os` and the wasm build fails.
+- Odin `fmt` treats `{}` as Python-style formatting; JSON format strings must
+  escape literal braces as `{{` and `}}`.
+- u64 hashes should cross the JS boundary as strings (JS numbers lose
+  precision above 2^53).
+- No Emscripten or raylib web lib needed; render into an RGBA framebuffer.
+
+## Replay
+
+```bash
+./bin/headless --script tests/smoke.jsonl --record replay.jsonl
+./bin/headless --replay replay.jsonl
+```
+
+- `# dreamcraft-replay v1` header.
+- JSON command per line.
+- `# hash <u64>` final line; replay verifies `game_hash`.
+- Live recording is only deterministic with `--serve --paused`.
+
+## Game Over
+
+- `game_over` is an explicit valid state.
+- Death check calls `game_update_game_over`.
+- Validator allows a missing player only when `game_over` is true.
+- Test hooks that destroy/spawn players must call `game_update_game_over`.
+
 ## Control HTTP Server
 
 - `core:net` only; parse requests manually.
@@ -81,6 +122,9 @@ my_test :: proc(t: ^testing.T) {
 - Poll the server from the main thread so commands mutate the same `Game` as
   rendering. Do not spawn a mutating thread.
 - Bind IPv4 loopback only.
+- Keep-alive: parse `Connection` and HTTP/1.0 vs 1.1; loop requests on the same
+  socket with a short receive timeout.
+- Return screenshots from `ExportImageToMemory`, not a temp file.
 
 ## Odin Syntax / Compiler Gotchas
 

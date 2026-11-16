@@ -83,13 +83,19 @@ handle_client :: proc(server: ^Server, client: net.TCP_Socket) {
 	_ = net.set_option(client, .Send_Timeout, 1000 * time.Millisecond)
 
 	buffer: [16384]u8
-	length, header_end, content_length, ok := read_http_request(client, buffer[:])
-	if !ok {
-		send_response(client, 400, "text/plain", transmute([]byte)string("bad request\n"))
-		return
+	for {
+		length, header_end, content_length, ok := read_http_request(client, buffer[:])
+		if !ok {
+			send_response(client, 400, false, "text/plain", transmute([]byte)string("bad request\n"))
+			return
+		}
+		method, path, body := parse_http_request(buffer[:length], header_end, content_length)
+		keep_alive := request_keep_alive(buffer[:header_end])
+		route(server, client, method, path, body, keep_alive)
+		if !keep_alive {
+			return
+		}
 	}
-	method, path, body := parse_http_request(buffer[:length], header_end, content_length)
-	route(server, client, method, path, body)
 }
 
 @(private)
@@ -172,92 +178,124 @@ parse_http_request :: proc(
 }
 
 @(private)
-route :: proc(server: ^Server, client: net.TCP_Socket, method, path, body: string) {
+request_keep_alive :: proc(header: []byte) -> bool {
+	text := string(header)
+	first_end := strings.index(text, "\r\n")
+	if first_end < 0 {
+		return false
+	}
+	first_line := text[:first_end]
+	keep_alive := strings.contains(first_line, "HTTP/1.1")
+	lines := strings.split(text[first_end + 2:], "\r\n")
+	defer delete(lines)
+	for line in lines {
+		colon := strings.index_byte(line, ':')
+		if colon < 0 {
+			continue
+		}
+		name := strings.trim_space(line[:colon])
+		if !strings.equal_fold(name, "Connection") {
+			continue
+		}
+		value := strings.trim_space(line[colon + 1:])
+		if strings.equal_fold(value, "close") {
+			return false
+		}
+		if strings.equal_fold(value, "keep-alive") {
+			return true
+		}
+	}
+	return keep_alive
+}
+
+@(private)
+route :: proc(server: ^Server, client: net.TCP_Socket, method, path, body: string, keep_alive: bool) {
 	switch method {
 	case "OPTIONS":
-		send_response(client, 204, "text/plain", nil)
+		send_response(client, 204, keep_alive, "text/plain", nil)
 	case "GET":
-		handle_get(server, client, path)
+		handle_get(server, client, path, keep_alive)
 	case "POST":
 		if path == "/command" {
-			handle_command(server, client, body)
+			handle_command(server, client, body, keep_alive)
 		} else {
-			send_response(client, 404, "application/json", transmute([]byte)string(`{"ok":false,"msg":"not found"}`))
+			send_response(client, 404, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"not found"}`))
 		}
 	case:
-		send_response(client, 405, "text/plain", transmute([]byte)string("method not allowed\n"))
+		send_response(client, 405, keep_alive, "text/plain", transmute([]byte)string("method not allowed\n"))
 	}
 }
 
 @(private)
-handle_get :: proc(server: ^Server, client: net.TCP_Socket, path: string) {
+handle_get :: proc(server: ^Server, client: net.TCP_Socket, path: string, keep_alive: bool) {
 	switch path {
 	case "/", "/health", "/state":
 		if path == "/health" {
-			send_response(client, 200, "application/json", transmute([]byte)string(`{"ok":true}`))
+			send_response(client, 200, keep_alive, "application/json", transmute([]byte)string(`{"ok":true}`))
 		} else {
-			send_json(client, encode_snapshot(server.game))
+			send_json(client, keep_alive, encode_snapshot(server.game))
 		}
 	case "/units":
-		send_json(client, encode_units(server.game))
+		send_json(client, keep_alive, encode_units(server.game))
 	case "/fog":
 		buffer: [g.GRID_CELLS + g.GRID_H]u8
 		length := fog_text(server.game, buffer[:])
-		send_response(client, 200, "text/plain; charset=utf-8", buffer[:length])
+		send_response(client, 200, keep_alive, "text/plain; charset=utf-8", buffer[:length])
 	case "/screenshot":
 		if server.screenshot == nil {
-			send_response(client, 501, "application/json", transmute([]byte)string(`{"ok":false,"msg":"screenshot not available in this build"}`))
+			send_response(client, 501, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"screenshot not available in this build"}`))
 			return
 		}
 		data, ok := server.screenshot(server.screenshot_user)
 		if !ok || data == nil {
-			send_response(client, 501, "application/json", transmute([]byte)string(`{"ok":false,"msg":"screenshot capture failed"}`))
+			send_response(client, 501, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"screenshot capture failed"}`))
 			return
 		}
 		defer delete(data)
-		send_response(client, 200, "image/png", data)
+		send_response(client, 200, keep_alive, "image/png", data)
 	case:
-		send_response(client, 404, "application/json", transmute([]byte)string(`{"ok":false,"msg":"not found"}`))
+		send_response(client, 404, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"not found"}`))
 	}
 }
 
 @(private)
-handle_command :: proc(server: ^Server, client: net.TCP_Socket, body: string) {
+handle_command :: proc(server: ^Server, client: net.TCP_Socket, body: string, keep_alive: bool) {
 	command: Command
 	if err := json.unmarshal_string(body, &command, allocator = context.temp_allocator); err != nil {
-		send_response(client, 400, "application/json", transmute([]byte)string(`{"ok":false,"msg":"invalid json"}`))
+		send_response(client, 400, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"invalid json"}`))
 		return
 	}
 	result := execute(server.game, command)
 	data, err := json.marshal(result)
 	if err != nil {
-		send_response(client, 500, "application/json", transmute([]byte)string(`{"ok":false,"msg":"marshal failed"}`))
+		send_response(client, 500, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"marshal failed"}`))
 		return
 	}
 	defer delete(data)
-	send_response(client, 200, "application/json", data)
+	send_response(client, 200, keep_alive, "application/json", data)
 }
 
 @(private)
-send_json :: proc(client: net.TCP_Socket, data: []byte, err: json.Marshal_Error) {
+send_json :: proc(client: net.TCP_Socket, keep_alive: bool, data: []byte, err: json.Marshal_Error) {
 	if err != nil {
-		send_response(client, 500, "application/json", transmute([]byte)string(`{"ok":false,"msg":"marshal failed"}`))
+		send_response(client, 500, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"marshal failed"}`))
 		return
 	}
 	defer delete(data)
-	send_response(client, 200, "application/json", data)
+	send_response(client, 200, keep_alive, "application/json", data)
 }
 
 @(private)
-send_response :: proc(client: net.TCP_Socket, status: int, content_type: string, body: []byte) {
+send_response :: proc(client: net.TCP_Socket, status: int, keep_alive: bool, content_type: string, body: []byte) {
 	header: [512]u8
 	text := fmt.bprintf(
 		header[:len(header) - 1],
-		"HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length: %d\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n\r\n",
+		"HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length: %d\r\nConnection: %s\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n\r\n",
 		status,
 		status_text(status),
 		content_type,
 		len(body),
+		keep_alive ? "keep-alive" : "close",
 	)
 	header[len(text)] = 0
 	if !send_all(client, transmute([]byte)text) {

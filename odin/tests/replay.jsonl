@@ -1,0 +1,7 @@
+# dreamcraft-replay v1
+{"cmd":"reset"}
+{"cmd":"goto","x":10,"y":25}
+{"cmd":"run","ticks":140}
+{"cmd":"verify","verify":{"type":"player_at","x":10,"y":25}}
+{"cmd":"verify","verify":{"type":"valid"}}
+# hash 10160054226389569550

@@ -27,7 +27,7 @@ draw_status_panel :: proc() {
 	buffer: [256]u8
 	rl.DrawText("DREAMCRAFT RTS", 24, 22, 20, rl.Color{235, 215, 120, 255})
 	rl.DrawText("Tutorial Level 1 - Through the Woods", 24, 46, 14, rl.Color{180, 200, 180, 255})
-	rl.DrawText("WASD/Arrows pan | Right-click move/attack | Esc menu", 24, 66, 12, rl.Color{140, 170, 140, 255})
+	rl.DrawText("WASD/Arrows pan | F follow | Right-click move/attack | Esc menu", 24, 66, 12, rl.Color{140, 170, 140, 255})
 
 	position, ok := g.game_player_position(&app.game)
 	if ok {
@@ -37,7 +37,11 @@ draw_status_panel :: proc() {
 		rl.DrawText("Player is dead", 24, 88, 14, rl.Color{230, 80, 80, 255})
 	}
 
-	text := format_text(buffer[:], "FPS %d  |  Units %d  |  Fog %.1f%%  |  Tick %d", rl.GetFPS(), app.game.units.alive_count, g.fog_coverage_percent(&app.game.fog), app.game.tick)
+	camera_mode := cstring("FOLLOW")
+	if !app.camera_follow {
+		camera_mode = cstring("FREE")
+	}
+	text := format_text(buffer[:], "FPS %d  |  Units %d  |  Fog %.1f%%  |  Tick %d  |  CAM %s", rl.GetFPS(), app.game.units.alive_count, g.fog_coverage_percent(&app.game.fog), app.game.tick, camera_mode)
 	rl.DrawText(text, 24, 108, 12, rl.Color{150, 180, 150, 255})
 }
 
@@ -47,7 +51,11 @@ draw_hint :: proc() {
 	text := cstring("Bottom center reserved for control groups")
 	text_width := rl.MeasureText(text, 13)
 	rl.DrawText(text, i32(width * 0.5) - text_width / 2, i32(height - 32), 13, rl.Color{110, 140, 110, 255})
-	if app.game.level_complete {
+	if app.game.game_over {
+		over := cstring("GAME OVER")
+		over_width := rl.MeasureText(over, 28)
+		rl.DrawText(over, i32(width * 0.5) - over_width / 2, 40, 28, rl.Color{230, 70, 70, 255})
+	} else if app.game.level_complete {
 		complete := cstring("LEVEL COMPLETE")
 		complete_width := rl.MeasureText(complete, 28)
 		rl.DrawText(complete, i32(width * 0.5) - complete_width / 2, 40, 28, rl.Color{255, 225, 80, 255})
