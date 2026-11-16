@@ -133,3 +133,34 @@ const after = await page.evaluate(() =>
 );
 assert(after.player_grid[0] === 10);
 ```
+
+---
+
+## Odin Control API (current replacement)
+
+The Odin port replaces the React/localStorage/BRP console with a localhost
+JSON API. It is available in both binaries:
+
+```bash
+odin/bin/dreamcraft --control=7777   # live game + rendering
+odin/bin/headless --serve=7777       # deterministic simulation only
+```
+
+Endpoints:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/health` | liveness |
+| GET | `/state` | tick, player/enemy, fog %, hash, valid, validation |
+| GET | `/units` | unit list with team, position, HP, state, path, target |
+| GET | `/fog` | 80×50 ASCII map |
+| GET | `/screenshot` | live PNG (client only) |
+| POST | `/command` | execute a JSON command |
+
+Commands: `status`, `goto`, `patrol`, `attack`, `stop`, `run`, `reset`,
+`verify`, `select`, `select_all`, `spawn`, `kill`, `set_hp`, `teleport`.
+
+Every response includes `valid` and `validation`, so agents can detect
+invariant violations without reading logs.
+
+The old Agent Console / Bevy BRP MCP path is not used by the Odin client.

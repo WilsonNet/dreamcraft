@@ -1,6 +1,4 @@
 use bevy::prelude::*;
-use bevy::remote::RemotePlugin;
-use bevy_brp_extras::BrpExtrasPlugin;
 use dreamcraft::DreamCraftPlugin;
 
 fn main() {
@@ -25,8 +23,6 @@ fn main() {
         }));
     }
 
-    app.add_plugins(RemotePlugin::default())
-        .add_plugins(BrpExtrasPlugin::default())
-        .add_plugins(DreamCraftPlugin)
+    app.add_plugins(DreamCraftPlugin)
         .run();
 }

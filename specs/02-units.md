@@ -192,3 +192,23 @@ This creates a true Fog of War experience where enemies can hide in unexplored o
 - `update_enemy_visibility`: Manages visibility and triggers agro state
 - `enemy_ai_chase`: Calculates chase paths for agro enemies
 - `unit_movement`: Universal movement for all units (player and AI)
+
+---
+
+## Odin Implementation Values
+
+The Odin port uses these current values (tutorial level):
+
+| Stat | Value |
+|------|-------|
+| Move speed | 150 world units/s (4.6875 cells/s) |
+| Max HP | 100 |
+| Attack damage | 15 |
+| Attack range | 3 cells (Euclidean) |
+| Attack cooldown | 60 ticks (1.0 s) |
+| Vision radius | 6 cells |
+| Unit capacity | 256 slots (SoA pool) |
+| Path capacity | 512 cells per unit |
+
+Player and enemy share the same melee stat block; team/color is the only
+difference. Unit references are generation handles, not ECS entities.

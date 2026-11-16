@@ -1,320 +1,170 @@
-# DreamCraft - Fantasy RTS Tech Stack
+# DreamCraft - Fantasy RTS (Odin)
 
-Spiritual successor to StarCraft: Brood War, built for the modern web.
+Spiritual successor to StarCraft: Brood War. Primary implementation:
+**Odin + raylib** in `odin/`. The Rust/Bevy prototype in `src/` is legacy
+reference only.
 
 ## ⚠️ CRITICAL: Specs Files (Read First!)
 
 **BEFORE implementing ANY feature, ALWAYS check:**
-1. `specs/` folder for existing specifications
+1. `specs/` for existing specifications
 2. `.opencode/skills/specs/SKILL.md` for update guidelines
 
 **AFTER completing ANY feature, ALWAYS:**
 1. Update relevant spec files in `specs/`
-2. Mark features as `[x]` completed in `specs/01-overview.md`
+2. Mark features as `[x]` in `specs/01-overview.md`
 3. Update unit specs, input specs, or other relevant docs
-
-**Why specs matter:**
-- Single source of truth for game design
-- Ensures consistency across implementations
-- Documents decisions for future developers/agents
-- Tracks implementation progress
 
 **Spec files:**
 | File | Purpose |
 |------|---------|
-| `specs/01-overview.md` | Game vision, features, implementation status, architecture |
-| `specs/02-units.md` | Unit types, stats, abilities, behaviors |
+| `specs/01-overview.md` | Vision, features, status, architecture |
+| `specs/02-units.md` | Unit types, stats, abilities |
 | `specs/03-isometric.md` | Grid rendering, coordinate systems |
 | `specs/04-input.md` | Control schemes, input handling |
-| `specs/05-networking.md` | Multiplayer architecture, sync protocols |
-| `specs/06-agent-console.md` | Agent Console commands, diagnostics, headless API |
-| `specs/07-minimap.md` | StarCraft-style minimap implementation |
+| `specs/05-networking.md` | Multiplayer architecture |
+| `specs/06-agent-console.md` | Diagnostics, control API, headless testing |
+| `specs/07-minimap.md` | Minimap implementation |
+| `specs/08-odin-port.md` | Odin data layout, allocation rules, control server |
 
 ---
 
-## Skills Map
+## Development Commands
 
-Skills are located in `.opencode/skills/` and `.claude/skills/` and provide specialized instructions:
+```bash
+cd odin
 
-| Skill | Purpose |
-|-------|---------|
-| **bevy** | Bevy ECS patterns, common errors, UI patterns, WASM/native setup |
-| **tmux** | Terminal multiplexing, session management, troubleshooting |
-| **specs** | Keeping `specs/` folder updated with new features |
+./run.sh                    # build + run native client
+./run.sh --control          # client + HTTP control API on :7777
+./build.sh                  # build bin/dreamcraft + bin/headless
+./test.sh                   # unit tests + headless smoke + HTTP smoke
 
-### Skill Update Rule (IMPORTANT!)
-After completing ANY task, update relevant skills if:
-- You discovered a new pattern or error fix
-- You learned something not in the skill
-- A skill is missing information that would have helped
+odin test game -vet -strict-style
+odin test control -vet -strict-style
+odin build client -out:bin/dreamcraft -o:speed
+odin build headless -out:bin/headless -o:speed
+```
 
-Example: Fixed a Bevy UI error? -> Update `.opencode/skills/bevy/SKILL.md` with the fix.
+Headless file protocol (agent-friendly):
+
+```bash
+echo '{"cmd":"status"}' > headless_command.json    # write, then read result
+./bin/headless --script tests/smoke.jsonl          # deterministic script
+./bin/headless --ticks 600                         # run fixed ticks
+./bin/headless --serve=7777                        # HTTP control API
+```
+
+## Odin Project Structure
+
+```
+odin/
+├── game/        # pure simulation: no raylib, no allocation
+│   ├── config.odin      # constants, fixed grid positions
+│   ├── fixed.odin       # Q16.16 math
+│   ├── grid.odin        # obstacle + fog bitsets
+│   ├── pathfinding.odin # allocation-free A*
+│   ├── units.odin       # SoA unit pool + generation handles
+│   ├── commands.odin    # command queue execution
+│   ├── movement.odin    # tick-based path movement
+│   ├── ai.odin          # enemy chase, fog, waypoints, goal
+│   ├── combat_sim.odin  # attacks, cooldowns, death
+│   ├── sim.odin         # fixed tick order
+│   ├── validation.odin  # runtime invariant checker
+│   ├── hash.odin        # deterministic state hash
+│   └── *_test.odin      # unit tests
+├── client/      # raylib rendering, input, HUD, minimap
+├── control/     # JSON commands + localhost HTTP server
+├── headless/    # script runner, file polling, --serve
+└── tests/       # smoke scripts
+```
+
+## Architecture Rules
+
+### Determinism
+- Simulation is integer-only: `Fp` Q16.16 fixed point, never `f32`.
+- Fixed 60 Hz tick, fixed system order in `game/sim.odin`.
+- No randomness in the simulation.
+- Same command log must produce the same `game_hash`. Covered by tests.
+
+### Memory
+- No allocation inside `sim_tick`, pathfinding, commands, combat, or fog.
+- All simulation arrays are fixed-capacity (`MAX_UNITS`, `MAX_PATH`,
+  `MAX_COMMANDS`, `GRID_CELLS`).
+- Units are struct-of-arrays with `{index, generation}` handles. Destruction
+  bumps the generation; stale handles cannot hit recycled slots.
+- Obstacles and fog are bitsets, not `[][]bool`.
+- A* reuses preallocated scratch arrays. No `BinaryHeap` and no per-call `Vec`.
+- Tests run 1000 ticks under a failing allocator and assert zero allocations.
+
+### Validation
+- `validate_game()` checks counters, handles, paths, fog, waypoints, commands.
+- `VALIDATE_EACH_TICK` is on by default. Release builds may pass
+  `-define:VALIDATE_EACH_TICK=false`.
+- Every control API response includes `valid` and `validation`.
+- `level_validate()` proves every waypoint is reachable before play.
+- Corrupt-state tests assert each validator branch fires.
+
+### Controls and Testing
+- Bevy BRP MCP was removed. Do not re-add `bevy_remote`, `bevy_brp_extras`,
+  or `bevy_brp` MCP config.
+- Use the Odin control API instead:
+  - `GET /state`, `GET /units`, `GET /fog`, `GET /screenshot`
+  - `POST /command` with `goto`, `patrol`, `attack`, `run`, `reset`, `verify`,
+    `select`, `spawn`, `kill`, `set_hp`, `teleport`
+- HTTP server is single-threaded and polled from the main loop. Commands
+  mutate the same `Game` as rendering.
+- `bin/headless --script` is the CI path; `--serve` is the interactive path.
+- Client screenshot endpoint works in `--control` mode.
 
 ## Code Style Rules
 
 ### Function Length Limit
-**Functions MUST NOT exceed 50 lines.** If a function grows beyond 50 lines:
-1. Identify logical sub-tasks within the function
-2. Extract each sub-task into a separate private function
-3. Give extracted functions descriptive names
-4. Keep the original function as a coordinator
-
-**Example:**
-```rust
-// BAD - 80 lines doing too much
-fn setup_level(...) {
-    // spawn camera (10 lines)
-    // init grids (15 lines)
-    // spawn minimap (30 lines)
-    // spawn units (25 lines)
-}
-
-// GOOD - each task extracted
-fn setup_level(...) {
-    spawn_camera(&mut commands, ...);
-    initialize_grids(&mut obstacle_grid, ...);
-    spawn_minimap(&mut commands, ...);
-    spawn_units(&mut commands, ...);
-}
-```
-
-**Benefits:**
-- Easier to test individual pieces
-- Better readability
-- Reusable components
-- Clearer intent
+**Functions MUST NOT exceed 50 lines.** Extract logical sub-tasks into private
+procedures. Keep the original as a coordinator.
 
 ### File Size Limit
-**Files MUST NOT exceed 420 lines.** If a file grows beyond 420 lines:
-1. Identify logical groupings of code (components, resources, systems, etc.)
-2. Extract related code into separate modules
-3. Organize modules by feature/domain (units, grid, minimap, input, etc.)
-4. Use `mod.rs` files to expose public API
+**Files MUST NOT exceed 420 lines.** Extract modules by domain. Prefer one
+responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 
-**Example structure:**
-```
-src/
-├── main.rs          # Entry point (< 50 lines)
-├── lib.rs           # Plugin registration (< 50 lines)
-├── core/
-│   ├── mod.rs       # Module exports
-│   ├── components.rs
-│   ├── resources.rs
-│   └── plugin.rs
-├── units/           # Unit logic
-├── grid/            # Grid & fog of war
-├── minimap/         # Minimap rendering
-├── input/           # Input handling
-└── pathfinding/     # A* pathfinding
-```
+### Odin Style
+- Explicit allocators; simulation uses none.
+- Prefer fixed arrays and slices over `[dynamic]` inside hot paths.
+- `#partial switch` only when a default is intentional.
+- Use `-vet -strict-style`; fix warnings rather than ignoring them.
+- Public names are package-visible by default; use `@(private)` for internals.
 
-## Core Architecture
+## Core Gameplay (Tutorial Level 1)
 
-### Logic (The Brain)
-- **Language**: Rust
-- **Targets**: Native (desktop) + WASM (browser)
-- **ECS Framework**: Bevy 0.18
-- **Math**: `fixed` crate for deterministic floating-point (essential for RTS synchronization)
+- 80×50 grid, 32 world units per cell
+- Player melee unit at (2,25), enemy at (50,25)
+- 132 tree obstacle cells across 30 clusters
+- A* 8-direction movement, no corner cutting through two blocked sides
+- 3-state fog: unexplored / explored / visible
+- 8 waypoints; waypoint 3 moved to (40,23) because (40,20) is a tree
+- Goal at grid x ≥ 77
+- Melee: 15 damage, range 3 cells, 1.0 s cooldown, 100 HP
+- Enemy chases within 6-cell vision and attacks on cooldown
+- Patrol loops A↔B until a move/stop command
 
-### Networking (The Nerve) - Future
-- **Client-Server**: WebTransport
-- **P2P LAN**: WebRTC DataChannels
-- **Rationale**: Bypass WebSocket latency for competitive RTS gameplay
+## Skills Map
 
-### Graphics (The Eyes)
-- **API**: WebGPU (via Bevy) on browser, Vulkan on native
-- **Standard**: 2026 high-performance rendering
-- **Features**: Custom shaders for fantasy "ambient" skill effects
+Skills live in `.opencode/skills/` and `.claude/skills/`:
 
-### UI
-- **Native**: Bevy UI (window, title bar, game view)
-- **Browser**: Simple canvas (no React) - game renders to HTML canvas
-- **Headless**: File-based command system (`headless_command.json` / `headless_result.json`)
+| Skill | Purpose |
+|-------|---------|
+| **odin** | Odin patterns, allocators, testing, raylib, control server |
+| **bevy** | Legacy Bevy reference only |
+| **tmux** | Long-running process management |
+| **specs** | Keeping `specs/` updated |
 
-## Project Structure
+### Skill Update Rule
+After a task, update a skill if you discovered a new pattern, fixed an error,
+or found information that would have helped. Add concise, actionable notes.
 
-```
-dreamcraft/
-├── CLAUDE.md              # This file
-├── Trunk.toml             # Trunk WASM bundler config (for browser build)
-├── Cargo.toml             # Rust configuration
-├── .cargo/config.toml     # Cargo config (mold linker, clang)
-├── index.html             # HTML entry for WASM (minimal, no React)
-├── src/
-│   ├── main.rs           # Native entry point (with headless mode support)
-│   ├── lib.rs            # Game plugin & ECS (all game logic)
-│   └── web.rs            # WASM entry point (minimal)
-├── specs/                 # Game specifications
-├── .opencode/skills/      # Specialized skills
-└── .claude/skills/        # Claude Code skills (mirrors .opencode/skills/)
-```
+## Legacy Rust/Bevy Path
 
-## Development Setup
+`src/` and `Cargo.toml` remain for reference. The Rust build is slow (Bevy).
+Do not use it for new features. `bevy_remote` and `bevy_brp_extras` were
+removed. Use `odin/` for all current work.
 
-### Prerequisites
-- Rust (stable) with `wasm32-unknown-unknown` target
-- Trunk WASM bundler
-- Mold linker (installed)
-- Clang (installed)
-
-### Install Tools
-```bash
-# Install trunk
-cargo install cargo-binstall
-cargo binstall trunk -y
-
-# Install mold linker (already on system)
-# Already installed via: sudo pacman -S mold clang
-```
-
-### Development Commands
-
-#### Native (PRIMARY - fast iteration)
-```bash
-# With window (for playing)
-cargo run --bin dreamcraft-bin --features bevy/dynamic_linking
-
-# Headless (for agents/LLMs)
-cargo run --bin dreamcraft-bin --features bevy/dynamic_linking -- --headless
-```
-
-#### Headless Agent Commands
-Write to `headless_command.json`, read from `headless_result.json`:
-
-```bash
-# Status
-echo '{"cmd": "status"}' > headless_command.json
-
-# Move player
-echo '{"cmd": "goto", "x": 10, "y": 25}' > headless_command.json
-
-# Verify player position
-echo '{"cmd": "verify", "verify": {"type": "player_at", "x": 10, "y": 25}}' > headless_command.json
-
-# Verify level complete
-echo '{"cmd": "verify", "verify": {"type": "level_complete"}}' > headless_command.json
-
-# Reset level
-echo '{"cmd": "reset"}' > headless_command.json
-```
-
-#### WASM (Browser) - Legacy, for testing
-```bash
-# Start dev server (runs on http://localhost:8080)
-/home/wilsonn/.asdf/installs/rust/stable/bin/trunk serve
-
-# Or build only
-/home/wilsonn/.asdf/installs/rust/stable/bin/trunk build
-```
-
-#### tmux Setup (REQUIRED for agents)
-**IMPORTANT**: Always use the tmux skill to run the game. This ensures proper process management and allows you to monitor output.
-
-```bash
-# Use tmux skill to create/manage session
-tmux new-session -d -s dreamcraft -n native -c /home/wilsonn/www/dreamcraft
-tmux send-keys -t dreamcraft:native 'cargo run --bin dreamcraft-bin --features bevy/dynamic_linking' Enter
-
-# Check if game is running
-tmux list-sessions
-tmux capture-pane -t dreamcraft:native -p
-
-# View live output
-tmux attach -t dreamcraft:native
-```
-
-**Benefits of tmux + mold linker:**
-- Game runs in background without blocking your terminal
-- Easy to check compilation errors and runtime output
-- Mold linker (configured in `.cargo/config.toml`) provides fast linking
-- Can restart game without killing your session
-
-### Cargo Configuration (.cargo/config.toml)
-```toml
-[target.x86_64-unknown-linux-gnu]
-linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]
-
-[profile.dev]
-opt-level = 1
-
-[profile.dev.package."*"]
-opt-level = 3
-
-[profile.release]
-codegen-units = 1
-lto = "thin"
-```
-
-## Specs
-
-Detailed game specifications are in `specs/`:
-
-| Spec | Description |
-|------|-------------|
-| `specs/01-overview.md` | Game vision, features, implementation status, architecture |
-| `specs/02-units.md` | Unit types, stats, abilities |
-| `specs/03-isometric.md` | Grid rendering, coordinate systems |
-| `specs/04-input.md` | Control schemes, input handling |
-| `specs/05-networking.md` | Multiplayer architecture, sync protocols |
-| `specs/06-agent-console.md` | Agent Console commands, diagnostics, headless API |
-| `specs/07-minimap.md` | StarCraft-style minimap implementation |
-
-Always check and update relevant specs after implementing features (see specs skill).
-
-## Game Features (Tutorial Level 1)
-
-### Implemented
-- [x] 80x50 grid map with A* pathfinding
-- [x] Player unit (blue circle with "M" label) with right-click movement
-- [x] Fog of war (cells revealed as player explores)
-- [x] 8 waypoints through the map
-- [x] Goal zone (right edge) — level complete when reached
-- [x] Tree obstacles (30 clusters, 132 cells)
-- [x] Camera pan (WASD/Arrow keys)
-- [x] Headless command system (file-based for agentic testing)
-- [x] Native build with dynamic_linking (fast iteration)
-- [x] Window title: "DreamCraft RTS - Tutorial Level 1"
-
-### Headless Agent API
-- `status` — Returns player position
-- `goto <x> <y>` — Move player to grid position
-- `verify player_at <x> <y>` — Verify player is at position
-- `verify level_complete` — Check if level is complete
-- `reset` — Reset level to start
-
-### Known Issues
-- Waypoint 3 at (40,20) collides with tree cluster — pathfinding skips it
-- Camera doesn't auto-follow player (must pan manually or use console `goto`)
-- Headless mode creates window then closes immediately (needs fix)
-
-## Key Design Principles
-
-1. **Determinism**: All game logic uses fixed-point arithmetic for perfect sync across clients
-2. **Low Latency**: WebTransport/WebRTC minimize network delay vs WebSockets
-3. **Performance**: WebGPU for GPU-compute and rendering; native uses Vulkan
-4. **Modularity**: Clear separation between logic (Rust/Bevy), native UI, browser canvas
-5. **Agentic Testing**: All game state controllable and verifiable via headless command files
-
-## Bevy Reference
-
-The `bevy-docs/` directory contains the full Bevy engine source for quick reference:
-- Examples: `bevy-docs/examples/`
-- ECS patterns: Look at `bevy-docs/examples/ecs/`
-- 2D rendering: `bevy-docs/examples/2d/`
-- Shaders: `bevy-docs/examples/shader/`
-
-Also see `.opencode/skills/bevy/SKILL.md` for quick reference.
-
-## Troubleshooting
-
-### Before Searching Docs (Max 3 attempts):
-1. Check tmux session: `tmux list-sessions`
-2. Check tmux window: `tmux list-windows -t dreamcraft`
-3. Check output: `tmux capture-pane -t dreamcraft:native -p`
-
-### Common Issues:
-- **Dynamic linking fails**: Use `--features bevy/dynamic_linking` for native
-- **WASM build fails**: Check Cargo.toml has correct crate-type (rlib only, not cdylib)
-- **Headless command not processed**: Check `headless_result.json` for errors
-- **Cached WASM build**: `trunk build` may use cached lib. Force rebuild: `touch src/lib.rs`
+Today's date: Mon Nov 16 2026

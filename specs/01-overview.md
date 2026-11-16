@@ -2,7 +2,7 @@
 
 ## Vision
 
-A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. Deterministic sync, low latency networking, and high-performance WebGPU rendering.
+A fantasy RTS — spiritual successor to StarCraft: Brood War. Current renderer is native raylib; long-term targets are web/WebGPU, deterministic sync, and low-latency networking.
 
 ## Core Features
 
@@ -24,7 +24,31 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 
 ## Implementation Status
 
-### Completed Features
+### Odin Port (Primary, native)
+
+The Odin implementation in `odin/` is the active codebase. It compiles in
+roughly 1–3 seconds, uses no GC, and keeps all simulation state in fixed
+capacity arrays.
+
+- [x] Deterministic Q16.16 fixed-point simulation at 60 Hz
+- [x] Struct-of-arrays unit pool with generation handles (256 slots)
+- [x] Allocation-free A* with preallocated scratch (no per-call heap)
+- [x] Obstacle and fog bitsets
+- [x] Fixed command queue (128 entries) validated on push and execute
+- [x] Runtime invariant checker (`validate_game`) after every tick
+- [x] State hash for deterministic replay tests
+- [x] Native raylib 6.2 client: world, fog, units, paths, HUD, minimap
+- [x] Headless runner: file polling, JSONL scripts, `--ticks`
+- [x] HTTP control API replacing Bevy BRP MCP
+  - [x] `GET /state`, `/units`, `/fog`, `/screenshot`, `/health`
+  - [x] `POST /command`: move, patrol, attack, stop, run, reset, verify,
+        select, spawn, kill, set_hp, teleport
+  - [x] Every response carries `valid` + `validation`
+- [x] 65 unit/integration tests (game + control)
+- [x] Zero-allocation simulation test under a failing allocator
+- [x] Waypoint 3 relocated from (40,20) to (40,23)
+
+### Completed Features (original Rust/Bevy prototype)
 
 #### Tutorial Level 1: "Through the Woods"
 - [x] Grid-based level (80x50 cells, 32px per cell)
@@ -33,7 +57,7 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 - [x] Team/race semantics clarified: available races are `Basic`, `Akana`, `Gorg`; Level 1 uses `Basic` for both teams; color indicates team, `M` indicates Melee type
 - [x] Tree clusters (30 clusters, 132 obstacle cells)
 - [x] Golden goal zone on the right side
-- [x] A* pathfinding (Rust implementation using BinaryHeap, 8-direction movement)
+- [x] A* pathfinding (Rust BinaryHeap prototype; Odin allocation-free version is primary)
 - [x] Path visualization with gizmos
 - [x] WASD/Arrow camera controls (speed: 400)
 - [x] Tutorial UI overlay (HUD)
@@ -94,10 +118,12 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 #### Headless/Agentic Testing
 - [x] Full game state observable via `dreamcraft_debug_state` localStorage key
 - [x] Commands injectable via `dreamcraft_command` localStorage key
-- [x] Playwright MCP integration for automated validation
+- [x] Playwright MCP integration for automated validation (Rust prototype)
 - [x] Level completable headlessly (goto waypoints, verify state)
 - [x] Native headless mode with file-based commands (`headless_command.json`)
-- [x] BRP (Bevy Remote Protocol) support for MCP tools
+- [x] Odin headless JSONL scripts (`odin/bin/headless --script`)
+- [x] Odin HTTP control API replaces BRP/MCP
+- [x] Bevy BRP MCP config and `bevy_remote`/`bevy_brp_extras` dependencies removed
 
 #### Combat System
 - [x] Melee combat with damage and health
@@ -126,8 +152,9 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 - [x] Color thresholds: green (>50%), yellow (25-50%), red (<25%)
 
 ### Known Issues
-- [ ] Waypoint 3 at (40,20) collides with tree cluster 7 — pathfinding skips it
+- [x] Waypoint 3 at (40,20) collided with a tree — fixed to (40,23) in Odin
 - [ ] Camera doesn't auto-follow player (must pan manually)
+- [ ] Odin web/WASM build not started (native raylib only)
 
 ### Controls
 - **Right-Click**: Move unit to location; right-click on enemy = attack
@@ -139,50 +166,62 @@ A web-based fantasy RTS game — spiritual successor to StarCraft: Brood War. De
 
 #### Waypoints for Level 1
 ```
-(10,25) -> (20,25) -> (30,25) -> (40,20)* -> (50,25) -> (60,25) -> (70,25) -> (77,25)
+(10,25) -> (20,25) -> (30,25) -> (40,23) -> (50,25) -> (60,25) -> (70,25) -> (77,25)
 Player starts at (2,25). Goal zone at x >= 77.
-* (40,20) blocked by tree cluster — needs relocation
+(40,20) is a tree; Odin uses (40,23).
 ```
 
 ### Architecture
 
+Primary implementation:
+
 ```
-dreamcraft/
-├── src/
-│   ├── combat/              # Combat system (attacking, damage, death)
-│   ├── core/                # Core components, resources, plugin
-│   ├── grid/                # Grid setup, visibility, fog of war
-│   ├── input/               # Mouse/keyboard, camera pan, screen edge scroll
-│   ├── lib.rs               # Main game plugin (all ECS systems)
-│   ├── main.rs              # Native entry point
-│   ├── minimap/             # Minimap rendering
-│   ├── pathfinding/         # A* pathfinding algorithm
-│   ├── ui/                  # RTS HUD and command buttons
-│   ├── units/               # Unit movement, AI, health, patrol
-│   └── web.rs               # WASM entry point (minimal)
-├── index.html              # Trunk entry — game + React console + React minimap
-├── web/                    # Legacy Bun-based React UI (not primary)
-├── specs/                  # Game specifications (this folder)
-└── bevy-docs/              # Bevy engine reference
+odin/
+├── game/           # pure deterministic simulation (no raylib, no allocation)
+│   ├── config.odin     # constants and fixed-capacity limits
+│   ├── fixed.odin      # Q16.16 fixed point
+│   ├── grid.odin       # obstacles + fog bitsets
+│   ├── pathfinding.odin# allocation-free A*
+│   ├── units.odin      # struct-of-arrays + generation handles
+│   ├── commands.odin   # validated command queue
+│   ├── movement.odin   # fixed-tick path movement
+│   ├── ai.odin         # enemy chase, fog, waypoints, goal
+│   ├── combat_sim.odin # attacks, cooldowns, death
+│   ├── sim.odin        # fixed system order
+│   ├── validation.odin # runtime invariants
+│   └── hash.odin       # deterministic state hash
+├── client/          # raylib native rendering, input, HUD, minimap
+├── control/         # JSON command API + localhost HTTP server
+├── headless/        # JSONL scripts, file polling, --serve
+└── tests/           # smoke scripts
+```
+
+Legacy prototype:
+
+```
+src/                 # Rust + Bevy 0.18 ECS
+index.html           # Trunk/React prototype entry
+web/                 # Legacy Bun React UI
+bevy-docs/           # Bevy engine reference
 ```
 
 ### Tech Stack
-- **Logic**: Rust + Bevy 0.18 ECS
-- **Rendering**: Bevy 2D (Mesh2d, Circle, Rectangle, Gizmos)
-- **UI Overlays**: React 19 (CDN, rendered in same page)
-- **Target**: WebAssembly via Trunk (port 8080)
-- **Testing**: Playwright MCP (headless browser control)
-- **Interop**: localStorage bridge (Bevy <-> React)
+- **Simulation**: Odin (Q16.16 fixed point, fixed 60 Hz tick)
+- **Rendering**: raylib 6.2 native
+- **Layer split**: pure `game` package, `client` renderer, `control` API
+- **Testing**: `core:testing`, allocation guard, headless JSONL, HTTP smoke
+- **Interactive testing**: `bin/dreamcraft --control` (live screenshot + commands)
+- **Legacy**: Rust + Bevy 0.18 + Trunk/WASM (reference only)
 
 ## Upcoming Features
 
 1. **Camera Follow Mode** - Auto-follow player with manual override
-2. **Fix Waypoint 3** - Relocate from (40,20) to clear cell
-3. **Isometric View** - Diagonal 2:1 grid rendering
-4. **Additional Unit Types** - Gatherer, Scout, Melee, Ranged
-5. **Resource System** - Gold collection
-6. **Multiplayer** - WebTransport networking
-7. **WebGPU Rendering** - High-performance shaders
+2. **Isometric View** - Diagonal 2:1 grid rendering
+3. **Additional Unit Types** - Gatherer, Scout, Melee, Ranged
+4. **Resource System** - Gold collection
+5. **Multiplayer** - WebTransport networking
+6. **Web/WASM Odin build** - raylib web backend or WebGPU
+7. **Replay files** - command log + state hash verification
 
 ## Level Design Principles
 

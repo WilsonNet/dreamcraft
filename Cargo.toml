@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.18.1", features = ["bevy_remote"] }
-bevy_brp_extras = "0.18"
+bevy = { version = "0.18.1" }
 fixed = "1.30.0"
 wasm-bindgen = "0.2.114"
 js-sys = "0.3.91"

@@ -10,3 +10,7 @@ bevy-docs/
 headless_result.json
 debug-console.html
 *.png
+
+odin/bin/
+odin/headless_command.json
+odin/control_screenshot.png

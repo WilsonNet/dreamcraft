@@ -133,3 +133,20 @@ System `handle_minimap_click` recenters the main camera when left-clicking insid
 - Independent of window size (always bottom-left)
 - Rendered on top of game view via Bevy UI camera (order: -1)
 - Captures left-click on minimap for camera recentering
+
+---
+
+## Odin Implementation
+
+The Odin client renders the minimap into a single 80×50 `rl.Texture2D`:
+
+- One RGBA pixel per grid cell.
+- Pixel colors derive from obstacle bitset, fog state, goal zone, waypoints,
+  player, and visible enemies.
+- The texture is scaled to 200×125 with nearest-neighbor filtering.
+- The source rectangle has negative height to flip Y so grid `(0,0)` is at the
+  bottom-left of the minimap.
+- Left-click maps minimap UV to grid coordinates and recenters the camera.
+- Updating costs 4000 pixel writes plus one 16 KiB texture upload per frame.
+
+No per-cell UI entities are created.

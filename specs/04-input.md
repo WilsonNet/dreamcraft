@@ -68,3 +68,16 @@
 - Click position is mapped from minimap normalized coordinates to grid coordinates
 - Y-axis is inverted from UI space so minimap top maps to high grid Y
 - Camera position is clamped to world camera bounds after recentering
+
+---
+
+## Odin Client Notes
+
+- The Odin client implements the same RTS controls with raylib:
+  left-click/drag selection, right-click move/attack, Move/Patrol command
+  modes, WASD/arrow pan, edge scroll, Escape menu, minimap click.
+- Losing window focus while the cursor is outside the window no longer causes
+  edge-scroll drift: edge scroll requires both `IsWindowFocused()` and
+  `IsCursorOnScreen()`.
+- Commands are queued as fixed-size `Command` values; input never mutates
+  simulation state directly.

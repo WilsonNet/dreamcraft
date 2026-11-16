@@ -1,0 +1,15 @@
+{"cmd":"reset"}
+{"cmd":"status"}
+{"cmd":"goto","x":10,"y":25}
+{"cmd":"run","ticks":140}
+{"cmd":"verify","verify":{"type":"player_at","x":10,"y":25}}
+{"cmd":"verify","verify":{"type":"valid"}}
+{"cmd":"kill","x":50,"y":25}
+{"cmd":"spawn","team":"enemy","x":5,"y":25,"value":30}
+{"cmd":"select_all"}
+{"cmd":"attack","x":5,"y":25}
+{"cmd":"run","ticks":220}
+{"cmd":"verify","verify":{"type":"enemy_dead"}}
+{"cmd":"verify","verify":{"type":"valid"}}
+{"cmd":"reset"}
+{"cmd":"verify","verify":{"type":"valid"}}
