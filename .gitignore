@@ -15,3 +15,6 @@ odin/bin/
 odin/headless_command.json
 odin/control_screenshot.png
 odin/web/main.wasm
+
+!odin/assets/warrior/*.png
+odin/tools/warrior/build/

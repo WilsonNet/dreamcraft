@@ -22,8 +22,16 @@ DEV_BUILD :: #config(DREAMCRAFT_DEV, false)
 
 App :: struct {
 	game: g.Game,
-	camera: rl.Camera2D,
-	camera_pos: rl.Vector2,
+	camera: rl.Camera3D,
+	camera_target: rl.Vector3,
+	pixel: rl.RenderTexture2D,
+	pixel_width: int,
+	pixel_height: int,
+	pixel_shader: rl.Shader,
+	shader_ready: bool,
+	shader_tex_size: i32,
+	ground_texture: rl.Texture2D,
+	ground_model: rl.Model,
 	accumulator: f64,
 	menu_open: bool,
 	command_mode: Command_Mode,
@@ -39,6 +47,9 @@ App :: struct {
 	resume_button: rl.Rectangle,
 	last_fps: int,
 	camera_follow: bool,
+	models: [g.MAX_UNITS]Unit_Model,
+	visuals: [g.MAX_UNITS]Unit_Visual,
+	last_tick: u64,
 	server: control.Server,
 	serving: bool,
 }
@@ -69,6 +80,10 @@ main :: proc() {
 		control.server_close(&app.server)
 	}
 	init_minimap_texture()
+	init_pixel_pipeline()
+	init_ground()
+	init_warrior_assets()
+	reset_warrior_visuals()
 	app.camera_follow = true
 	reset_camera()
 	update_layout()
@@ -79,6 +94,7 @@ main :: proc() {
 		handle_input()
 		update_simulation(dt)
 		update_camera(dt)
+		update_warrior_visuals(f32(dt))
 		update_minimap_pixels()
 		draw_frame()
 		if app.serving {
@@ -86,6 +102,9 @@ main :: proc() {
 		}
 		free_all(context.temp_allocator)
 	}
+	unload_warrior_assets()
+	unload_ground()
+	unload_pixel_pipeline()
 	rl.UnloadTexture(app.minimap)
 }
 
@@ -96,25 +115,10 @@ init_minimap_texture :: proc() {
 	rl.SetTextureFilter(app.minimap, .POINT)
 }
 
-reset_camera :: proc() {
-	position, ok := g.game_player_position(&app.game)
-	if !ok {
-		position = g.START_POS
-	}
-	app.camera_pos = iso_cell_center(position)
-	app.camera_follow = true
-	app.camera = rl.Camera2D{
-		offset = rl.Vector2{0, 0},
-		target = app.camera_pos,
-		rotation = 0,
-		zoom = 1,
-	}
-}
-
 update_layout :: proc() {
 	width := f32(rl.GetScreenWidth())
 	height := f32(rl.GetScreenHeight())
-	app.camera.offset = rl.Vector2{width * 0.5, height * 0.5}
+	ensure_pixel_target(int(width) / 2, int(height) / 2)
 	app.minimap_rect = rl.Rectangle{20, height - 150, 200, 125}
 	app.move_button = rl.Rectangle{width - 104, height - 52, 84, 32}
 	app.patrol_button = rl.Rectangle{width - 104, height - 92, 84, 32}
@@ -150,9 +154,6 @@ is_dev_executable :: proc() -> bool {
 	return strings.contains(base, "dev")
 }
 
-screen_to_grid :: proc(screen: rl.Vector2) -> g.Grid_Pos {
-	return iso_screen_to_grid(screen, app.camera)
-}
 
 format_text :: proc(buffer: []u8, format: string, args: ..any) -> cstring {
 	assert(len(buffer) > 0)

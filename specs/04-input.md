@@ -90,6 +90,9 @@
   unit is between cells plans from `next` and keeps `progress`/`world`, so the
   unit never snaps back to the previous cell center. Clicks on blocked cells
   are rejected without changing the current order.
+- Mouse picking in the 3D client casts a ray from the camera and intersects
+  the ground plane; selection boxes project unit positions with
+  `GetWorldToScreen`.
 - Web client: left click select/command, right click move/attack, shift+click
   add selection, Esc cancel mode, F select all. Buttons: Move, Patrol, Stop,
   Select All, Reset.

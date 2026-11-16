@@ -38,7 +38,9 @@ capacity arrays.
 - [x] Runtime invariant checker (`validate_game`) after every tick
 - [x] State hash for deterministic replay tests
 - [x] Native raylib 6.2 client: world, fog, units, paths, HUD, minimap
-- [x] Isometric 2:1 world view in native and web clients
+- [x] Native full 3D isometric renderer + pixel-art post shader
+- [x] Animated low-poly melee warrior (idle/walk/attack)
+- [x] Web client keeps the lightweight 2:1 canvas view
 - [x] Camera follow mode with manual override (`F`)
 - [x] Move/attack re-orders keep mid-cell position (no teleport/rollback)
 - [x] Browser build: Odin `js_wasm32` + HTML canvas + DOM HUD
@@ -49,7 +51,7 @@ capacity arrays.
   - [x] `POST /command`: move, patrol, attack, stop, run, reset, verify,
         select, spawn, kill, set_hp, teleport
   - [x] Every response carries `valid` + `validation`
-- [x] 77 unit/integration tests (game + control)
+- [x] 74 unit/integration tests (game + control + client)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator
@@ -214,7 +216,7 @@ bevy-docs/           # Bevy engine reference
 
 ### Tech Stack
 - **Simulation**: Odin (Q16.16 fixed point, fixed 60 Hz tick)
-- **Rendering**: raylib 6.2 native
+- **Rendering**: raylib 6.2 native 3D + low-res pixel shader
 - **Layer split**: pure `game` package, `client` renderer, `control` API
 - **Testing**: `core:testing`, allocation guard, headless JSONL, HTTP smoke
 - **Interactive testing**: `bin/dreamcraft --control` (live screenshot + commands)
@@ -242,6 +244,6 @@ bevy-docs/           # Bevy engine reference
 ### Tree Clusters (30 total, 132 obstacle cells)
 Clusters are distributed across the 80x50 grid to create:
 - Navigation obstacles requiring pathfinding
-- Visual variety (trunk + leaves sprites)
+- Visual variety (low-poly trunk + leaf cones)
 - Strategic chokepoints
 - Entries with (0,0) coordinates are padding (skipped)

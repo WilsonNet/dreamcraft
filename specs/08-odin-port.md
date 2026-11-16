@@ -12,7 +12,7 @@ Measured on this machine (Apple Silicon):
 |-------|------|
 | Odin client + headless, `-o:speed` | ~2.8 s total |
 | Bevy client, incremental | tens of seconds to minutes |
-| Odin unit tests (77 tests) | < 30 ms runtime |
+| Odin unit tests (74 tests) | < 30 ms runtime |
 
 ## Why Odin for an RTS
 
@@ -29,10 +29,12 @@ Measured on this machine (Apple Silicon):
 ```
 odin/
 ├── game/        # pure simulation, imports no rendering libraries
-├── client/      # raylib native client
+├── client/      # raylib 3D isometric renderer, input, HUD
 ├── control/     # JSON command model + localhost HTTP server
 ├── headless/    # JSONL scripts, file polling, --serve, replay
-├── web/         # js_wasm32 build, canvas renderer, DOM HUD
+├── web/         # js_wasm32 build, 2:1 canvas renderer, DOM HUD
+├── assets/      # warrior GLBs and pixel-art shader
+├── tools/       # Blender warrior pipeline
 └── tests/       # shell/JSONL smoke tests
 ```
 
@@ -363,6 +365,18 @@ Layers:
 - Reuse scratch buffers instead of allocating per query.
 - Keep tick order explicit and documented; determinism depends on it.
 
+## Native 3D Renderer
+
+- Orthographic `Camera3D`: 45° yaw, ~30° pitch, ortho height 20.
+- Ground is one textured plane; 320×200 fog/goal texture, 4 texels per cell.
+- Trees are low-poly cylinders/cones; units are animated GLB models.
+- Scene renders to a half-resolution `RenderTexture2D`, then upscales with
+  nearest filtering and `assets/shaders/pixelart.fs` (posterize, dither,
+  outline).
+- HUD, minimap, health bars and selection box stay full resolution.
+- Picking casts a camera ray at the ground plane.
+- One model instance per unit, so idle/walk/attack can differ per unit.
+
 ## Web Build
 
 `odin/web/` compiles the same `game` package to `js_wasm32`:
@@ -417,6 +431,8 @@ Native client:
 - HTTP control server is single-threaded and handles up to 8 requests per
   frame. Back-to-back keep-alive requests are supported with a 250 ms idle
   timeout.
-- Web build uses a fixed full-map isometric view (no web camera zoom/pan).
-- Web HUD is DOM; unit labels and health bars are simplified to pixel marks.
+- Native client is full 3D; the web build keeps the fixed 2:1 canvas view.
+- Web HUD is DOM; web units remain simple colored pixel markers.
+- One GLB model instance per unit costs memory; the tutorial and normal test
+  spawn counts are small.
 - Rust/Bevy files remain as a legacy reference and are not built or tested.

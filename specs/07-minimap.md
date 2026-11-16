@@ -151,7 +151,7 @@ The Odin client renders the minimap into a single 80×50 `rl.Texture2D`:
 
 No per-cell UI entities are created.
 
-The minimap stays top-down even though the world view is isometric. The web
+The minimap stays top-down even though the native world view is full 3D. The web
 build renders the iso world into a 640×400 canvas framebuffer, scaled to
 960×600 with nearest-neighbor filtering. Waypoints, units, fog and the goal
 use the same color logic.

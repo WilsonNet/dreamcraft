@@ -83,20 +83,35 @@ my_test :: proc(t: ^testing.T) {
   file bytes from the control server.
 - Minimap: one 80×50 texture, scale to 200×125, negative source height flips Y.
 
-## Isometric Rendering
+## 3D Rendering
 
-- Simulation stays orthogonal; project in the client only.
-- `client/iso.odin`: continuous grid coords, cell center is `(gx+0.5, gy+0.5)`.
-- `iso_from_grid(fx, fy) = {(fx-fy)*32, (fx+fy)*16}` for 64x32 tiles.
-- Inverse: `gx=(sx/32+sy/16)/2`, `gy=(sy/16-sx/32)/2`; floor for the cell.
-- Interpolated units: convert `units.world` back to grid units, then project.
-- Camera target and screen-to-grid must both use iso space.
-- Draw trees/units back-to-front by `gx+gy` (or interpolated world sum).
-- `raylib.DrawTriangle` is back-face culled: screen-space CCW order required
-  (`top, bottom, right`). Wrong winding makes ground/fog fills invisible.
+- Native client is full 3D; simulation stays orthogonal.
+- `Camera3D` orthographic:
+  - position = target + `normalize({1,0.816,1})*40`,
+  - `up = {0,1,0}`, `fovy = 20`, `projection = .ORTHOGRAPHIC`.
+- Grid center mapping: `x = gx + .5 - GRID_W/2`, `z = gy + .5 - GRID_H/2`.
+- Picking: `GetScreenToWorldRay` then intersect `y=0`.
+- Selection/health bars: `GetWorldToScreen`.
+- Ground: one textured `GenMeshPlane`; 4 texels per cell, point filtered,
+  fog/goal colors updated with `UpdateTexture`.
+- Trees: low-poly `DrawCylinder` cones; units: animated GLB models.
+- Render scene to a half-size `RenderTexture2D`, upscale nearest, then apply
+  `assets/shaders/pixelart.fs` (posterize + dither + outline).
+- HUD and health bars draw after the pixel pass at full resolution.
 - Minimap and ASCII fog stay top-down.
-- Web: 640x400 framebuffer, 8x4 tiles, offset `(260,70)`; JS inverts the
-  projection before issuing orders.
+
+## Warrior Model Pipeline
+
+- `odin/tools/warrior/build.sh` runs Blender headless; no MCP needed.
+- Blender 5.3, Workbench preview, GLB export with `export_animation_mode='ACTIONS'`.
+- Actions: idle 33 frames, walk 17, attack 11 at 24 fps.
+- Raylib: `LoadModel`, `LoadModelAnimations`, `UpdateModelAnimation`,
+  `DrawModelEx`.
+- One model instance per unit; a shared model cannot show two animations.
+- Model faces +Z at 0 degrees; yaw = `atan2(dx, dy)` in grid space.
+- Trigger attack when `units.cooldown[i]` increases (simulation reset it).
+- Move the preview ground plane `hide_render = True` or every transparent
+  frame gets an opaque ground.
 
 ## Web / WASM
 

@@ -40,12 +40,13 @@ Build a fantasy RTS called **DreamCraft** with:
 - 8-way A*, fog of war, waypoints, goal
 - 256-slot SoA unit pool with generation handles
 - Melee combat, enemy chase AI, patrol loops
-- Native raylib client with HUD, minimap, camera follow and 2:1 iso view
+- Native raylib full 3D isometric client with pixel-art post shader
+- Animated low-poly warrior models (Blue/Red) with idle/walk/attack
 - Two-lane build: stable `bin/dreamcraft` on `:7777`, dev binaries on `:7778`
 - Browser WASM/canvas client with DOM HUD and `window.dreamcraft` API
 - Headless JSONL scripts, HTTP control server, hash-verified replays
 - Curve/state validation after every tick
-- 77 native tests + web WASM smoke: invariants, allocations, determinism,
+- 74 native tests + web WASM smoke: invariants, allocations, determinism,
   HTTP round trip, browser API
 - Bevy BRP MCP removed; control API replaces it
 
@@ -57,7 +58,9 @@ odin/
 ├── client/     # raylib renderer/input/HUD/minimap
 ├── control/    # JSON API + localhost HTTP server
 ├── headless/   # scripts, polling, --serve, record/replay
-├── web/        # js_wasm32 canvas client + DOM HUD
+├── web/        # js_wasm32 2:1 canvas client + DOM HUD
+├── assets/     # warrior GLBs + pixel shader
+├── tools/      # Blender warrior pipeline
 ├── tests/      # smoke, replay, control tests
 ├── build.sh       # stable lane
 ├── test.sh        # tests + dev lane

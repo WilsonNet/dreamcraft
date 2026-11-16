@@ -1,7 +1,8 @@
 # DreamCraft RTS
 
 A deterministic fantasy RTS — spiritual successor to StarCraft: Brood War,
-rendered in a 2:1 isometric view (native and browser).
+rendered in full 3D isometric on native (raylib) with a pixel-art post shader;
+the browser build keeps a lightweight 2:1 canvas view.
 
 The primary implementation is **Odin** (`odin/`): native raylib client plus a
 browser WASM/canvas build. It compiles in seconds, uses fixed-capacity data
@@ -50,7 +51,7 @@ cd odin
 | Layer | Technology |
 |-------|-----------|
 | Simulation | Odin, Q16.16 fixed point, fixed-timestep 60 Hz |
-| Rendering | raylib 6.2 (native) / HTML canvas (web) |
+| Rendering | raylib 6.2 3D + pixel shader (native) / HTML canvas (web) |
 | Units | Struct-of-arrays, generation handles, fixed pools |
 | Pathfinding | Allocation-free A*, preallocated scratch |
 | Fog | Two bitsets (explored / visible) |
@@ -65,7 +66,9 @@ odin/
 ├── client/      # raylib native client, HUD, minimap, input
 ├── control/     # JSON control API + localhost HTTP server
 ├── headless/    # file/script runner, --serve, --record/--replay
-├── web/         # js_wasm32 build, canvas renderer, DOM HUD
+├── web/         # js_wasm32 build, 2:1 canvas renderer, DOM HUD
+├── assets/      # warrior GLBs + pixel shader
+├── tools/       # Blender warrior pipeline
 ├── tests/       # smoke and replay scripts
 ├── build.sh
 ├── test.sh
@@ -121,7 +124,7 @@ Detailed specifications live in [`specs/`](specs/):
 |------|-------------|
 | [01-overview.md](specs/01-overview.md) | Vision, features, implementation status |
 | [02-units.md](specs/02-units.md) | Unit types, stats, abilities |
-| [03-isometric.md](specs/03-isometric.md) | Grid rendering, coordinate systems |
+| [03-isometric.md](specs/03-isometric.md) | 3D isometric renderer, picking, pixel shader |
 | [04-input.md](specs/04-input.md) | Control schemes, input handling |
 | [05-networking.md](specs/05-networking.md) | Multiplayer architecture |
 | [06-agent-console.md](specs/06-agent-console.md) | Agent diagnostics and control |

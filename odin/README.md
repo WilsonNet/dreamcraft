@@ -1,7 +1,8 @@
 # DreamCraft RTS — Odin
 
-Deterministic RTS prototype. Odin native raylib client + browser WASM/canvas
-build. No GC, fixed pools, Q16.16 fixed point.
+Deterministic RTS prototype. Native raylib full 3D isometric client with a
+pixel-art post shader, plus a lightweight browser canvas build. No GC, fixed
+pools, Q16.16 fixed point.
 
 ## Build & Run
 
@@ -28,6 +29,13 @@ The dev client window title always starts with `DEV - `. The build passes
 `-define:DREAMCRAFT_DEV=true`, and `bin/dreamcraft-dev` is also detected by
 executable name, so the prefix stays even for a manual dev build.
 
+Warrior assets are committed. To regenerate the Blender model and animations:
+
+```bash
+cd tools/warrior
+./build.sh
+```
+
 Web:
 
 ```bash
@@ -52,7 +60,7 @@ Runs (against dev binaries; the stable build is not touched):
 
 1. `odin test game` — simulation unit tests
 2. `odin test control` — command/HTTP tests
-3. `odin test client` — iso projection/click-mapping tests
+3. `odin test client` — warrior facing tests
 4. headless JSONL smoke script
 5. replay hash verification
 6. web wasm smoke test (Node)
@@ -224,7 +232,7 @@ Allowed allocations outside hot paths:
 
 `client/` uses raylib:
 
-- 1280×720 window, resizable (min 800×600), 2D camera
+- 1280×720 window, resizable (min 800×600), orthographic 3D camera
 - ground, grid lines, goal zone, trees, waypoints
 - 3-state fog overlay
 - units with team color, label, health bars, selection ring

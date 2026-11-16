@@ -20,7 +20,7 @@ reference only.
 |------|---------|
 | `specs/01-overview.md` | Vision, features, status, architecture |
 | `specs/02-units.md` | Unit types, stats, abilities |
-| `specs/03-isometric.md` | Grid rendering, coordinate systems |
+| `specs/03-isometric.md` | 3D isometric renderer, picking, pixel shader |
 | `specs/04-input.md` | Control schemes, input handling |
 | `specs/05-networking.md` | Multiplayer architecture |
 | `specs/06-agent-console.md` | Diagnostics, control API, headless testing |
@@ -44,6 +44,7 @@ cd web && ./build.sh && ./serve.sh 8080   # browser build
 
 odin test game -vet -strict-style
 odin test control -vet -strict-style
+odin test client -vet -strict-style
 odin build client -out:bin/dreamcraft -o:speed
 odin build headless -out:bin/headless -o:speed
 ```
@@ -103,10 +104,12 @@ odin/
 │   ├── validation.odin  # runtime invariant checker
 │   ├── hash.odin        # deterministic state hash
 │   └── *_test.odin      # unit tests
-├── client/      # raylib rendering, input, HUD, minimap
+├── client/      # raylib 3D renderer, input, HUD, minimap
 ├── control/     # JSON commands + localhost HTTP server
 ├── headless/    # script runner, polling, --serve, record/replay
-├── web/         # js_wasm32 canvas client + DOM HUD
+├── web/         # js_wasm32 2:1 canvas client + DOM HUD
+├── assets/      # warrior GLBs + pixel-art shader
+├── tools/       # Blender warrior pipeline
 └── tests/       # smoke and replay scripts
 ```
 
@@ -186,8 +189,9 @@ responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 - Enemy chases within 6-cell vision and attacks on cooldown
 - Patrol loops A↔B until a move/stop command
 - Camera follow by default; manual pan switches to FREE (`F` toggles)
-- Isometric 2:1 world view; minimap stays top-down
-- Browser build: 640×400 iso framebuffer, DOM HUD, full-map view
+- Native full 3D orthographic isometric renderer + pixel post shader
+- Animated low-poly melee warrior (idle/walk/attack)
+- Minimap stays top-down; browser build keeps the 2:1 canvas view
 
 ## Skills Map
 

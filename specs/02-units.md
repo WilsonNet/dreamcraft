@@ -18,7 +18,7 @@
 
 ## Current Implementation (Tutorial Level 1)
 
-- **Player Unit**: Blue circle with "M" label
+- **Player Unit**: Blue animated 3D knight (idle/walk/attack)
   - Speed: 150.0 (world units/sec)
   - Vision range: 6 cells (radius)
   - Controlled via right-click movement
@@ -26,7 +26,7 @@
   - Health: 100 HP with health bar above unit
   - Combat: 15 damage, 3-cell range, 1s cooldown
     
-- **Enemy Unit**: Red circle with "M" label
+- **Enemy Unit**: Red animated 3D knight (idle/walk/attack)
   - Speed: 150.0 (world units/sec)
   - Same race as player (melee unit)
   - Hidden in fog until revealed
@@ -41,9 +41,19 @@
 
 - Available races: `Basic`, `Akana`, `Gorg`.
 - Tutorial Level 1 uses `Basic` race for both teams.
-- The **shape** (currently circle placeholder) represents race art placeholder, not team.
-- The **letter** represents unit type (`M` = Melee), not team.
+- The native client renders the **melee warrior model**; blue/red cloth marks team.
+- The HUD and debug APIs still use `M` as the logical melee type.
 - Team is represented by `Team` ownership and color tint (blue player / red enemy).
+
+### Warrior Model
+
+- Low-poly Blender model with an 8-bone rig.
+- Actions: `idle` (loop), `walk` (loop), `attack` (one-shot).
+- One model instance per unit so animations are independent.
+- Face direction follows the next path cell, or the attack target.
+- Attack triggers when the simulation attack cooldown resets.
+- Assets: `odin/assets/warrior/warrior_{blue,red}.glb`.
+- Pipeline: `odin/tools/warrior/build.sh` (Blender headless).
 
 ### Health Bars
 

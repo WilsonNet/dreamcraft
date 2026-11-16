@@ -1,24 +1,29 @@
-// World rendering in 2:1 isometric projection. All draws happen inside the
-// 2D camera; the simulation grid stays orthogonal.
+// Full 3D world rendering into a low-resolution target.
 package main
 
+import "core:math"
 import rl "vendor:raylib"
 import g "../game"
 
-MAX_TREE_CELLS :: 30 * 6
+GROUND_TEX_SCALE :: 4
+GROUND_TEX_W :: g.GRID_W * GROUND_TEX_SCALE
+GROUND_TEX_H :: g.GRID_H * GROUND_TEX_SCALE
+
+ground_pixels: [GROUND_TEX_W * GROUND_TEX_H]rl.Color
 
 draw_frame :: proc() {
-	rl.BeginDrawing()
+	update_ground_texture()
+	rl.BeginTextureMode(app.pixel)
 	rl.ClearBackground(rl.Color{5, 10, 5, 255})
-	rl.BeginMode2D(app.camera)
-	draw_ground()
-	draw_goal_zone()
-	draw_trees()
-	draw_waypoints()
-	draw_fog()
-	draw_units()
-	draw_selected_paths()
-	rl.EndMode2D()
+	rl.BeginMode3D(app.camera)
+	draw_world_3d()
+	rl.EndMode3D()
+	rl.EndTextureMode()
+
+	rl.BeginDrawing()
+	rl.ClearBackground(rl.BLACK)
+	draw_pixel_output()
+	draw_unit_health_bars()
 	draw_hud()
 	draw_selection_box()
 	if app.menu_open {
@@ -27,193 +32,207 @@ draw_frame :: proc() {
 	rl.EndDrawing()
 }
 
-draw_ground :: proc() {
-	base := rl.Color{30, 54, 30, 255}
-	p0 := iso_from_grid(0, 0)
-	p1 := iso_from_grid(f32(g.GRID_W), 0)
-	p2 := iso_from_grid(f32(g.GRID_W), f32(g.GRID_H))
-	p3 := iso_from_grid(0, f32(g.GRID_H))
-	rl.DrawTriangle(p0, p2, p1, base)
-	rl.DrawTriangle(p0, p3, p2, base)
+init_ground :: proc() {
+	image := rl.GenImageColor(GROUND_TEX_W, GROUND_TEX_H, rl.BLACK)
+	app.ground_texture = rl.LoadTextureFromImage(image)
+	rl.UnloadImage(image)
+	rl.SetTextureFilter(app.ground_texture, .POINT)
+	mesh := rl.GenMeshPlane(f32(g.GRID_W), f32(g.GRID_H), 1, 1)
+	app.ground_model = rl.LoadModelFromMesh(mesh)
+	rl.SetMaterialTexture(&app.ground_model.materials[0], .ALBEDO, app.ground_texture)
+}
 
-	grid_color := rl.Color{42, 70, 42, 255}
-	for gx := 0; gx <= g.GRID_W; gx += 4 {
-		rl.DrawLineV(
-			iso_from_grid(f32(gx), 0),
-			iso_from_grid(f32(gx), f32(g.GRID_H)),
-			grid_color,
-		)
+unload_ground :: proc() {
+	if app.ground_model.meshCount > 0 {
+		rl.UnloadModel(app.ground_model)
+		app.ground_model = {}
 	}
-	for gy := 0; gy <= g.GRID_H; gy += 4 {
-		rl.DrawLineV(
-			iso_from_grid(0, f32(gy)),
-			iso_from_grid(f32(g.GRID_W), f32(gy)),
-			grid_color,
-		)
+	if app.ground_texture.id > 0 {
+		rl.UnloadTexture(app.ground_texture)
+		app.ground_texture = {}
 	}
 }
 
-draw_goal_zone :: proc() {
+update_ground_texture :: proc() {
 	for gy in 0..<g.GRID_H {
-		for gx in g.GOAL_X..<g.GRID_W {
+		for gx in 0..<g.GRID_W {
 			cell := g.Grid_Pos{x = i32(gx), y = i32(gy)}
 			state := g.fog_state(&app.game.fog, cell)
-			if state == 0 {
-				continue
+			base := rl.Color{4, 6, 4, 255}
+			if state == 1 {
+				base = rl.Color{20, 44, 22, 255}
+			} else if state == 2 {
+				base = rl.Color{42, 92, 46, 255}
 			}
-			color := rl.Color{210, 180, 40, 24}
-			if state == 2 {
-				color = rl.Color{230, 200, 70, 150}
+			if state > 0 && gx >= g.GOAL_X && gx < g.GRID_W - 1 {
+				if state == 2 {
+					base = rl.Color{135, 112, 30, 255}
+				} else {
+					base = rl.Color{75, 62, 18, 255}
+				}
 			}
-			draw_diamond(iso_cell_center(cell), color)
+			grid := rl.Color{18, 30, 18, 255}
+			for py in 0..<GROUND_TEX_SCALE {
+				for px in 0..<GROUND_TEX_SCALE {
+					color := base
+					if state > 0 && ((gx % 4 == 0 && px == 0) || (gy % 4 == 0 && py == 0)) {
+						color = grid
+					}
+					index := (gy * GROUND_TEX_SCALE + py) * GROUND_TEX_W + gx * GROUND_TEX_SCALE + px
+					ground_pixels[index] = color
+				}
+			}
 		}
 	}
-	rl.DrawLineV(
-		iso_from_grid(f32(g.GOAL_X), 0),
-		iso_from_grid(f32(g.GOAL_X), f32(g.GRID_H)),
-		rl.Color{230, 200, 60, 210},
-	)
+	rl.UpdateTexture(app.ground_texture, raw_data(ground_pixels[:]))
 }
 
-draw_trees :: proc() {
-	cells: [MAX_TREE_CELLS]g.Grid_Pos
-	count := 0
+draw_world_3d :: proc() {
+	rl.DrawModel(app.ground_model, rl.Vector3{0, 0, 0}, 1, rl.WHITE)
+	draw_goal_3d()
+	draw_trees_3d()
+	draw_waypoints_3d()
+	draw_paths_3d()
+	draw_units_3d()
+}
+
+draw_goal_3d :: proc() {
+	x := f32(g.GOAL_X) - f32(g.GRID_W) * 0.5
+	for gy in 0..<g.GRID_H {
+		cell := g.Grid_Pos{x = g.GOAL_X, y = i32(gy)}
+		if g.fog_state(&app.game.fog, cell) == 0 {
+			continue
+		}
+		z := f32(gy) - f32(g.GRID_H) * 0.5
+		a := rl.Vector3{x, 0.04, z}
+		b := rl.Vector3{x, 0.04, z + 1}
+		rl.DrawLine3D(a, b, rl.Color{230, 200, 60, 210})
+	}
+}
+
+draw_trees_3d :: proc() {
 	for cluster in g.TREE_CLUSTERS {
 		for cell in cluster {
 			if cell.x < 0 || cell.y < 0 {
 				continue
 			}
-			cells[count] = cell
-			count += 1
+			state := g.fog_state(&app.game.fog, cell)
+			if state == 0 {
+				continue
+			}
+			pos := cell_center(cell)
+			scale := 0.9 + f32((int(cell.x) * 7 + int(cell.y) * 13) % 4) * 0.07
+			trunk := rl.Color{95, 60, 25, 255}
+			leaf := rl.Color{20, 118, 46, 255}
+			leaf_light := rl.Color{34, 146, 60, 255}
+			if state == 1 {
+				trunk = rl.Color{40, 28, 14, 255}
+				leaf = rl.Color{8, 38, 16, 255}
+				leaf_light = rl.Color{12, 48, 20, 255}
+			}
+			rl.DrawCylinder(pos + rl.Vector3{0, 0.02, 0}, 0.26, 0.26, 0.01, 8, rl.Color{0, 0, 0, 80})
+			rl.DrawCylinder(pos + rl.Vector3{0, 0.05, 0}, 0.07, 0.11, 0.6 * scale, 6, trunk)
+			rl.DrawCylinder(pos + rl.Vector3{0, 0.6 * scale, 0}, 0.0, 0.42, 0.9 * scale, 7, leaf)
+			rl.DrawCylinder(pos + rl.Vector3{0, 1.05 * scale, 0}, 0.0, 0.30, 0.65 * scale, 7, leaf_light)
 		}
 	}
-	for i in 1..<count {
-		cell := cells[i]
-		j := i - 1
-		for j >= 0 && tree_depth_less(cell, cells[j]) {
-			cells[j + 1] = cells[j]
-			j -= 1
-		}
-		cells[j + 1] = cell
-	}
-	for i in 0..<count {
-		draw_tree(cells[i])
-	}
 }
 
-tree_depth_less :: proc(a, b: g.Grid_Pos) -> bool {
-	da := a.x + a.y
-	db := b.x + b.y
-	if da != db {
-		return da < db
-	}
-	return a.x < b.x
-}
-
-draw_tree :: proc(cell: g.Grid_Pos) {
-	center := iso_cell_center(cell)
-	rl.DrawEllipseV(rl.Vector2{center.x, center.y + 2}, 15, 6, rl.Color{10, 30, 12, 120})
-	rl.DrawRectangle(i32(center.x) - 2, i32(center.y) - 14, 4, 16, rl.Color{95, 60, 25, 255})
-	rl.DrawCircleV(rl.Vector2{center.x, center.y - 20}, 16, rl.Color{20, 110, 45, 255})
-	rl.DrawCircleV(rl.Vector2{center.x - 5, center.y - 24}, 9, rl.Color{30, 135, 55, 255})
-}
-
-draw_waypoints :: proc() {
+draw_waypoints_3d :: proc() {
 	for i in 1..<app.game.waypoints.count {
-		point := app.game.waypoints.points[i]
-		if g.fog_state(&app.game.fog, point) == 0 {
+		cell := app.game.waypoints.points[i]
+		if g.fog_state(&app.game.fog, cell) == 0 {
 			continue
 		}
-		center := iso_cell_center(point)
-		color := rl.Color{120, 100, 25, 120}
+		color := rl.Color{120, 100, 25, 160}
 		if i < app.game.waypoints.current {
-			color = rl.Color{70, 180, 70, 120}
+			color = rl.Color{70, 180, 70, 170}
 		} else if i == app.game.waypoints.current {
-			color = rl.Color{255, 220, 60, 230}
+			color = rl.Color{255, 220, 60, 235}
 		}
-		rl.DrawEllipseLinesV(center, 18, 9, color)
+		center := cell_center(cell) + rl.Vector3{0, 0.03, 0}
+		rl.DrawCircle3D(center, 0.55, rl.Vector3{1, 0, 0}, 90, color)
 	}
 }
 
-draw_fog :: proc() {
-	half_width := f32(rl.GetScreenWidth()) * 0.5
-	half_height := f32(rl.GetScreenHeight()) * 0.5
-	for gy in 0..<g.GRID_H {
-		for gx in 0..<g.GRID_W {
-			cell := g.Grid_Pos{x = i32(gx), y = i32(gy)}
-			state := g.fog_state(&app.game.fog, cell)
-			if state == 2 {
-				continue
-			}
-			center := iso_cell_center(cell)
-			if abs(center.x - app.camera.target.x) > half_width + f32(HALF_TILE_W) ||
-			   abs(center.y - app.camera.target.y) > half_height + f32(HALF_TILE_H) {
-				continue
-			}
-			color := rl.Color{2, 3, 2, 242}
-			if state == 1 {
-				color = rl.Color{2, 3, 2, 122}
-			}
-			draw_diamond(center, color)
+draw_paths_3d :: proc() {
+	units := &app.game.units
+	for i in 0..<g.MAX_UNITS {
+		if !units.alive[i] || !units.selected[i] || !g.unit_has_path(units, i) {
+			continue
+		}
+		previous := unit_ground(i) + rl.Vector3{0, 0.06, 0}
+		drawn := 0
+		for p := int(units.path_index[i]); p < int(units.path_len[i]) && drawn < 24; p += 1 {
+			cell := g.cell_position(int(units.path[i][p]))
+			point := cell_center(cell) + rl.Vector3{0, 0.06, 0}
+			rl.DrawLine3D(previous, point, rl.Color{90, 200, 120, 120})
+			rl.DrawSphere(point, 0.055, rl.Color{120, 230, 140, 170})
+			previous = point
+			drawn += 1
 		}
 	}
 }
 
-draw_units :: proc() {
-	order: [g.MAX_UNITS]int
-	count := 0
+draw_units_3d :: proc() {
 	units := &app.game.units
 	for i in 0..<g.MAX_UNITS {
 		if !units.alive[i] || !g.enemy_is_visible(&app.game, i) {
 			continue
 		}
-		order[count] = i
-		count += 1
-	}
-	for i := 1; i < count; i += 1 {
-		index := order[i]
-		j := i - 1
-		for j >= 0 && unit_depth_less(index, order[j]) {
-			order[j + 1] = order[j]
-			j -= 1
+		ground := unit_ground(i)
+		color := rl.Color{70, 120, 230, 255}
+		if units.team[i] == .Enemy {
+			color = rl.Color{225, 70, 70, 255}
 		}
-		order[j + 1] = index
-	}
-	for i in 0..<count {
-		draw_unit(order[i])
+		rl.DrawCylinder(ground + rl.Vector3{0, 0.02, 0}, 0.52, 0.52, 0.01, 12, rl.Color{0, 0, 0, 100})
+		if units.selected[i] {
+			rl.DrawCircle3D(ground + rl.Vector3{0, 0.04, 0}, 0.72, rl.Vector3{1, 0, 0}, 90, rl.Color{255, 225, 80, 235})
+		}
+		if draw_warrior_model(i, ground) {
+			draw_attack_effect(i, ground)
+			continue
+		}
+		rl.DrawCylinder(ground, 0.32, 0.38, 1.3, 8, color)
+		rl.DrawSphere(ground + rl.Vector3{0, 1.55, 0}, 0.26, color)
 	}
 }
 
-unit_depth_less :: proc(a, b: int) -> bool {
+draw_attack_effect :: proc(index: int, ground: rl.Vector3) {
+	visual := &app.visuals[index]
+	if visual.attack <= 0 {
+		return
+	}
+	elapsed := WARRIOR_ATTACK_SECONDS - visual.attack
+	if elapsed < 0.08 || elapsed > 0.34 {
+		return
+	}
+	radians := visual.angle * math.PI / 180
+	forward := rl.Vector3{math.sin(radians), 0, math.cos(radians)}
+	right := rl.Vector3{math.cos(radians), 0, -math.sin(radians)}
+	center := ground + rl.Vector3{0, 1.1, 0} + forward * 0.75
+	for k in 0..<3 {
+		offset := f32(k-1) * 0.18
+		a := center - right * 0.55 + forward * offset
+		b := center + right * 0.55 + forward * offset
+		rl.DrawLine3D(a, b, rl.Color{255, 245, 180, 220})
+	}
+}
+
+draw_unit_health_bars :: proc() {
 	units := &app.game.units
-	da := units.world[a].x + units.world[a].y
-	db := units.world[b].x + units.world[b].y
-	if da != db {
-		return da < db
+	for i in 0..<g.MAX_UNITS {
+		if !units.alive[i] || !g.enemy_is_visible(&app.game, i) {
+			continue
+		}
+		head := unit_ground(i) + rl.Vector3{0, 2.45, 0}
+		screen := rl.GetWorldToScreen(head, app.camera)
+		if screen.x < 0 || screen.x > f32(rl.GetScreenWidth()) ||
+		   screen.y < 0 || screen.y > f32(rl.GetScreenHeight()) - HUD_HEIGHT {
+			continue
+		}
+		draw_health_bar(rl.Vector2{screen.x, screen.y + 18}, units.hp[i], units.hp_max[i])
 	}
-	return a < b
-}
-
-draw_unit :: proc(index: int) {
-	units := &app.game.units
-	ground := iso_from_world(units.world[index])
-	body := rl.Vector2{ground.x, ground.y - 9}
-	color := rl.Color{70, 120, 230, 255}
-	if units.team[index] == .Enemy {
-		color = rl.Color{225, 70, 70, 255}
-	}
-	rl.DrawEllipseV(rl.Vector2{ground.x, ground.y + 2}, 12, 5, rl.Color{8, 20, 8, 130})
-	if units.selected[index] {
-		rl.DrawEllipseLinesV(ground, 19, 9, rl.Color{255, 225, 80, 235})
-	}
-	rl.DrawCircleV(body, 12, color)
-	rl.DrawCircleLinesV(body, 12, rl.Color{15, 20, 15, 230})
-	draw_unit_label(body)
-	draw_health_bar(body, units.hp[index], units.hp_max[index])
-}
-
-draw_unit_label :: proc(position: rl.Vector2) {
-	rl.DrawText("M", i32(position.x) - 5, i32(position.y) - 7, 16, rl.WHITE)
 }
 
 draw_health_bar :: proc(position: rl.Vector2, hp, max_hp: u16) {
@@ -226,36 +245,4 @@ draw_health_bar :: proc(position: rl.Vector2, hp, max_hp: u16) {
 		color = rl.Color{230, 180, 25, 255}
 	}
 	rl.DrawRectangleRec(rl.Rectangle{position.x - 12, position.y - 25, 24 * percent, 4}, color)
-}
-
-draw_selected_paths :: proc() {
-	units := &app.game.units
-	for i in 0..<g.MAX_UNITS {
-		if !units.alive[i] || !units.selected[i] {
-			continue
-		}
-		if !g.unit_has_path(units, i) {
-			continue
-		}
-		previous := iso_from_world(units.world[i])
-		drawn := 0
-		for p := int(units.path_index[i]); p < int(units.path_len[i]) && drawn < 24; p += 1 {
-			cell := g.cell_position(int(units.path[i][p]))
-			point := iso_cell_center(cell)
-			rl.DrawLineV(previous, point, rl.Color{90, 200, 120, 120})
-			rl.DrawCircleV(point, 3, rl.Color{120, 230, 140, 170})
-			previous = point
-			drawn += 1
-		}
-	}
-}
-
-// Flat iso tile: a 2:1 diamond. Used by fog and goal overlays.
-draw_diamond :: proc(center: rl.Vector2, color: rl.Color) {
-	top := rl.Vector2{center.x, center.y - f32(HALF_TILE_H)}
-	right := rl.Vector2{center.x + f32(HALF_TILE_W), center.y}
-	bottom := rl.Vector2{center.x, center.y + f32(HALF_TILE_H)}
-	left := rl.Vector2{center.x - f32(HALF_TILE_W), center.y}
-	rl.DrawTriangle(top, bottom, right, color)
-	rl.DrawTriangle(top, left, bottom, color)
 }
