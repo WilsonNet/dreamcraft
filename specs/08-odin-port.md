@@ -361,6 +361,10 @@ cd odin/web
 Native client:
 
 - Follow mode is on by default.
+- Follow uses the unit's exact interpolated world position, not its grid cell.
+- Camera update runs after `sim_tick`, so rendering has no one-frame lag.
+- No smoothing: the unit remains screen-centered while moving; no catch-up
+  drift or rollback when it stops.
 - Manual WASD/arrow/edge-scroll or minimap click switches to FREE.
 - `F` toggles FOLLOW.
 - HUD shows `CAM FOLLOW` or `CAM FREE`.

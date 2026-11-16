@@ -242,16 +242,13 @@ apply_edge_scroll :: proc(dt: f32) -> bool {
 	return velocity.x != 0 || velocity.y != 0
 }
 
-follow_player :: proc(dt: f32) {
-	position, ok := g.game_player_position(&app.game)
+follow_player :: proc(_: f32) {
+	index, ok := g.game_player_index(&app.game)
 	if !ok {
 		return
 	}
-	world := g.grid_to_world(position)
-	target := rl.Vector2{g.fp_to_f32(world.x), g.fp_to_f32(world.y)}
-	lerp := min(1.0, dt * 10.0)
-	app.camera_pos.x += (target.x - app.camera_pos.x) * lerp
-	app.camera_pos.y += (target.y - app.camera_pos.y) * lerp
+	world := app.game.units.world[index]
+	app.camera_pos = rl.Vector2{g.fp_to_f32(world.x), g.fp_to_f32(world.y)}
 }
 
 handle_minimap_click :: proc(mouse: rl.Vector2) {

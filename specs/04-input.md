@@ -79,8 +79,11 @@
 - Losing window focus while the cursor is outside the window no longer causes
   edge-scroll drift: edge scroll requires both `IsWindowFocused()` and
   `IsCursorOnScreen()`.
-- Camera follow is on by default. WASD/arrow/edge-scroll/minimap click switches
-  to FREE. `F` toggles FOLLOW. HUD shows `CAM FOLLOW`/`CAM FREE`.
+- Camera follow is on by default. It tracks the unit's interpolated world
+  position exactly (no smoothing) and runs after the simulation tick, so the
+  unit stays screen-centered without catch-up drift or rollback.
+- WASD/arrow/edge-scroll/minimap click switches to FREE. `F` toggles FOLLOW.
+  HUD shows `CAM FOLLOW`/`CAM FREE`.
 - Web client: left click select/command, right click move/attack, shift+click
   add selection, Esc cancel mode, F select all. Buttons: Move, Patrol, Stop,
   Select All, Reset.

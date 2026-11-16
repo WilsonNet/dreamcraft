@@ -64,9 +64,9 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		dt := f64(rl.GetFrameTime())
 		update_layout()
-		update_camera(dt)
 		handle_input()
 		update_simulation(dt)
+		update_camera(dt)
 		update_minimap_pixels()
 		draw_frame()
 		if app.serving {
