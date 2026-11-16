@@ -6,11 +6,23 @@ build. No GC, fixed pools, Q16.16 fixed point.
 ## Build & Run
 
 ```bash
-./build.sh                 # bin/dreamcraft + bin/headless, ~3 s
+./build.sh                 # stable: bin/dreamcraft + bin/headless + web, ~3 s
 ./run.sh                   # build + launch client
 ./run.sh --control         # launch with HTTP control API on :7777
 ./run.sh --control=7780    # custom port
 ```
+
+Two lanes while developing:
+
+```bash
+./build.sh --dev           # bin/dreamcraft-dev + bin/headless-dev, stable untouched
+./run-dev.sh --control=7778
+./bin/headless-dev --serve=7778 --paused   # deterministic agent lane
+./restart-build.sh         # close-out: restart stable game in tmux on :7777
+```
+
+The stable build runs in tmux `dreamcraft:game`. Tests build dev binaries only;
+the agent restarts the stable build when a task is finished.
 
 Web:
 
@@ -32,7 +44,7 @@ Requirements:
 ./test.sh
 ```
 
-Runs:
+Runs (against dev binaries; the stable build is not touched):
 
 1. `odin test game` — simulation unit tests
 2. `odin test control` — command/HTTP tests

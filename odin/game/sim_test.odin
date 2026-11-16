@@ -202,3 +202,80 @@ player_death_sets_game_over_and_stays_valid :: proc(t: ^testing.T) {
 	_, alive := game_player_index(&game)
 	testing.expect(t, !alive)
 }
+
+@(test)
+reorder_move_preserves_mid_segment_position :: proc(t: ^testing.T) {
+	game := new(Game)
+	defer free(game)
+	game_init(game)
+	player, ok := game_player_index(game)
+	testing.expect(t, ok)
+
+	testing.expect(t, game_issue_move(game, Grid_Pos{12, 25}))
+	sim_run(game, 6)
+	testing.expect(t, unit_between_cells(&game.units, player))
+	before := game.units.world[player]
+
+	testing.expect(t, game_issue_move(game, Grid_Pos{20, 25}))
+	sim_tick(game)
+	after := game.units.world[player]
+
+	// Exactly one tick of forward travel, not a reset to the cell center.
+	testing.expect_value(t, after.x - before.x, MOVE_STEP_PER_TICK * CELL_SIZE)
+	testing.expect_value(t, after.y, before.y)
+	testing.expect_value(t, validate_game(game), Validation_Error.None)
+}
+
+@(test)
+blocked_move_click_does_not_stop_or_snap_unit :: proc(t: ^testing.T) {
+	game := new(Game)
+	defer free(game)
+	game_init(game)
+	player, ok := game_player_index(game)
+	testing.expect(t, ok)
+
+	testing.expect(t, game_issue_move(game, Grid_Pos{12, 25}))
+	sim_run(game, 6)
+	game.units.patrol_active[player] = true
+	game.units.state[player] = .Patrol
+	before := game.units.world[player]
+
+	// Tree cell: the order is rejected and must not disturb the current order.
+	testing.expect(t, !game_issue_move(game, Grid_Pos{8, 20}))
+	testing.expect_value(t, game.commands.rejected, u32(1))
+	sim_tick(game)
+	after := game.units.world[player]
+	testing.expect_value(t, after.x - before.x, MOVE_STEP_PER_TICK * CELL_SIZE)
+	testing.expect(t, game.units.patrol_active[player])
+	testing.expect_value(t, validate_game(game), Validation_Error.None)
+}
+
+@(test)
+reordering_past_obstacles_never_jumps :: proc(t: ^testing.T) {
+	game := new(Game)
+	defer free(game)
+	game_init(game)
+	player, ok := game_player_index(game)
+	testing.expect(t, ok)
+
+	testing.expect(t, game_issue_move(game, Grid_Pos{12, 22}))
+	previous := game.units.world[player]
+	max_step := Fp(0)
+	reorders := 0
+	destinations := [3]Grid_Pos{{16, 26}, {20, 22}, {24, 26}}
+	for _ in 0..<400 {
+		if reorders < len(destinations) && unit_between_cells(&game.units, player) {
+			testing.expect(t, game_issue_move(game, destinations[reorders]))
+			reorders += 1
+		}
+		sim_tick(game)
+		current := game.units.world[player]
+		step := abs(current.x - previous.x) + abs(current.y - previous.y)
+		max_step = max(max_step, step)
+		previous = current
+		testing.expect_value(t, validate_game(game), Validation_Error.None)
+	}
+	testing.expect_value(t, reorders, 3)
+	// A diagonal tick moves at most one step on each axis.
+	testing.expect(t, max_step <= MOVE_STEP_PER_TICK * CELL_SIZE * 2)
+}

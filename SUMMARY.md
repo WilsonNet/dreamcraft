@@ -41,10 +41,11 @@ Build a fantasy RTS called **DreamCraft** with:
 - 256-slot SoA unit pool with generation handles
 - Melee combat, enemy chase AI, patrol loops
 - Native raylib client with HUD, minimap and camera follow
+- Two-lane build: stable `bin/dreamcraft` on `:7777`, dev binaries on `:7778`
 - Browser WASM/canvas client with DOM HUD and `window.dreamcraft` API
 - Headless JSONL scripts, HTTP control server, hash-verified replays
 - Curve/state validation after every tick
-- 68 native tests + web WASM smoke: invariants, allocations, determinism,
+- 71 native tests + web WASM smoke: invariants, allocations, determinism,
   HTTP round trip, browser API
 - Bevy BRP MCP removed; control API replaces it
 
@@ -58,9 +59,11 @@ odin/
 ├── headless/   # scripts, polling, --serve, record/replay
 ├── web/        # js_wasm32 canvas client + DOM HUD
 ├── tests/      # smoke, replay, control tests
-├── build.sh
-├── test.sh
-└── run.sh
+├── build.sh       # stable lane
+├── test.sh        # tests + dev lane
+├── run.sh
+├── run-dev.sh
+└── restart-build.sh
 specs/
 └── 08-odin-port.md
 ```
@@ -69,6 +72,7 @@ specs/
 
 Tutorial Level 1 is playable and testable:
 - Right-click move/attack, left-click/drag selection
+- Move re-orders keep mid-cell interpolation (no teleport/rollback)
 - Fog reveal, waypoint progression, goal completion
 - Enemy combat and patrol commands
 - Headless and live HTTP control for agents

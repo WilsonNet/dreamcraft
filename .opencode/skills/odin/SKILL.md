@@ -22,6 +22,16 @@ odin build headless -out:bin/headless -o:speed
 - `-vet -strict-style` catches shadowing and unused imports.
 - Odin includes `core:*` and `vendor:*`; no package manager.
 
+## Two-Lane Workflow
+
+- Stable lane: `bin/dreamcraft` in tmux `dreamcraft:game`, control `:7777`.
+  The user plays this. Do not rebuild or restart it mid-task.
+- Dev lane: `./build.sh --dev` -> `bin/dreamcraft-dev`, `bin/headless-dev`.
+  Use `--control=7778` or `bin/headless-dev --serve=7778 --paused`.
+- `./test.sh` builds dev binaries only; it must not overwrite the stable lane.
+- Close-out: `./test.sh` -> `./build.sh` -> `./restart-build.sh` -> docs.
+- `GET /units` exposes `world`, `progress` and `next` for jump diagnosis.
+
 ## Memory Rules
 
 - Simulation (`game/`) must not allocate.
@@ -111,6 +121,17 @@ node test_wasm.mjs
 - Death check calls `game_update_game_over`.
 - Validator allows a missing player only when `game_over` is true.
 - Test hooks that destroy/spawn players must call `game_update_game_over`.
+
+## Movement Continuity
+
+- `world` is interpolated; `position` is the last reached cell.
+- Re-issuing a move mid-segment must keep `progress` and `world` and plan from
+  `path[path_index]` (the cell being entered), not from `position`.
+- Validate the destination before mutating path or world fields. A rejected
+  move must leave the current path intact.
+- Validator: `path[0] != position` is legal only while `progress > 0`.
+- Regression: re-order while moving, click a tree cell, re-order while routing
+  past an obstacle. `world` must advance monotonically.
 
 ## Control HTTP Server
 

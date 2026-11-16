@@ -197,6 +197,16 @@ unit_has_path :: proc(units: ^Units, index: int) -> bool {
 	return units.path_index[index] < units.path_len[index]
 }
 
+// True when the unit is visibly between two cells: it has leftover progress
+// toward a path cell that is not its current grid position.
+unit_between_cells :: proc(units: ^Units, index: int) -> bool {
+	if units.progress[index] <= 0 || units.path_index[index] >= units.path_len[index] {
+		return false
+	}
+	next := cell_position(int(units.path[index][units.path_index[index]]))
+	return !cells_equal(next, units.position[index])
+}
+
 unit_path_destination :: proc(units: ^Units, index: int) -> (Grid_Pos, bool) {
 	if units.path_len[index] == 0 {
 		return {}, false

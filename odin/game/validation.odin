@@ -149,6 +149,7 @@ validate_unit_path :: proc(units: ^Units, grid: ^Grid, index: int) -> Validation
 		return .UnitPathTooLong
 	}
 	if units.path_len[index] > 0 && units.path_index[index] == 0 &&
+	   units.progress[index] == 0 &&
 	   !cells_equal(cell_position(int(units.path[index][0])), units.position[index]) {
 		return .UnitPathStartInvalid
 	}

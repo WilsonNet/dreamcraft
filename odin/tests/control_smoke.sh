@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PORT="${1:-17990}"
-BIN=./bin/headless
+BIN="${DREAMCRAFT_BIN:-./bin/headless}"
 LOG=/tmp/dreamcraft-control-test.log
 
 "$BIN" --serve="$PORT" --paused >"$LOG" 2>&1 &
@@ -39,6 +39,16 @@ echo "$run" | grep -q '"ok":true'
 
 verify=$(curl -fsS --max-time 2 -X POST "http://127.0.0.1:$PORT/command" -H 'Content-Type: application/json' -d '{"cmd":"verify","verify":{"type":"player_at","x":10,"y":25}}')
 echo "$verify" | grep -q '"ok":true'
+
+# Re-ordering mid-segment must continue forward, not snap back to the cell center.
+curl -fsS --max-time 2 -X POST "http://127.0.0.1:$PORT/command" -H 'Content-Type: application/json' -d '{"cmd":"reset"}' >/dev/null
+curl -fsS --max-time 2 -X POST "http://127.0.0.1:$PORT/command" -H 'Content-Type: application/json' -d '{"cmd":"goto","x":12,"y":25}' >/dev/null
+curl -fsS --max-time 2 -X POST "http://127.0.0.1:$PORT/command" -H 'Content-Type: application/json' -d '{"cmd":"run","ticks":6}' >/dev/null
+before=$(curl -fsS --max-time 2 "http://127.0.0.1:$PORT/units" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["world"][0])')
+curl -fsS --max-time 2 -X POST "http://127.0.0.1:$PORT/command" -H 'Content-Type: application/json' -d '{"cmd":"goto","x":20,"y":25}' >/dev/null
+curl -fsS --max-time 2 -X POST "http://127.0.0.1:$PORT/command" -H 'Content-Type: application/json' -d '{"cmd":"run","ticks":1}' >/dev/null
+after=$(curl -fsS --max-time 2 "http://127.0.0.1:$PORT/units" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["world"][0])')
+python3 -c "assert $after > $before, ('reorder snapped back', $before, $after)"
 
 valid=$(curl -fsS --max-time 2 -X POST "http://127.0.0.1:$PORT/command" -H 'Content-Type: application/json' -d '{"cmd":"verify","verify":{"type":"valid"}}')
 echo "$valid" | grep -q '"ok":true'

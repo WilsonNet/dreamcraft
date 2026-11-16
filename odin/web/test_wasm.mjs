@@ -48,6 +48,17 @@ s = state();
 assert.deepEqual(s.player_grid, [10, 25]);
 assert.equal(s.valid, true);
 
+// Re-ordering mid-segment continues forward instead of snapping to the cell.
+exports_.web_reset();
+assert.equal(exports_.web_move(12, 25), 1);
+exports_.web_run(6);
+const before = units()[0].world[0];
+assert.equal(exports_.web_move(20, 25), 1);
+exports_.web_run(1);
+const after = units()[0].world[0];
+assert.ok(after > before, `reorder snapped back: ${before} -> ${after}`);
+assert.equal(state().valid, true);
+
 assert.equal(exports_.web_reset(), 1);
 assert.equal(exports_.web_kill(50, 25), 1);
 assert.equal(exports_.web_teleport(77, 25), 1);

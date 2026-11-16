@@ -23,7 +23,16 @@ cd odin/web
 ```bash
 cd odin
 ./test.sh                # unit + headless + replay + web + HTTP tests
-./build.sh               # build client + headless binaries
+./build.sh               # stable build: client + headless + web
+```
+
+Two-lane development (stable game stays playable):
+
+```bash
+cd odin
+./build.sh --dev                            # dev binaries, stable untouched
+./bin/headless-dev --serve=7778 --paused    # deterministic agent lane
+./restart-build.sh                          # close-out: restart game on :7777
 ```
 
 ## Controls
@@ -59,7 +68,9 @@ odin/
 ├── tests/       # smoke and replay scripts
 ├── build.sh
 ├── test.sh
-└── run.sh
+├── run.sh
+├── run-dev.sh
+└── restart-build.sh
 ```
 
 ## Control API (replaces Bevy BRP MCP)

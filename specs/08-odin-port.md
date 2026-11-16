@@ -12,7 +12,7 @@ Measured on this machine (Apple Silicon):
 |-------|------|
 | Odin client + headless, `-o:speed` | ~2.8 s total |
 | Bevy client, incremental | tens of seconds to minutes |
-| Odin unit tests (68 tests) | < 30 ms runtime |
+| Odin unit tests (71 tests) | < 30 ms runtime |
 
 ## Why Odin for an RTS
 
@@ -31,12 +31,32 @@ odin/
 ├── game/        # pure simulation, imports no rendering libraries
 ├── client/      # raylib native client
 ├── control/     # JSON command model + localhost HTTP server
-├── headless/    # JSONL scripts, file polling, --serve
+├── headless/    # JSONL scripts, file polling, --serve, replay
+├── web/         # js_wasm32 build, canvas renderer, DOM HUD
 └── tests/       # shell/JSONL smoke tests
 ```
 
 `game` is the only package that defines simulation rules. `client` and
 `control` are adapters. Tests import `game` directly.
+
+## Build Lanes
+
+Two binaries stay separate so manual play never interrupts development:
+
+| Lane | Binary | Control port | Purpose |
+|------|--------|--------------|---------|
+| Stable | `bin/dreamcraft` | `:7777` | user play session, tmux `dreamcraft:game` |
+| Dev | `bin/dreamcraft-dev` | `:7778` | agent reproduction and visual checks |
+| Dev headless | `bin/headless-dev` | `:7778` | deterministic `run`/`tick` stepping |
+
+- `./build.sh --dev` builds only the dev lane.
+- `./test.sh` builds dev binaries and never overwrites the stable lane.
+- `./build.sh` builds the stable lane plus the web build.
+- `./restart-build.sh` restarts the stable tmux session.
+- Close-out order: tests → stable build → restart → update docs/specs.
+- `GET /units` returns `world` (float world position), `progress` (cells
+  between `position` and `next`) and `next` (current path cell). These make
+  position jumps measurable through the control API.
 
 ## Data Model
 
@@ -196,6 +216,22 @@ Rules:
 - No wall-clock time; one tick is one update.
 - Same initial state + same command sequence = same `game_hash`.
 - Tests run the same script on two `Game` values and compare hashes.
+
+## Movement Continuity
+
+A move order must never teleport the unit.
+
+- `position` is the last reached cell; `world` is the interpolated render
+  position.
+- When a move order arrives mid-segment, the new path is planned from
+  `path[path_index]` (the cell being entered) and `progress`/`world` are kept.
+  The unit keeps walking forward; it does not snap back to `position`.
+- Destination validation happens before any path or world field changes.
+  An order to a blocked cell is rejected and the current path continues.
+- The validator allows `path[0] != position` only while `progress > 0`, which
+  is exactly the preserved mid-segment state.
+- Regression tests cover straight re-orders, blocked clicks, and re-orders
+  while routing past tree clusters.
 
 ## Validation Matrix
 

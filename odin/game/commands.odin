@@ -40,10 +40,11 @@ command_apply :: proc(game: ^Game, command: Command) {
 apply_to_unit :: proc(game: ^Game, index: int, command: Command) {
 	switch command.kind {
 	case .Move:
-		units := &game.units
-		units.patrol_active[index] = false
-		units.attack_target[index] = INVALID_HANDLE
-		issue_move_path(game, index, command.position)
+		if issue_move_path(game, index, command.position) {
+			units := &game.units
+			units.patrol_active[index] = false
+			units.attack_target[index] = INVALID_HANDLE
+		}
 	case .Attack:
 		apply_attack(game, index, command.target)
 	case .Patrol:
@@ -60,30 +61,32 @@ apply_to_unit :: proc(game: ^Game, index: int, command: Command) {
 @(private)
 issue_move_path :: proc(game: ^Game, index: int, destination: Grid_Pos) -> bool {
 	units := &game.units
-	units.path_len[index] = 0
-	units.path_index[index] = 0
-	units.progress[index] = 0
-	units.world[index] = grid_to_world(units.position[index])
-
-	if cells_equal(units.position[index], destination) {
-		units.state[index] = .Idle
-		return true
+	current := units.position[index]
+	start := current
+	// Re-ordering mid-segment must not snap the unit back to the cell it is
+	// leaving. Plan the new path from the cell it is already walking into and
+	// keep the current interpolation, so the unit continues from where it is.
+	mid_segment := unit_between_cells(units, index)
+	if mid_segment {
+		start = cell_position(int(units.path[index][units.path_index[index]]))
+	}
+	if !in_bounds(destination) || grid_is_blocked(&game.grid, destination) {
+		return false
 	}
 
 	out := units.path[index][:]
-	length, result := find_path(
-		&game.pathfinder,
-		&game.grid,
-		units.position[index],
-		destination,
-		out,
-	)
+	length, result := find_path(&game.pathfinder, &game.grid, start, destination, out)
 	if result != .Found || length <= 0 {
-		units.state[index] = .Idle
 		return false
 	}
+
 	units.path_len[index] = u16(length)
+	units.path_index[index] = 0
 	units.state[index] = .Moving
+	if !mid_segment {
+		units.progress[index] = 0
+		units.world[index] = grid_to_world(current)
+	}
 	return true
 }
 

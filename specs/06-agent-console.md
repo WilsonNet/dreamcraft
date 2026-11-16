@@ -163,6 +163,10 @@ Commands: `status`, `goto`, `patrol`, `attack`, `stop`, `run`, `reset`,
 Every response includes `valid` and `validation`, plus `game_over` when the
 player has died. Agents can detect invariant violations without reading logs.
 
+`GET /units` also returns `world` (float world position), `progress` (cells
+between `position` and `next`) and `next` (current path cell). Use these to
+detect interpolation jumps or snap-backs after command changes.
+
 The web build exposes the same command set at `window.dreamcraft`:
 `state()`, `units()`, `fog()`, `command(obj)`, `reset()`.
 

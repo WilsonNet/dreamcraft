@@ -90,13 +90,23 @@ web_refresh_units :: proc() -> i32 {
 		if g.handle_is_valid(units.attack_target[i]) {
 			target = int(units.attack_target[i].index)
 		}
+		next := [2]i32{-1, -1}
+		if units.path_index[i] < units.path_len[i] {
+			cell := g.cell_position(int(units.path[i][units.path_index[i]]))
+			next = [2]i32{cell.x, cell.y}
+		}
 		text := fmt.bprintf(
 			Units_Buffer[offset:len(Units_Buffer) - 8],
-			`{{"index":%d,"team":"%s","position":[%d,%d],"hp":%d,"hp_max":%d,"state":"%s","path_len":%d,"path_index":%d,"selected":%t,"patrol":%t,"attack_target":%d,"visible":%t}}`,
+			`{{"index":%d,"team":"%s","position":[%d,%d],"world":[%.2f,%.2f],"progress":%.3f,"next":[%d,%d],"hp":%d,"hp_max":%d,"state":"%s","path_len":%d,"path_index":%d,"selected":%t,"patrol":%t,"attack_target":%d,"visible":%t}}`,
 			i,
 			team,
 			units.position[i].x,
 			units.position[i].y,
+			g.fp_to_f32(units.world[i].x),
+			g.fp_to_f32(units.world[i].y),
+			f32(units.progress[i]) / f32(g.FP_ONE),
+			next[0],
+			next[1],
 			units.hp[i],
 			units.hp_max[i],
 			state,

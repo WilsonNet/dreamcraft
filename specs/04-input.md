@@ -86,6 +86,10 @@
   unit stays screen-centered without catch-up drift or rollback.
 - WASD/arrow/edge-scroll/minimap click switches to FREE. `F` toggles FOLLOW.
   HUD shows `CAM FOLLOW`/`CAM FREE`.
+- Right-click re-orders use the current interpolation: a second click while the
+  unit is between cells plans from `next` and keeps `progress`/`world`, so the
+  unit never snaps back to the previous cell center. Clicks on blocked cells
+  are rejected without changing the current order.
 - Web client: left click select/command, right click move/attack, shift+click
   add selection, Esc cancel mode, F select all. Buttons: Move, Patrol, Stop,
   Select All, Reset.

@@ -36,8 +36,10 @@ cd odin
 
 ./run.sh                    # build + run native client
 ./run.sh --control          # client + HTTP control API on :7777
-./build.sh                  # build bin/dreamcraft + bin/headless
-./test.sh                   # unit + headless + replay + web + HTTP tests
+./build.sh                  # stable build: bin/dreamcraft + bin/headless + web
+./build.sh --dev            # dev build: bin/dreamcraft-dev + bin/headless-dev
+./test.sh                   # tests + dev build only (stable lane untouched)
+./restart-build.sh          # restart the stable tmux session on :7777
 cd web && ./build.sh && ./serve.sh 8080   # browser build
 
 odin test game -vet -strict-style
@@ -56,6 +58,29 @@ echo '{"cmd":"status"}' > headless_command.json    # write, then read result
 ./bin/headless --script tests/smoke.jsonl --record replay.jsonl
 ./bin/headless --replay replay.jsonl               # verifies final hash
 ```
+
+## Build / Dev Workflow (two lanes)
+
+Keep the user's play session and the agent's edit loop separate:
+
+| Lane | Binary | Port | Owner |
+|------|--------|------|-------|
+| Build | `bin/dreamcraft` | `:7777` | user plays |
+| Dev | `bin/dreamcraft-dev`, `bin/headless-dev` | `:7778` | agent |
+
+- The stable build runs in tmux `dreamcraft:game`.
+- Never overwrite or restart the stable build while a task is in progress.
+  `./test.sh` builds dev binaries only.
+- Agent loop: edit source, `./build.sh --dev`, then either
+  `./bin/headless-dev --serve=7778 --paused` (deterministic stepping) or
+  `./bin/dreamcraft-dev --control=7778` (visual checks).
+- Close-out for every task, in order:
+  1. `./test.sh`
+  2. `./build.sh` (stable + web)
+  3. `./restart-build.sh`
+  4. update `specs/` and the relevant markdown docs.
+- `GET /units` exposes `world`, `progress` and `next`; use them to measure
+  position jumps through the control API instead of guessing from screenshots.
 
 ## Odin Project Structure
 

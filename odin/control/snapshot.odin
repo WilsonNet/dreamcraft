@@ -29,6 +29,9 @@ Unit_Info :: struct {
 	index: int `json:"index"`,
 	team: string `json:"team"`,
 	position: [2]i32 `json:"position"`,
+	world: [2]f32 `json:"world"`,
+	progress: f32 `json:"progress"`,
+	next: [2]i32 `json:"next"`,
 	hp: u16 `json:"hp"`,
 	hp_max: u16 `json:"hp_max"`,
 	state: string `json:"state"`,
@@ -129,10 +132,18 @@ encode_units :: proc(game: ^g.Game) -> (data: []byte, err: json.Marshal_Error) {
 		if g.handle_is_valid(units.attack_target[i]) {
 			target = int(units.attack_target[i].index)
 		}
+		next := [2]i32{-1, -1}
+		if units.path_index[i] < units.path_len[i] {
+			cell := g.cell_position(int(units.path[i][units.path_index[i]]))
+			next = [2]i32{cell.x, cell.y}
+		}
 		infos[count] = Unit_Info{
 			index = i,
 			team = team,
 			position = [2]i32{units.position[i].x, units.position[i].y},
+			world = [2]f32{g.fp_to_f32(units.world[i].x), g.fp_to_f32(units.world[i].y)},
+			progress = f32(units.progress[i]) / f32(g.FP_ONE),
+			next = next,
 			hp = units.hp[i],
 			hp_max = units.hp_max[i],
 			state = state,
