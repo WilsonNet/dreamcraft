@@ -69,6 +69,9 @@ Keep the user's play session and the agent's edit loop separate:
 | Dev | `bin/dreamcraft-dev`, `bin/headless-dev` | `:7778` | agent |
 
 - The stable build runs in tmux `dreamcraft:game`.
+- The dev client window title always starts with `DEV - `. The build sets
+  `-define:DREAMCRAFT_DEV=true`, and the executable name (`dreamcraft-dev`)
+  is also checked at runtime, so the prefix survives a manual dev build.
 - Never overwrite or restart the stable build while a task is in progress.
   `./test.sh` builds dev binaries only.
 - Agent loop: edit source, `./build.sh --dev`, then either

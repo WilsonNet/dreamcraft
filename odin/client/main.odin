@@ -17,6 +17,10 @@ Command_Mode :: enum {
 	Patrol,
 }
 
+WINDOW_TITLE :: "DreamCraft RTS - Tutorial Level 1 (Odin)"
+DEV_WINDOW_TITLE :: "DEV - DreamCraft RTS - Tutorial Level 1 (Odin)"
+DEV_BUILD :: #config(DREAMCRAFT_DEV, false)
+
 App :: struct {
 	game: g.Game,
 	camera: rl.Camera2D,
@@ -44,7 +48,15 @@ app: App
 
 main :: proc() {
 	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
-	rl.InitWindow(1280, 720, "DreamCraft RTS - Tutorial Level 1 (Odin)")
+	dev := DEV_BUILD || is_dev_executable()
+	window_title: cstring = WINDOW_TITLE
+	if dev {
+		window_title = DEV_WINDOW_TITLE
+	}
+	rl.InitWindow(1280, 720, window_title)
+	if dev {
+		fmt.println("DEV build window:", window_title)
+	}
 	defer rl.CloseWindow()
 	rl.SetWindowMinSize(800, 600)
 	rl.SetTargetFPS(60)
@@ -121,6 +133,23 @@ update_simulation :: proc(dt: f64) {
 		app.accumulator -= STEP
 		steps += 1
 	}
+}
+
+// The dev binary must always be identifiable, even when built without
+// -define:DREAMCRAFT_DEV. `bin/dreamcraft-dev` keeps the DEV prefix.
+is_dev_executable :: proc() -> bool {
+	if len(os.args) == 0 {
+		return false
+	}
+	name := os.args[0]
+	base := name
+	for i := len(name) - 1; i >= 0; i -= 1 {
+		if name[i] == '/' || name[i] == '\\' {
+			base = name[i + 1:]
+			break
+		}
+	}
+	return strings.contains(base, "dev")
 }
 
 screen_to_grid :: proc(screen: rl.Vector2) -> g.Grid_Pos {

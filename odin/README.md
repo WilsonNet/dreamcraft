@@ -24,6 +24,10 @@ Two lanes while developing:
 The stable build runs in tmux `dreamcraft:game`. Tests build dev binaries only;
 the agent restarts the stable build when a task is finished.
 
+The dev client window title always starts with `DEV - `. The build passes
+`-define:DREAMCRAFT_DEV=true`, and `bin/dreamcraft-dev` is also detected by
+executable name, so the prefix stays even for a manual dev build.
+
 Web:
 
 ```bash

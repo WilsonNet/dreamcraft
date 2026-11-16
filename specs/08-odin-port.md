@@ -49,6 +49,9 @@ Two binaries stay separate so manual play never interrupts development:
 | Dev | `bin/dreamcraft-dev` | `:7778` | agent reproduction and visual checks |
 | Dev headless | `bin/headless-dev` | `:7778` | deterministic `run`/`tick` stepping |
 
+- The dev client window title is always `DEV - DreamCraft RTS ...`.
+  `build.sh --dev` defines `DREAMCRAFT_DEV=true`; the client also checks its
+  executable name, so `bin/dreamcraft-dev` keeps the prefix when built by hand.
 - `./build.sh --dev` builds only the dev lane.
 - `./test.sh` builds dev binaries and never overwrites the stable lane.
 - `./build.sh` builds the stable lane plus the web build.

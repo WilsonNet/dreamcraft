@@ -9,7 +9,7 @@ mkdir -p bin
 MODE="${1:-stable}"
 case "$MODE" in
   --dev|dev)
-    odin build client -out:bin/dreamcraft-dev -o:speed -vet -strict-style
+    odin build client -out:bin/dreamcraft-dev -o:speed -vet -strict-style -define:DREAMCRAFT_DEV=true
     odin build headless -out:bin/headless-dev -o:speed -vet -strict-style
     echo "built bin/dreamcraft-dev and bin/headless-dev"
     exit 0

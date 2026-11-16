@@ -4,7 +4,7 @@ cd "$(dirname "$0")"
 mkdir -p bin
 if [ "${1:-}" = "--dev" ]; then
   shift
-  odin build client -out:bin/dreamcraft-dev -o:speed
+  odin build client -out:bin/dreamcraft-dev -o:speed -define:DREAMCRAFT_DEV=true
   exec ./bin/dreamcraft-dev "$@"
 fi
 odin build client -out:bin/dreamcraft -o:speed

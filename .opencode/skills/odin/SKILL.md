@@ -28,6 +28,8 @@ odin build headless -out:bin/headless -o:speed
   The user plays this. Do not rebuild or restart it mid-task.
 - Dev lane: `./build.sh --dev` -> `bin/dreamcraft-dev`, `bin/headless-dev`.
   Use `--control=7778` or `bin/headless-dev --serve=7778 --paused`.
+- Dev client title always starts with `DEV - `:
+  `-define:DREAMCRAFT_DEV=true` plus an executable-name check.
 - `./test.sh` builds dev binaries only; it must not overwrite the stable lane.
 - Close-out: `./test.sh` -> `./build.sh` -> `./restart-build.sh` -> docs.
 - `GET /units` exposes `world`, `progress` and `next` for jump diagnosis.
