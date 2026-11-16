@@ -15,6 +15,12 @@ const imports = {
 const { instance } = await WebAssembly.instantiate(bytes, imports);
 exports_ = instance.exports;
 exports_._start();
+assert.equal(exports_.web_pixels_width(), 640);
+assert.equal(exports_.web_pixels_height(), 400);
+assert.equal(exports_.web_iso_offset_x(), 260);
+assert.equal(exports_.web_iso_offset_y(), 70);
+assert.equal(exports_.web_iso_half_w(), 4);
+assert.equal(exports_.web_iso_half_h(), 2);
 
 function readString(ptr, len) {
 	return new TextDecoder().decode(new Uint8Array(exports_.memory.buffer, ptr, len));

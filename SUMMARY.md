@@ -40,12 +40,12 @@ Build a fantasy RTS called **DreamCraft** with:
 - 8-way A*, fog of war, waypoints, goal
 - 256-slot SoA unit pool with generation handles
 - Melee combat, enemy chase AI, patrol loops
-- Native raylib client with HUD, minimap and camera follow
+- Native raylib client with HUD, minimap, camera follow and 2:1 iso view
 - Two-lane build: stable `bin/dreamcraft` on `:7777`, dev binaries on `:7778`
 - Browser WASM/canvas client with DOM HUD and `window.dreamcraft` API
 - Headless JSONL scripts, HTTP control server, hash-verified replays
 - Curve/state validation after every tick
-- 72 native tests + web WASM smoke: invariants, allocations, determinism,
+- 77 native tests + web WASM smoke: invariants, allocations, determinism,
   HTTP round trip, browser API
 - Bevy BRP MCP removed; control API replaces it
 

@@ -52,16 +52,18 @@ Runs (against dev binaries; the stable build is not touched):
 
 1. `odin test game` — simulation unit tests
 2. `odin test control` — command/HTTP tests
-3. headless JSONL smoke script
-4. replay hash verification
-5. web wasm smoke test (Node)
-6. HTTP control smoke test
+3. `odin test client` — iso projection/click-mapping tests
+4. headless JSONL smoke script
+5. replay hash verification
+6. web wasm smoke test (Node)
+7. HTTP control smoke test
 
 Individual:
 
 ```bash
 odin test game -vet -strict-style
 odin test control -vet -strict-style
+odin test client -vet -strict-style
 ./bin/headless --script tests/smoke.jsonl
 ./tests/control_smoke.sh
 ```

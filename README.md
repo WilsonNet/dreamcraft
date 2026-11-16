@@ -1,6 +1,7 @@
 # DreamCraft RTS
 
-A deterministic fantasy RTS — spiritual successor to StarCraft: Brood War.
+A deterministic fantasy RTS — spiritual successor to StarCraft: Brood War,
+rendered in a 2:1 isometric view (native and browser).
 
 The primary implementation is **Odin** (`odin/`): native raylib client plus a
 browser WASM/canvas build. It compiles in seconds, uses fixed-capacity data

@@ -166,9 +166,8 @@ select_box :: proc(start, finish: rl.Vector2) {
 		if !units.alive[i] || units.team[i] != .Player {
 			continue
 		}
-		x := g.fp_to_f32(units.world[i].x)
-		y := g.fp_to_f32(units.world[i].y)
-		if x >= min_x && x <= max_x && y >= min_y && y <= max_y {
+		point := iso_from_world(units.world[i])
+		if point.x >= min_x && point.x <= max_x && point.y >= min_y && point.y <= max_y {
 			g.unit_select(units, i, true)
 		}
 	}
@@ -247,8 +246,7 @@ follow_player :: proc(_: f32) {
 	if !ok {
 		return
 	}
-	world := app.game.units.world[index]
-	app.camera_pos = rl.Vector2{g.fp_to_f32(world.x), g.fp_to_f32(world.y)}
+	app.camera_pos = iso_from_world(app.game.units.world[index])
 }
 
 handle_minimap_click :: proc(mouse: rl.Vector2) {
@@ -256,8 +254,7 @@ handle_minimap_click :: proc(mouse: rl.Vector2) {
 	u := clamp((mouse.x - rect.x) / rect.width, 0, 0.999)
 	v := clamp((mouse.y - rect.y) / rect.height, 0, 0.999)
 	cell := g.Grid_Pos{x = i32(u * f32(g.GRID_W)), y = i32((1 - v) * f32(g.GRID_H))}
-	world := g.grid_to_world(cell)
-	app.camera_pos = clamp_camera(rl.Vector2{g.fp_to_f32(world.x), g.fp_to_f32(world.y)})
+	app.camera_pos = clamp_camera(iso_cell_center(cell))
 	app.camera.target = app.camera_pos
 	app.camera_follow = false
 }

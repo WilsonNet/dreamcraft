@@ -83,6 +83,21 @@ my_test :: proc(t: ^testing.T) {
   file bytes from the control server.
 - Minimap: one 80×50 texture, scale to 200×125, negative source height flips Y.
 
+## Isometric Rendering
+
+- Simulation stays orthogonal; project in the client only.
+- `client/iso.odin`: continuous grid coords, cell center is `(gx+0.5, gy+0.5)`.
+- `iso_from_grid(fx, fy) = {(fx-fy)*32, (fx+fy)*16}` for 64x32 tiles.
+- Inverse: `gx=(sx/32+sy/16)/2`, `gy=(sy/16-sx/32)/2`; floor for the cell.
+- Interpolated units: convert `units.world` back to grid units, then project.
+- Camera target and screen-to-grid must both use iso space.
+- Draw trees/units back-to-front by `gx+gy` (or interpolated world sum).
+- `raylib.DrawTriangle` is back-face culled: screen-space CCW order required
+  (`top, bottom, right`). Wrong winding makes ground/fog fills invisible.
+- Minimap and ASCII fog stay top-down.
+- Web: 640x400 framebuffer, 8x4 tiles, offset `(260,70)`; JS inverts the
+  projection before issuing orders.
+
 ## Web / WASM
 
 ```bash

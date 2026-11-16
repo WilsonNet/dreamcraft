@@ -12,7 +12,7 @@ Measured on this machine (Apple Silicon):
 |-------|------|
 | Odin client + headless, `-o:speed` | ~2.8 s total |
 | Bevy client, incremental | tens of seconds to minutes |
-| Odin unit tests (72 tests) | < 30 ms runtime |
+| Odin unit tests (77 tests) | < 30 ms runtime |
 
 ## Why Odin for an RTS
 
@@ -374,8 +374,9 @@ cd odin/web
 ```
 
 - No Emscripten and no raylib web library.
-- Odin owns a 320×200 RGBA framebuffer (4×4 pixels per cell).
+- Odin owns a 640×400 RGBA framebuffer (8×4 pixel iso tiles).
 - JS uploads it with `ImageData` and scales it to 960×600.
+- The world view is 2:1 isometric; the minimap and ASCII fog map stay top-down.
 - HUD, buttons, validation status and ASCII fog map are DOM.
 - `window.dreamcraft` mirrors the HTTP command API.
 - `web/test_wasm.mjs` loads the wasm in Node and checks movement, goal,
@@ -416,6 +417,6 @@ Native client:
 - HTTP control server is single-threaded and handles up to 8 requests per
   frame. Back-to-back keep-alive requests are supported with a 250 ms idle
   timeout.
-- Web build uses a fixed full-map view (no web camera zoom/pan).
+- Web build uses a fixed full-map isometric view (no web camera zoom/pan).
 - Web HUD is DOM; unit labels and health bars are simplified to pixel marks.
 - Rust/Bevy files remain as a legacy reference and are not built or tested.

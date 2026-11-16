@@ -9,6 +9,9 @@ odin test game -vet -strict-style
 echo "== unit tests: control =="
 odin test control -vet -strict-style
 
+echo "== unit tests: client projection =="
+odin test client -vet -strict-style
+
 echo "== build: dev lane =="
 mkdir -p bin
 odin build headless -out:bin/headless-dev -o:speed

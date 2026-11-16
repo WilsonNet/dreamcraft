@@ -120,8 +120,12 @@
 
 	function cellFromEvent(event) {
 		const rect = canvas.getBoundingClientRect();
-		const x = Math.floor(((event.clientX - rect.left) / rect.width) * 80);
-		const y = Math.floor(((event.clientY - rect.top) / rect.height) * 50);
+		const px = ((event.clientX - rect.left) / rect.width) * ex.web_pixels_width();
+		const py = ((event.clientY - rect.top) / rect.height) * ex.web_pixels_height();
+		const hx = (px - ex.web_iso_offset_x()) / ex.web_iso_half_w();
+		const hy = (py - ex.web_iso_offset_y()) / ex.web_iso_half_h();
+		const x = Math.floor((hx + hy) * 0.5);
+		const y = Math.floor((hy - hx) * 0.5);
 		return [Math.max(0, Math.min(79, x)), Math.max(0, Math.min(49, y))];
 	}
 

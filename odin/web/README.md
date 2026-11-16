@@ -41,9 +41,11 @@ const state = await page.evaluate(() => dreamcraft.state());
 
 ## Rendering
 
-- The simulation owns a `320×200` RGBA framebuffer (`4×4` pixels per cell).
+- The simulation owns a `640×400` RGBA framebuffer with 2:1 isometric tiles
+  (`8×4` pixels per cell).
 - JS uploads the framebuffer with `ImageData` and scales it to `960×600`
   (`image-rendering: pixelated`).
+- World view is isometric; the ASCII fog map stays top-down.
 - HUD, buttons, status, validation and ASCII fog map are HTML/DOM.
 - No per-frame WASM↔JS draw calls; one pixel buffer per frame.
 

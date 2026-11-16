@@ -38,6 +38,7 @@ capacity arrays.
 - [x] Runtime invariant checker (`validate_game`) after every tick
 - [x] State hash for deterministic replay tests
 - [x] Native raylib 6.2 client: world, fog, units, paths, HUD, minimap
+- [x] Isometric 2:1 world view in native and web clients
 - [x] Camera follow mode with manual override (`F`)
 - [x] Move/attack re-orders keep mid-cell position (no teleport/rollback)
 - [x] Browser build: Odin `js_wasm32` + HTML canvas + DOM HUD
@@ -48,7 +49,7 @@ capacity arrays.
   - [x] `POST /command`: move, patrol, attack, stop, run, reset, verify,
         select, spawn, kill, set_hp, teleport
   - [x] Every response carries `valid` + `validation`
-- [x] 72 unit/integration tests (game + control)
+- [x] 77 unit/integration tests (game + control)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator
@@ -221,11 +222,10 @@ bevy-docs/           # Bevy engine reference
 
 ## Upcoming Features
 
-1. **Isometric View** - Diagonal 2:1 grid rendering
-2. **Additional Unit Types** - Gatherer, Scout, Melee, Ranged
-3. **Resource System** - Gold collection
-4. **Multiplayer** - WebTransport networking
-5. **WebGPU renderer** - replace canvas/raylib with GPU pipeline
+1. **Additional Unit Types** - Gatherer, Scout, Melee, Ranged
+2. **Resource System** - Gold collection
+3. **Multiplayer** - WebTransport networking
+4. **WebGPU renderer** - replace canvas/raylib with GPU pipeline
 
 ## Level Design Principles
 

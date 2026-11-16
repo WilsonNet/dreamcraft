@@ -3,7 +3,6 @@ package main
 
 import "core:c"
 import "core:fmt"
-import "core:math"
 import "core:mem"
 import "core:os"
 import "core:strings"
@@ -102,8 +101,7 @@ reset_camera :: proc() {
 	if !ok {
 		position = g.START_POS
 	}
-	world := g.grid_to_world(position)
-	app.camera_pos = rl.Vector2{g.fp_to_f32(world.x), g.fp_to_f32(world.y)}
+	app.camera_pos = iso_cell_center(position)
 	app.camera_follow = true
 	app.camera = rl.Camera2D{
 		offset = rl.Vector2{0, 0},
@@ -153,30 +151,7 @@ is_dev_executable :: proc() -> bool {
 }
 
 screen_to_grid :: proc(screen: rl.Vector2) -> g.Grid_Pos {
-	world := rl.GetScreenToWorld2D(screen, app.camera)
-	gx := i32(math.floor(f64((world.x - f32(g.WORLD_MIN_X)) / f32(g.CELL_SIZE))))
-	gy := i32(math.floor(f64((world.y - f32(g.WORLD_MIN_Y)) / f32(g.CELL_SIZE))))
-	return g.Grid_Pos{x = clamp(gx, 0, g.GRID_W - 1), y = clamp(gy, 0, g.GRID_H - 1)}
-}
-
-world_vector :: proc(position: g.Grid_Pos) -> rl.Vector2 {
-	world := g.grid_to_world(position)
-	return rl.Vector2{g.fp_to_f32(world.x), g.fp_to_f32(world.y)}
-}
-
-cell_rect :: proc(position: g.Grid_Pos) -> rl.Rectangle {
-	return rl.Rectangle{
-		x = f32(g.WORLD_MIN_X + int(position.x) * g.CELL_SIZE),
-		y = f32(g.WORLD_MIN_Y + int(position.y) * g.CELL_SIZE),
-		width = f32(g.CELL_SIZE),
-		height = f32(g.CELL_SIZE),
-	}
-}
-
-clamp_camera :: proc(position: rl.Vector2) -> rl.Vector2 {
-	half_width := f32(g.WORLD_MAX_X + 200)
-	half_height := f32(g.WORLD_MAX_Y + 200)
-	return rl.Vector2{clamp(position.x, -half_width, half_width), clamp(position.y, -half_height, half_height)}
+	return iso_screen_to_grid(screen, app.camera)
 }
 
 format_text :: proc(buffer: []u8, format: string, args: ..any) -> cstring {

@@ -186,7 +186,8 @@ responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 - Enemy chases within 6-cell vision and attacks on cooldown
 - Patrol loops A↔B until a move/stop command
 - Camera follow by default; manual pan switches to FREE (`F` toggles)
-- Browser build: 320×200 software framebuffer, DOM HUD, full-map view
+- Isometric 2:1 world view; minimap stays top-down
+- Browser build: 640×400 iso framebuffer, DOM HUD, full-map view
 
 ## Skills Map
 
