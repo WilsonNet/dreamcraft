@@ -49,6 +49,12 @@ odin build client -out:bin/dreamcraft -o:speed
 odin build headless -out:bin/headless -o:speed
 ```
 
+Model reference renders (no map hunting):
+
+```bash
+./bin/dreamcraft-dev --sheet        # -> build/sheet/*.png
+```
+
 Headless file protocol (agent-friendly):
 
 ```bash
@@ -104,7 +110,8 @@ odin/
 │   ├── validation.odin  # runtime invariant checker
 │   ├── hash.odin        # deterministic state hash
 │   └── *_test.odin      # unit tests
-├── client/      # raylib 3D renderer, input, HUD, minimap
+├── assets/shaders/  # unit.vs, unit.fs, watercolor.fs
+├── client/      # raylib 3D renderer, procedural units, input, HUD, minimap
 ├── control/     # JSON commands + localhost HTTP server
 ├── headless/    # script runner, polling, --serve, record/replay
 ├── web/         # js_wasm32 2:1 canvas client + DOM HUD
@@ -189,8 +196,9 @@ responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 - Enemy chases within 6-cell vision and attacks on cooldown
 - Patrol loops A↔B until a move/stop command
 - Camera follow by default; manual pan switches to FREE (`F` toggles)
-- Native full 3D orthographic isometric renderer + pixel post shader
-- Animated low-poly melee warrior (idle/walk/attack)
+- Native full 3D orthographic isometric renderer + watercolour post shader
+- Procedural Mamluk unit: modelled/rigged/skinned in Odin (idle/walk/attack)
+- Painterly watercolour shading (unit.fs + watercolor.fs), no GLB assets
 - Minimap stays top-down; browser build keeps the 2:1 canvas view
 
 ## Skills Map
@@ -200,6 +208,7 @@ Skills live in `.opencode/skills/` and `.claude/skills/`:
 | Skill | Purpose |
 |-------|---------|
 | **odin** | Odin patterns, allocators, testing, raylib, control server |
+| **art-direction** | Toriyama/DQ character look, palette, watercolour shading |
 | **bevy** | Legacy Bevy reference only |
 | **tmux** | Long-running process management |
 | **specs** | Keeping `specs/` updated |

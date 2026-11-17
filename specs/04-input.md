@@ -29,6 +29,12 @@
 - WASD or arrow keys pan the camera at 400 px/sec
 - Camera is clamped to grid bounds (+200px margin)
 
+### Mouse Wheel Zoom
+- Wheel zooms the orthographic camera between `0.08x` and `2.0x`
+- Default zoom is `0.65` (unit ≈15 % of screen height, Diablo 2 framing)
+- `--zoom=<n>` sets the initial zoom for dev runs
+- Picking uses the live camera, so selection and commands stay accurate
+
 ### Screen Edge Scrolling (RTS Standard)
 - When mouse cursor enters the 20px zone at any screen edge, camera scrolls
 - Scroll speed is progressive: faster the closer the cursor is to the edge

@@ -45,15 +45,33 @@
 - The HUD and debug APIs still use `M` as the logical melee type.
 - Team is represented by `Team` ownership and color tint (blue player / red enemy).
 
-### Warrior Model
+### Unit Model: Mamluk
 
-- Low-poly Blender model with an 8-bone rig.
-- Actions: `idle` (loop), `walk` (loop), `attack` (one-shot).
-- One model instance per unit so animations are independent.
+The native client builds every melee unit from code. There is no GLB, no
+Blender step, and no asset pipeline for units.
+
+- `odin/client/mamluk_model.odin` + `mamluk_head.odin` assemble the model from
+  parametric primitives (lathes, ellipsoids, tori, swept blades, domed plates).
+- 25-joint rig (`odin/client/unit_rig.odin`): root, pelvis, spine, chest, neck,
+  head, plume, shoulders/arms/hands, legs/feet, three cape joints, sash.
+- Clips are analytic functions, not keyframes:
+  `idle` 2.40 s loop, `walk` 0.72 s loop, `attack` 0.46 s one-shot
+  (`odin/client/unit_anim.odin`).
+- Skin is rigid per part and done on the CPU each frame; the mesh buffer is
+  rewritten with skinned positions and normals.
 - Face direction follows the next path cell, or the attack target.
-- Attack triggers when the simulation attack cooldown resets.
-- Assets: `odin/assets/warrior/warrior_{blue,red}.glb`.
-- Pipeline: `odin/tools/warrior/build.sh` (Blender headless).
+- Attack triggers when the simulation attack cooldown resets and always eases
+  back into the guard pose.
+- Blue/red cloth and turban bands mark the team; the model is otherwise shared.
+- Look: Toriyama / Dragon Quest proportions and palette with Diablo 2 framing.
+  See `.opencode/skills/art-direction/SKILL.md`.
+- Reference renders: `./bin/dreamcraft-dev --sheet` writes `build/sheet/*.png`
+  (front, 3/4, side, back, walk, attack, head, helm).
+
+### Legacy Unit Asset
+
+`odin/assets/warrior/*.glb` and `odin/tools/warrior/` are kept for reference
+only. The client no longer loads them.
 
 ### Health Bars
 

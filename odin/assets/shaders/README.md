@@ -1,10 +1,14 @@
 # Shaders
 
-`pixelart.fs` is the native post-process shader:
+Native client:
 
-- one-texel dark outline on luminance edges,
-- 12-level posterization,
-- subtle 4×4 Bayer dithering, skipped on near-black fog.
+- `unit.vs` / `unit.fs` — painterly material shader for procedural unit meshes.
+  Vertex colour carries albedo + baked AO, UV carries (metalness, glow).
+  Six soft tone washes, Beer–Lambert pigment compositing, warm rim light.
+- `watercolor.fs` — post-process applied when the half-resolution 3D target is
+  upscaled. Wet-bleed, pigment pooling on edges, paper grain, cheap bloom,
+  warm/cool split tone and a soft vignette.
+- `pixelart.fs` — retired. Kept for reference; it produced the hard pixel
+  outline and 12-level posterize that read as voxel art.
 
-It runs when the half-resolution 3D render target is upscaled to the window.
-HUD text stays full-resolution and unshaded.
+Run with `--no-shader` to bypass the post pass.

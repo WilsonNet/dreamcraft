@@ -53,13 +53,17 @@ apply_camera :: proc() {
 	app.camera.target = app.camera_target
 	app.camera.position = app.camera_target + camera_offset()
 	app.camera.up = rl.Vector3{0, 1, 0}
-	app.camera.fovy = CAMERA_ORTHO_HEIGHT
+	app.camera.fovy = CAMERA_ORTHO_HEIGHT * clamp(app.zoom, 0.08, 2.0)
 	app.camera.projection = .ORTHOGRAPHIC
 }
 
 update_camera :: proc(dt: f64) {
 	if app.menu_open {
 		return
+	}
+	if wheel := rl.GetMouseWheelMove(); wheel != 0 {
+		app.zoom = clamp(app.zoom * (1 - wheel * 0.12), 0.25, 2.0)
+		apply_camera()
 	}
 	delta := f32(dt)
 	forward := rl.Vector3{-1, 0, -1}

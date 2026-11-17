@@ -1,27 +1,9 @@
-# Warrior Model Pipeline
+# Warrior Pipeline (legacy)
 
-Low-poly melee warrior for the native 3D client.
+The client no longer loads GLB models: units are modelled, rigged, skinned and
+animated in Odin (`odin/client/mamluk_*.odin`). This Blender pipeline is kept
+for reference only and is not part of the build.
 
 ```bash
-./build.sh
+./build.sh   # writes ../../assets/warrior/warrior_{blue,red}.glb (unused)
 ```
-
-Runs Blender headless and writes:
-
-- `../../assets/warrior/warrior_blue.glb`
-- `../../assets/warrior/warrior_red.glb`
-- `../../assets/warrior/preview.png`
-
-The GLBs contain:
-
-- a skinned 8-bone rig,
-- `idle` action (33 keyed frames at 24 fps),
-- `walk` action (17 keyed frames),
-- `attack` action (11 keyed frames).
-
-The raylib client loads one model instance per unit, so units can play
-different animations independently. `idle`/`walk` loop; `attack` is one-shot
-and is triggered when the simulation cooldown resets.
-
-Requires Blender 4+ (tested with 5.3). No Blender MCP is needed; the pipeline is
-deterministic and headless.

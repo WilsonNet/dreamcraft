@@ -38,8 +38,10 @@ capacity arrays.
 - [x] Runtime invariant checker (`validate_game`) after every tick
 - [x] State hash for deterministic replay tests
 - [x] Native raylib 6.2 client: world, fog, units, paths, HUD, minimap
-- [x] Native full 3D isometric renderer + pixel-art post shader
-- [x] Animated low-poly melee warrior (idle/walk/attack)
+- [x] Native full 3D isometric renderer + watercolour post shader
+- [x] Procedural Mamluk melee unit modelled, rigged and skinned in Odin
+- [x] Procedural idle/walk/attack clips with cape and sash secondary motion
+- [x] Painterly material shader + wet-edge post-process (no GLB assets)
 - [x] Web client keeps the lightweight 2:1 canvas view
 - [x] Camera follow mode with manual override (`F`)
 - [x] Move/attack re-orders keep mid-cell position (no teleport/rollback)
@@ -51,7 +53,7 @@ capacity arrays.
   - [x] `POST /command`: move, patrol, attack, stop, run, reset, verify,
         select, spawn, kill, set_hp, teleport
   - [x] Every response carries `valid` + `validation`
-- [x] 74 unit/integration tests (game + control + client)
+- [x] 79 unit/integration tests (61 game, 11 control, 7 client)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator
@@ -216,7 +218,7 @@ bevy-docs/           # Bevy engine reference
 
 ### Tech Stack
 - **Simulation**: Odin (Q16.16 fixed point, fixed 60 Hz tick)
-- **Rendering**: raylib 6.2 native 3D + low-res pixel shader
+- **Rendering**: raylib 6.2 native 3D + procedural meshes + watercolour shaders
 - **Layer split**: pure `game` package, `client` renderer, `control` API
 - **Testing**: `core:testing`, allocation guard, headless JSONL, HTTP smoke
 - **Interactive testing**: `bin/dreamcraft --control` (live screenshot + commands)

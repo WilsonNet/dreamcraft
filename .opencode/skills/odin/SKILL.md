@@ -206,3 +206,26 @@ node test_wasm.mjs
 - Validate after every tick (`VALIDATE_EACH_TICK`).
 - Functions ≤ 50 lines, files ≤ 420 lines.
 - Update `specs/` and this skill after a task.
+
+## Procedural Models And Custom Shaders (raylib 6)
+
+- `rl.Matrix` here is `#row_major matrix[4,4]f32`, not the C struct: read
+  translation as `m[0][3]`, identity as `rl.Matrix(1)`. `MatrixMultiply` is
+  deprecated; compose with `a * b` (wrap it in `xf_mul` for intent).
+- `rl.Color` is `distinct [4]u8`: `.r/.g/.b/.a` swizzle, literal
+  `rl.Color{10,20,30,255}`. `Vector3` is `[3]f32` with `.x/.y/.z`.
+- `UnloadMesh` frees mesh arrays with `RL_FREE`. If you hand it slices you
+  allocated, allocate them with `rl.MemAlloc` or you will crash.
+- A custom shader gets `mvp`, `matModel`, `matView`, `matProjection` and the
+  default attributes (`vertexPosition`, `vertexNormal`, `vertexColor`,
+  `vertexTexCoord`) resolved by name. Use `gl_Position = mvp * vec4(pos,1)`.
+- Pack per-vertex material data: `vertexColor.a` = baked AO,
+  `texcoord.xy` = (metalness, glow). One draw call per character.
+- `UpdateMeshBuffer(mesh, 0, ...)` = positions, `2` = normals, `1` = UVs,
+  `3` = colours. Upload indices once at build time.
+- CPU skinning in `main` package: rigid parts, one bone per vertex, rewrite
+  positions/normals per frame. Far cheaper than it looks for a few units and
+  avoids GLB/skinning-shader plumbing.
+- `package main` cannot be imported. For dev tools (model sheets, turntables)
+  add a flag inside the client (`--sheet`) and early-return before the game
+  loop; grab the render target with `LoadImageFromTexture` + `ImageFlipVertical`.

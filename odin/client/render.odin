@@ -13,6 +13,7 @@ ground_pixels: [GROUND_TEX_W * GROUND_TEX_H]rl.Color
 
 draw_frame :: proc() {
 	update_ground_texture()
+	set_unit_shader_uniforms(f32(rl.GetTime()))
 	rl.BeginTextureMode(app.pixel)
 	rl.ClearBackground(rl.Color{5, 10, 5, 255})
 	rl.BeginMode3D(app.camera)
@@ -43,14 +44,13 @@ init_ground :: proc() {
 }
 
 unload_ground :: proc() {
+	// UnloadModel releases the material's diffuse texture, so drop the handle
+	// instead of unloading it twice.
 	if app.ground_model.meshCount > 0 {
 		rl.UnloadModel(app.ground_model)
 		app.ground_model = {}
 	}
-	if app.ground_texture.id > 0 {
-		rl.UnloadTexture(app.ground_texture)
-		app.ground_texture = {}
-	}
+	app.ground_texture = {}
 }
 
 update_ground_texture :: proc() {
@@ -58,25 +58,44 @@ update_ground_texture :: proc() {
 		for gx in 0..<g.GRID_W {
 			cell := g.Grid_Pos{x = i32(gx), y = i32(gy)}
 			state := g.fog_state(&app.game.fog, cell)
-			base := rl.Color{4, 6, 4, 255}
+			base := ground_tint(0, gx, gy)
 			if state == 1 {
-				base = rl.Color{20, 44, 22, 255}
+				base = ground_tint(1, gx, gy)
 			} else if state == 2 {
-				base = rl.Color{42, 92, 46, 255}
-			}
-			if state > 0 && gx >= g.GOAL_X && gx < g.GRID_W - 1 {
-				if state == 2 {
-					base = rl.Color{135, 112, 30, 255}
-				} else {
-					base = rl.Color{75, 62, 18, 255}
+				base = ground_tint(2, gx, gy)
+				if gx >= g.GOAL_X && gx < g.GRID_W - 1 {
+					base = rl.Color{
+						u8(clamp(f32(base.r) + 54, 0, 255)),
+						u8(clamp(f32(base.g) + 20, 0, 255)),
+						u8(clamp(f32(base.b) - 18, 0, 255)),
+						255,
+					}
 				}
 			}
-			grid := rl.Color{18, 30, 18, 255}
+			shade := ground_fog_shade(cell, int(state))
+			base.r = u8(clamp(f32(base.r) * shade, 0, 255))
+			base.g = u8(clamp(f32(base.g) * shade, 0, 255))
+			base.b = u8(clamp(f32(base.b) * shade, 0, 255))
 			for py in 0..<GROUND_TEX_SCALE {
 				for px in 0..<GROUND_TEX_SCALE {
+					// Fine per-pixel drift keeps the wash organic, not tiled.
+					// Fog stays clean so unexplored space reads as void.
+					drift := f32(0)
+					if state > 0 {
+						drift = (ground_hash(gx * 4 + px + 7, gy * 4 + py + 13) - 0.5) * 7
+					}
 					color := base
-					if state > 0 && ((gx % 4 == 0 && px == 0) || (gy % 4 == 0 && py == 0)) {
-						color = grid
+					color.r = u8(clamp(f32(base.r) + drift, 0, 255))
+					color.g = u8(clamp(f32(base.g) + drift, 0, 255))
+					color.b = u8(clamp(f32(base.b) + drift * 0.7, 0, 255))
+					// A single soft tiling line keeps the grid readable without boxing tiles.
+					if state > 0 && gx % 4 == 0 && px == 0 {
+						color = rl.Color{
+							u8(clamp(f32(base.r) * 0.80, 0, 255)),
+							u8(clamp(f32(base.g) * 0.80, 0, 255)),
+							u8(clamp(f32(base.b) * 0.80, 0, 255)),
+							255,
+						}
 					}
 					index := (gy * GROUND_TEX_SCALE + py) * GROUND_TEX_W + gx * GROUND_TEX_SCALE + px
 					ground_pixels[index] = color
@@ -90,7 +109,9 @@ update_ground_texture :: proc() {
 draw_world_3d :: proc() {
 	rl.DrawModel(app.ground_model, rl.Vector3{0, 0, 0}, 1, rl.WHITE)
 	draw_goal_3d()
+	draw_tree_shadows_3d()
 	draw_trees_3d()
+	draw_unit_shadows_3d()
 	draw_waypoints_3d()
 	draw_paths_3d()
 	draw_units_3d()
@@ -122,18 +143,24 @@ draw_trees_3d :: proc() {
 			}
 			pos := cell_center(cell)
 			scale := 0.9 + f32((int(cell.x) * 7 + int(cell.y) * 13) % 4) * 0.07
-			trunk := rl.Color{95, 60, 25, 255}
-			leaf := rl.Color{20, 118, 46, 255}
-			leaf_light := rl.Color{34, 146, 60, 255}
+			tint := ground_hash(int(cell.x) + 91, int(cell.y) + 47) - 0.5
+			trunk := rl.Color{72, 48, 28, 255}
+			leaf := rl.Color{26, 62, 34, 255}
+			leaf_light := rl.Color{38, 82, 42, 255}
 			if state == 1 {
-				trunk = rl.Color{40, 28, 14, 255}
-				leaf = rl.Color{8, 38, 16, 255}
-				leaf_light = rl.Color{12, 48, 20, 255}
+				trunk = rl.Color{34, 24, 16, 255}
+				leaf = rl.Color{12, 30, 18, 255}
+				leaf_light = rl.Color{17, 40, 22, 255}
 			}
-			rl.DrawCylinder(pos + rl.Vector3{0, 0.02, 0}, 0.26, 0.26, 0.01, 8, rl.Color{0, 0, 0, 80})
-			rl.DrawCylinder(pos + rl.Vector3{0, 0.05, 0}, 0.07, 0.11, 0.6 * scale, 6, trunk)
-			rl.DrawCylinder(pos + rl.Vector3{0, 0.6 * scale, 0}, 0.0, 0.42, 0.9 * scale, 7, leaf)
-			rl.DrawCylinder(pos + rl.Vector3{0, 1.05 * scale, 0}, 0.0, 0.30, 0.65 * scale, 7, leaf_light)
+			shift := i32(tint * 12)
+			leaf.r = u8(clamp(f32(leaf.r) + f32(shift), 0, 255))
+			leaf.g = u8(clamp(f32(leaf.g) + f32(shift), 0, 255))
+			leaf_light.r = u8(clamp(f32(leaf_light.r) + f32(shift), 0, 255))
+			leaf_light.g = u8(clamp(f32(leaf_light.g) + f32(shift), 0, 255))
+			rl.DrawCylinder(pos + rl.Vector3{0, 0.04, 0}, 0.055, 0.085, 0.55 * scale, 6, trunk)
+			rl.DrawCylinder(pos + rl.Vector3{0, 0.42 * scale, 0}, 0.0, 0.33, 0.72 * scale, 8, leaf)
+			rl.DrawCylinder(pos + rl.Vector3{0, 0.78 * scale, 0}, 0.0, 0.26, 0.62 * scale, 8, leaf)
+			rl.DrawCylinder(pos + rl.Vector3{0, 1.08 * scale, 0}, 0.0, 0.19, 0.52 * scale, 8, leaf_light)
 		}
 	}
 }
@@ -174,6 +201,30 @@ draw_paths_3d :: proc() {
 	}
 }
 
+draw_unit_shadows_3d :: proc() {
+	units := &app.game.units
+	for i in 0..<g.MAX_UNITS {
+		if !units.alive[i] || !g.enemy_is_visible(&app.game, i) {
+			continue
+		}
+		draw_unit_shadow(unit_ground(i), 0.80, 105)
+	}
+}
+
+draw_tree_shadows_3d :: proc() {
+	for cluster in g.TREE_CLUSTERS {
+		for cell in cluster {
+			if cell.x < 0 || cell.y < 0 {
+				continue
+			}
+			if g.fog_state(&app.game.fog, cell) == 0 {
+				continue
+			}
+			draw_unit_shadow(cell_center(cell), 1.05, 80)
+		}
+	}
+}
+
 draw_units_3d :: proc() {
 	units := &app.game.units
 	for i in 0..<g.MAX_UNITS {
@@ -185,7 +236,6 @@ draw_units_3d :: proc() {
 		if units.team[i] == .Enemy {
 			color = rl.Color{225, 70, 70, 255}
 		}
-		rl.DrawCylinder(ground + rl.Vector3{0, 0.02, 0}, 0.52, 0.52, 0.01, 12, rl.Color{0, 0, 0, 100})
 		if units.selected[i] {
 			rl.DrawCircle3D(ground + rl.Vector3{0, 0.04, 0}, 0.72, rl.Vector3{1, 0, 0}, 90, rl.Color{255, 225, 80, 235})
 		}
@@ -203,7 +253,7 @@ draw_attack_effect :: proc(index: int, ground: rl.Vector3) {
 	if visual.attack <= 0 {
 		return
 	}
-	elapsed := WARRIOR_ATTACK_SECONDS - visual.attack
+	elapsed := ANIM_ATTACK_SECONDS - visual.attack
 	if elapsed < 0.08 || elapsed > 0.34 {
 		return
 	}

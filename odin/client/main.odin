@@ -30,8 +30,12 @@ App :: struct {
 	pixel_shader: rl.Shader,
 	shader_ready: bool,
 	shader_tex_size: i32,
+	unit_shader: Unit_Shader,
 	ground_texture: rl.Texture2D,
 	ground_model: rl.Model,
+	shadow_texture: rl.Texture2D,
+	shadow_model: rl.Model,
+	shadow_ready: bool,
 	accumulator: f64,
 	menu_open: bool,
 	command_mode: Command_Mode,
@@ -47,6 +51,7 @@ App :: struct {
 	resume_button: rl.Rectangle,
 	last_fps: int,
 	camera_follow: bool,
+	zoom: f32,
 	models: [g.MAX_UNITS]Unit_Model,
 	visuals: [g.MAX_UNITS]Unit_Visual,
 	last_tick: u64,
@@ -63,7 +68,14 @@ main :: proc() {
 	if dev {
 		window_title = DEV_WINDOW_TITLE
 	}
-	rl.InitWindow(1280, 720, window_title)
+	sheet := has_arg(os.args, "--sheet")
+	width := 1280
+	height := 720
+	if sheet {
+		width = SHEET_SIZE
+		height = SHEET_SIZE
+	}
+	rl.InitWindow(i32(width), i32(height), window_title)
 	if dev {
 		fmt.println("DEV build window:", window_title)
 	}
@@ -81,10 +93,20 @@ main :: proc() {
 	}
 	init_minimap_texture()
 	init_pixel_pipeline()
+	init_unit_shader()
+	if sheet {
+		run_model_sheet()
+		return
+	}
 	init_ground()
+	init_shadow_assets()
 	init_warrior_assets()
 	reset_warrior_visuals()
 	app.camera_follow = true
+	app.zoom = 0.65
+	if zoom, ok := find_zoom(os.args); ok {
+		app.zoom = zoom
+	}
 	reset_camera()
 	update_layout()
 
@@ -103,8 +125,10 @@ main :: proc() {
 		free_all(context.temp_allocator)
 	}
 	unload_warrior_assets()
+	unload_shadow_assets()
 	unload_ground()
 	unload_pixel_pipeline()
+	unload_unit_shader()
 	rl.UnloadTexture(app.minimap)
 }
 
@@ -155,6 +179,15 @@ is_dev_executable :: proc() -> bool {
 }
 
 
+has_arg :: proc(args: []string, flag: string) -> bool {
+	for arg in args {
+		if arg == flag {
+			return true
+		}
+	}
+	return false
+}
+
 format_text :: proc(buffer: []u8, format: string, args: ..any) -> cstring {
 	assert(len(buffer) > 0)
 	text := fmt.bprintf(buffer[:len(buffer) - 1], format, ..args)
@@ -162,6 +195,56 @@ format_text :: proc(buffer: []u8, format: string, args: ..any) -> cstring {
 	return cast(cstring)raw_data(buffer)
 }
 
+
+// --zoom=<n> is a dev aid for inspecting models up close.
+find_zoom :: proc(args: []string) -> (zoom: f32, ok: bool) {
+	for arg in args {
+		if !strings.has_prefix(arg, "--zoom=") {
+			continue
+		}
+		value := arg[len("--zoom="):]
+		parsed: f32 = 0
+		seen := false
+		for ch in value {
+			if ch == '.' || (ch >= '0' && ch <= '9') {
+				seen = true
+			} else {
+				return 0, false
+			}
+		}
+		if !seen {
+			return 0, false
+		}
+		parsed = f32(parse_decimal(value))
+		if parsed <= 0 {
+			return 0, false
+		}
+		return parsed, true
+	}
+	return 0, false
+}
+
+@(private)
+parse_decimal :: proc(text: string) -> f64 {
+	whole: f64 = 0
+	fraction: f64 = 0
+	scale: f64 = 0.1
+	after_point := false
+	for ch in text {
+		if ch == '.' {
+			after_point = true
+			continue
+		}
+		digit := f64(ch - '0')
+		if after_point {
+			fraction += digit * scale
+			scale *= 0.1
+		} else {
+			whole = whole * 10 + digit
+		}
+	}
+	return whole + fraction
+}
 
 find_control_port :: proc(args: []string) -> (port: int, ok: bool) {
 	for arg in args {

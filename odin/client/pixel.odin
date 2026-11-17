@@ -1,4 +1,4 @@
-// Low-resolution 3D target plus the pixel-art post-process shader.
+// Low-resolution 3D target plus the watercolour post-process shader.
 package main
 
 import "core:os"
@@ -23,7 +23,7 @@ init_pixel_pipeline :: proc() {
 }
 
 load_pixel_shader :: proc() -> rl.Shader {
-	paths := [2]string{"assets/shaders/pixelart.fs", "odin/assets/shaders/pixelart.fs"}
+	paths := [2]string{"assets/shaders/watercolor.fs", "odin/assets/shaders/watercolor.fs"}
 	for path in paths {
 		if !os.exists(path) {
 			continue
