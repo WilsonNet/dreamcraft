@@ -6,6 +6,7 @@ import rl "vendor:raylib"
 import g "../game"
 
 CAMERA_ORTHO_HEIGHT :: f32(20)
+DEFAULT_ZOOM :: f32(0.55)
 CAMERA_TARGET_HEIGHT :: f32(0)
 CAMERA_DISTANCE :: f32(40)
 CAMERA_PAN_SPEED :: f32(14)
@@ -103,10 +104,16 @@ apply_edge_scroll :: proc(dt: f32) -> bool {
 	mouse := rl.GetMousePosition()
 	width := f32(rl.GetScreenWidth())
 	height := f32(rl.GetScreenHeight())
+	ZONE :: f32(20)
+	if !app.edge_armed {
+		if mouse.x > ZONE && mouse.x < width - ZONE && mouse.y > ZONE && mouse.y < height - ZONE {
+			app.edge_armed = true
+		}
+		return false
+	}
 	if mouse.x <= 0 || mouse.x >= width || mouse.y <= 0 || mouse.y >= height {
 		return false
 	}
-	ZONE :: f32(20)
 	forward := rl.Vector3{-1, 0, -1}
 	right := rl.Vector3{-1, 0, 1}
 	velocity := rl.Vector3{0, 0, 0}

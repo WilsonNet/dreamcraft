@@ -1,4 +1,5 @@
 /target/
+legacy/rust/target/
 *.png
 .DS_Store
 *.swp
@@ -9,12 +10,12 @@ bevy-docs/
 .playwright-mcp/
 headless_result.json
 debug-console.html
-*.png
 
 odin/bin/
+odin/build/
 odin/headless_command.json
 odin/control_screenshot.png
 odin/web/main.wasm
 
-!odin/assets/warrior/*.png
-odin/tools/warrior/build/
+!legacy/warrior-glb/assets/*.png
+legacy/warrior-glb/tools/build/

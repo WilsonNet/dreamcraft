@@ -6,8 +6,8 @@ the browser build keeps a lightweight 2:1 canvas view.
 
 The primary implementation is **Odin** (`odin/`): native raylib client plus a
 browser WASM/canvas build. It compiles in seconds, uses fixed-capacity data
-structures, and has no garbage collector. The original Rust/Bevy prototype
-remains in `src/` for reference.
+structures, and has no garbage collector. Deprecated prototypes (`rust/`,
+`web-console/`, `warrior-glb/`, `reference.jpg`) are archived under `legacy/`.
 
 ## Quick Start
 
@@ -51,30 +51,37 @@ cd odin
 | Layer | Technology |
 |-------|-----------|
 | Simulation | Odin, Q16.16 fixed point, fixed-timestep 60 Hz |
-| Rendering | raylib 6.2 3D + pixel shader (native) / HTML canvas (web) |
+| Rendering | raylib 6.2 3D + procedural art + watercolour & terrain shaders (native) / HTML canvas (web) |
 | Units | Struct-of-arrays, generation handles, fixed pools |
 | Pathfinding | Allocation-free A*, preallocated scratch |
 | Fog | Two bitsets (explored / visible) |
 | Testing | `core:testing`, headless scripts, HTTP control API, Node WASM smoke |
-| Legacy | Rust + Bevy 0.18 (`src/`) |
+| Legacy | Rust + Bevy 0.18, early web console, GLB pipeline (`legacy/`) |
 
-## Odin Layout
+## Repository & Odin Layout
 
 ```
 odin/
-├── game/        # pure deterministic simulation (no rendering, no allocation)
-├── client/      # raylib native client, HUD, minimap, input
-├── control/     # JSON control API + localhost HTTP server
-├── headless/    # file/script runner, --serve, --record/--replay
-├── web/         # js_wasm32 build, 2:1 canvas renderer, DOM HUD
-├── assets/      # warrior GLBs + pixel shader
-├── tools/       # Blender warrior pipeline
-├── tests/       # smoke and replay scripts
+├── game/          # pure deterministic simulation (no rendering, no allocation)
+├── client/        # raylib native client, HUD, minimap, input, shaders, VFX
+│   └── art/       # procedural Mamluk mesh, 26-bone rig, anims, trees, props
+├── control/       # JSON control API + localhost HTTP server
+├── headless/      # file/script runner, --serve, --record/--replay
+├── web/           # js_wasm32 build, 2:1 canvas renderer, DOM HUD
+├── assets/
+│   └── shaders/   # ground.{vs,fs}, unit.{vs,fs}, watercolor.fs
+├── tests/         # smoke and replay scripts
 ├── build.sh
 ├── test.sh
 ├── run.sh
 ├── run-dev.sh
 └── restart-build.sh
+
+legacy/            # archived prototypes (not built or tested)
+├── rust/          # Rust/Bevy 0.18 prototype
+├── web-console/   # early Bun/React UI
+├── warrior-glb/   # retired Blender pipeline + GLB outputs
+└── reference.jpg  # early art reference
 ```
 
 ## Control API (replaces Bevy BRP MCP)

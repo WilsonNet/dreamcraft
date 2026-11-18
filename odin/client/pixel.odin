@@ -5,8 +5,8 @@ import "core:os"
 import "core:strings"
 import rl "vendor:raylib"
 
-PIXEL_MIN_WIDTH :: 320
-PIXEL_MIN_HEIGHT :: 180
+PIXEL_MIN_WIDTH :: 640
+PIXEL_MIN_HEIGHT :: 360
 
 init_pixel_pipeline :: proc() {
 	app.pixel_shader = load_pixel_shader()
@@ -46,8 +46,8 @@ ensure_pixel_target :: proc(width, height: int) {
 	if app.pixel.id > 0 {
 		rl.UnloadRenderTexture(app.pixel)
 	}
-	app.pixel = rl.LoadRenderTexture(i32(w), i32(h))
-	rl.SetTextureFilter(app.pixel.texture, .POINT)
+		app.pixel = rl.LoadRenderTexture(i32(w), i32(h))
+	rl.SetTextureFilter(app.pixel.texture, .BILINEAR)
 	app.pixel_width = w
 	app.pixel_height = h
 }

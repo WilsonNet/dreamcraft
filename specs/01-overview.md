@@ -39,9 +39,10 @@ capacity arrays.
 - [x] State hash for deterministic replay tests
 - [x] Native raylib 6.2 client: world, fog, units, paths, HUD, minimap
 - [x] Native full 3D isometric renderer + watercolour post shader
-- [x] Procedural Mamluk melee unit modelled, rigged and skinned in Odin
-- [x] Procedural idle/walk/attack clips with cape and sash secondary motion
-- [x] Painterly material shader + wet-edge post-process (no GLB assets)
+- [x] Procedural Mamluk melee unit modelled, rigged and skinned in Odin (`odin/client/art/`)
+- [x] Kinetic-chain idle/walk/attack clips with S-wave cape/sash/plume, turn banking, and stop-settle cushion
+- [x] Age of Empires × Toriyama world proportions: towering procedural pines & oaks, mossy boulders, stone waypoints, double-crescent slash VFX
+- [x] Painterly terrain (`1280×800`), obstacle-aware Catmull-Rom trail, bilinear mist fog, and full-res watercolour post-process (no GLB assets)
 - [x] Web client keeps the lightweight 2:1 canvas view
 - [x] Camera follow mode with manual override (`F`)
 - [x] Move/attack re-orders keep mid-cell position (no teleport/rollback)
@@ -53,7 +54,7 @@ capacity arrays.
   - [x] `POST /command`: move, patrol, attack, stop, run, reset, verify,
         select, spawn, kill, set_hp, teleport
   - [x] Every response carries `valid` + `validation`
-- [x] 79 unit/integration tests (61 game, 11 control, 7 client)
+- [x] 87 unit/integration tests (61 game, 11 control, 12 art, 3 client)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator
@@ -201,19 +202,24 @@ odin/
 │   ├── sim.odin        # fixed system order
 │   ├── validation.odin # runtime invariants
 │   └── hash.odin       # deterministic state hash
-├── client/          # raylib native rendering, input, HUD, minimap
+├── client/          # raylib native rendering, input, HUD, minimap, VFX
+│   └── art/         # procedural Mamluk model, 26-bone rig, anims, trees, props
 ├── control/         # JSON command API + localhost HTTP server
 ├── headless/        # JSONL scripts, file polling, --serve
+├── web/             # js_wasm32 2:1 canvas build
+├── assets/shaders/  # ground.{vs,fs}, unit.{vs,fs}, watercolor.fs
 └── tests/           # smoke scripts
 ```
 
-Legacy prototype:
+Legacy archive (not built):
 
 ```
-src/                 # Rust + Bevy 0.18 ECS
-index.html           # Trunk/React prototype entry
-web/                 # Legacy Bun React UI
-bevy-docs/           # Bevy engine reference
+legacy/
+├── rust/            # Rust + Bevy 0.18 ECS prototype (src, Cargo.*, tests, Trunk.toml)
+├── web-console/     # Early Bun/React UI prototype
+├── warrior-glb/     # Retired Blender warrior pipeline and GLB outputs
+└── reference.jpg    # Visual style reference
+bevy-docs/           # Bevy engine reference (gitignored)
 ```
 
 ### Tech Stack

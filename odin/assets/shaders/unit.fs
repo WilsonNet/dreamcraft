@@ -1,9 +1,9 @@
-// Painterly unit shader: watercolour washes instead of flat voxel bands.
+// Painterly Toriyama / Dragon Quest watercolour shader for units and props.
 //
-// The light ramp is split into a few soft washes whose boundaries wobble with
-// noise. Colour is composited the way pigment sits on paper (Beer-Lambert),
-// shadows shift to a cool pigment and the silhouette pools dark while a warm
-// rim keeps the figure readable against the dark forest.
+// Uses a crisp 4-tone illustrative ramp (cobalt-violet shadow -> mid shadow ->
+// bright midtone -> warm sunlit highlight) with no muddy black crushing, tight
+// metallic specular gleam, grazing-only silhouette contour ink wash, and smooth
+// fog-of-war shroud blending via u_fog_vis.
 #version 330
 
 in vec3 fragPosition;
@@ -14,6 +14,8 @@ in vec2 fragLook;
 uniform vec3 u_camera;
 uniform vec3 u_key_dir;
 uniform float u_time;
+uniform vec3 u_tint;
+uniform float u_fog_vis;
 
 out vec4 finalColor;
 
@@ -46,56 +48,65 @@ void main()
     float ao = clamp(fragAlbedo.a, 0.0, 1.0);
     float metal = clamp(fragLook.x, 0.0, 1.0);
     float glow = clamp(fragLook.y, 0.0, 1.0);
-    vec3 albedo = fragAlbedo.rgb;
+    vec3 albedo = fragAlbedo.rgb * u_tint;
 
-    // Warm key from the upper left, cool sky fill from behind the camera.
     vec3 L = normalize(u_key_dir);
-    vec3 F = normalize(vec3(-0.60, 0.35, 0.72));
+    vec3 F = normalize(vec3(-0.62, 0.34, 0.70));
     float ndl = dot(N, L);
-    float key = smoothstep(-0.12, 0.80, ndl);
-    float fill = clamp(dot(N, F) * 0.5 + 0.5, 0.0, 1.0) * 0.30;
-    float sky = 0.170 + 0.070 * clamp(N.y, 0.0, 1.0);
-    float light = key * 0.94 + fill * 0.55 + sky;
+    float ndv = clamp(dot(N, V), 0.0, 1.0);
 
-    // Soft washes: the terminator wobbles so it never reads as a hard band.
-    float wash = value_noise(fragPosition.xz * 7.0 + fragPosition.y * 4.0) - 0.5;
-    float bands = 6.0;
-    float f = clamp(light * 0.92 + wash * 0.16, 0.0, 1.0) * bands;
-    float fr = fract(f);
-    float tone = (floor(f) + smoothstep(0.24, 0.76, fr)) / bands;
-    float wet = exp(-pow((fr - 0.5) / 0.17, 2.0)) * step(0.02, f) * step(f, bands - 0.02);
+    float key = smoothstep(-0.22, 0.86, ndl);
+    float fill = (dot(N, F) * 0.5 + 0.5) * 0.24;
+    float sky = 0.12 + 0.10 * clamp(N.y, 0.0, 1.0);
+    float wash = (value_noise(fragPosition.xz * 7.5 + fragPosition.y * 4.5) - 0.5) * 0.085;
+    float lv = clamp(key * 0.78 + fill + sky * 0.65 + wash - (1.0 - ao) * 0.18, 0.0, 1.0);
 
-    // Pigment over paper. Shadows carry a cool, heavier pigment.
-    vec3 shadow_pigment = vec3(0.46, 0.55, 0.76);
-    vec3 pigment = mix(albedo, albedo * shadow_pigment * 1.85, (1.0 - tone) * 0.78);
-    float density = mix(1.42, 0.82, tone);
-    density += wet * 0.14;
-    density += (1.0 - ao) * 0.55;
-    vec3 paper = vec3(0.93, 0.90, 0.82);
-    vec3 col = paper * pow(max(pigment, vec3(0.015)), vec3(density));
-    col *= mix(0.24, 1.05, tone);
-    col *= 0.92 + 0.14 * ao;
+    // Crisp 4-tone Toriyama ramp: cobalt/violet shadow through sunlit highlight.
+    float t1 = smoothstep(0.20, 0.28, lv);
+    float t2 = smoothstep(0.44, 0.52, lv);
+    float t3 = smoothstep(0.74, 0.82, lv);
 
-    // Metal glint: tight, few pixels, the way pre-rendered sprites sparkle.
+    vec3 c0 = albedo * vec3(0.44, 0.46, 0.68);
+    vec3 c1 = albedo * vec3(0.68, 0.70, 0.86);
+    vec3 c2 = albedo * vec3(1.00, 0.99, 0.96);
+    vec3 c3 = mix(albedo * vec3(1.12, 1.07, 0.93), vec3(1.00, 0.97, 0.88), 0.14);
+
+    vec3 col = mix(c0, c1, t1);
+    col = mix(col, c2, t2);
+    col = mix(col, c3, t3);
+
+    // Soft pigment pooling at the primary shadow terminator and gentle AO.
+    float term_pool = exp(-pow((lv - 0.48) / 0.055, 2.0));
+    col *= 1.0 - term_pool * 0.06;
+    col *= mix(0.76, 1.03, ao);
+
+    // Tight crisp metallic gleam.
     vec3 H = normalize(L + V);
-    float spec = pow(max(dot(N, H), 0.0), mix(20.0, 96.0, metal));
-    col += vec3(1.0, 0.96, 0.86) * spec * (0.02 + 0.22 * metal) * (0.30 + 0.70 * key) * ao;
+    float spec_pow = mix(28.0, 120.0, metal);
+    float spec_raw = pow(max(dot(N, H), 0.0), spec_pow);
+    float spec = mix(spec_raw * 0.25, smoothstep(0.18, 0.55, spec_raw), step(0.25, metal));
+    col += vec3(1.00, 0.96, 0.86) * spec * (0.04 + 0.34 * metal) * (0.35 + 0.65 * t2) * ao;
 
-    // Silhouette pools pigment; a warm rim separates figure from background.
-    float edge = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.7);
-    vec3 rim_warm = vec3(1.00, 0.79, 0.50);
-    vec3 rim_cool = vec3(0.42, 0.60, 0.90);
-    vec3 rim = mix(rim_cool, rim_warm, smoothstep(-0.15, 0.85, ndl));
-    col += rim * edge * (0.14 + 0.20 * ao);
-    col *= 1.0 - edge * 0.18;
+    // Grazing silhouette contour ink wash + rim separation, cleanly skipping front faces.
+    float grazing = 1.0 - ndv;
+    float silhouette = smoothstep(0.55, 0.96, grazing);
+    vec3 rim_warm = vec3(1.00, 0.84, 0.54);
+    vec3 rim_cool = vec3(0.48, 0.66, 0.94);
+    vec3 rim = mix(rim_cool, rim_warm, smoothstep(-0.10, 0.82, ndl));
+    col = mix(col, col * vec3(0.44, 0.42, 0.56), silhouette * 0.40);
+    col += rim * smoothstep(0.50, 0.92, grazing) * (0.10 + 0.14 * ao);
 
-    // Arcane glow from visor, conduits and blade runes.
-    float pulse = 0.84 + 0.16 * sin(u_time * 2.4 + fragPosition.y * 5.0);
-    col += albedo * glow * (1.35 * pulse + 0.65);
+    // Arcane glow scaled cleanly by fog visibility.
+    float vis = clamp(u_fog_vis, 0.0, 1.0);
+    float pulse = 0.86 + 0.14 * sin(u_time * 2.4 + fragPosition.y * 5.0);
+    col += albedo * glow * (1.25 * pulse + 0.55) * vis;
 
-    // A touch of extra chroma keeps the palette upbeat rather than muddy.
+    // Preserve lively chroma, then blend explored props into moonlit memory.
     float grey = dot(col, vec3(0.299, 0.587, 0.114));
-    col = mix(vec3(grey), col, 1.14);
+    col = mix(vec3(grey), col, 1.10);
+
+    vec3 fog_mem = mix(vec3(grey), col, 0.52) * vec3(0.32, 0.41, 0.53) + vec3(0.014, 0.022, 0.034);
+    col = mix(fog_mem, col, smoothstep(0.36, 1.0, vis));
 
     finalColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

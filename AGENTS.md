@@ -1,8 +1,7 @@
 # DreamCraft - Fantasy RTS (Odin)
 
-Spiritual successor to StarCraft: Brood War. Primary implementation:
-**Odin + raylib** in `odin/`. The Rust/Bevy prototype in `src/` is legacy
-reference only.
+Spiritual successor to StarCraft: Brood War. Primary implementation: **Odin + raylib** in `odin/`. Deprecated prototypes
+(`rust/`, `web-console/`, `warrior-glb/`, `reference.jpg`) live in `legacy/`.
 
 ## ⚠️ CRITICAL: Specs Files (Read First!)
 
@@ -44,6 +43,7 @@ cd web && ./build.sh && ./serve.sh 8080   # browser build
 
 odin test game -vet -strict-style
 odin test control -vet -strict-style
+odin test client/art -vet -strict-style
 odin test client -vet -strict-style
 odin build client -out:bin/dreamcraft -o:speed
 odin build headless -out:bin/headless -o:speed
@@ -110,14 +110,18 @@ odin/
 │   ├── validation.odin  # runtime invariant checker
 │   ├── hash.odin        # deterministic state hash
 │   └── *_test.odin      # unit tests
-├── assets/shaders/  # unit.vs, unit.fs, watercolor.fs
-├── client/      # raylib 3D renderer, procedural units, input, HUD, minimap
+├── client/      # raylib 3D renderer, input, HUD, minimap, VFX, shaders
+│   └── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props
 ├── control/     # JSON commands + localhost HTTP server
 ├── headless/    # script runner, polling, --serve, record/replay
 ├── web/         # js_wasm32 2:1 canvas client + DOM HUD
-├── assets/      # shaders (unit, watercolor) + legacy warrior GLBs
-├── tools/       # legacy Blender warrior pipeline
+├── assets/shaders/ # ground.{vs,fs}, unit.{vs,fs}, watercolor.fs
 └── tests/       # smoke and replay scripts
+
+legacy/          # archived prototypes (not built or tested)
+├── rust/        # original Rust/Bevy 0.18 prototype
+├── web-console/ # early Bun/React debug console prototype
+└── warrior-glb/ # retired Blender Mamluk pipeline & GLB assets
 ```
 
 ## Architecture Rules
@@ -197,8 +201,9 @@ responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 - Patrol loops A↔B until a move/stop command
 - Camera follow by default; manual pan switches to FREE (`F` toggles)
 - Native full 3D orthographic isometric renderer + watercolour post shader
-- Procedural Mamluk unit: modelled/rigged/skinned in Odin (idle/walk/attack)
-- Painterly watercolour shading (unit.fs + watercolor.fs), no GLB assets
+- Procedural Mamluk unit (`client/art/`): 5.36-head heroic rig (26 joints),
+  kinetic-chain idle/walk/attack clips, turn banking & stop-settle cushion
+- Painterly shading (`unit.{vs,fs}`, `ground.{vs,fs}`, `watercolor.fs`), no GLB assets
 - Minimap stays top-down; browser build keeps the 2:1 canvas view
 
 ## Skills Map
@@ -220,6 +225,6 @@ or found information that would have helped. Add concise, actionable notes.
 
 ## Legacy Rust/Bevy Path
 
-`src/` and `Cargo.toml` remain for reference. The Rust build is slow (Bevy).
-Do not use it for new features. `bevy_remote` and `bevy_brp_extras` were
-removed. Use `odin/` for all current work.
+`legacy/` holds the deprecated Rust/Bevy prototype (`legacy/rust/`), early
+Bun web UI (`legacy/web-console/`), and retired Blender GLB pipeline
+(`legacy/warrior-glb/`). Use `odin/` for all current work.

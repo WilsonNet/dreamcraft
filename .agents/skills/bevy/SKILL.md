@@ -1,6 +1,6 @@
 ---
 name: bevy
-description: Legacy Rust/Bevy ECS reference patterns for src/ only. Use only when inspecting or maintaining the deprecated Rust prototype in src/, not for current Odin work in odin/.
+description: Legacy Rust/Bevy ECS reference patterns for legacy/rust/ only. Use only when inspecting or maintaining the deprecated Rust prototype in legacy/rust/, not for current Odin work in odin/.
 ---
 
 # Bevy Game Engine Skill
@@ -122,15 +122,8 @@ bevy = "0.18.1"
 
 ## WASM + Trunk
 
-### Trunk.toml
-```toml
-[serve]
-port = 8080
-
-[watch]
-watch_paths = ["src", "index.html"]
-ignore = ["target", "dist", ".playwright-mcp", "web", "bevy-docs"]
-```
+# Legacy Trunk config in legacy/rust/Trunk.toml
+# Ignore artifacts such as target, dist, .playwright-mcp, bevy-docs
 
 ### index.html (minimal, no React)
 ```html

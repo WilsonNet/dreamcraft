@@ -13,6 +13,8 @@ Use when working in `odin/`. The Rust/Bevy code is legacy.
 cd odin
 odin test game -vet -strict-style
 odin test control -vet -strict-style
+odin test client/art -vet -strict-style
+odin test client -vet -strict-style
 odin build client -out:bin/dreamcraft -o:speed
 odin build headless -out:bin/headless -o:speed
 ./test.sh
@@ -92,18 +94,22 @@ my_test :: proc(t: ^testing.T) {
 - Grid center mapping: `x = gx + .5 - GRID_W/2`, `z = gy + .5 - GRID_H/2`.
 - Picking: `GetScreenToWorldRay` then intersect `y=0`.
 - Selection/health bars: `GetWorldToScreen`.
-- Ground: one textured `GenMeshPlane`; 4 texels per cell, point filtered,
-  fog/goal colors updated with `UpdateTexture`.
-- Trees: layered low-poly pine tiers; units: procedural skinned Mamluk mesh.
-- Render scene to a half-size `RenderTexture2D`, upscale nearest, then apply
-  `assets/shaders/watercolor.fs` (`--no-shader` bypasses; `pixelart.fs` retired).
+- Ground (`ground_tex.odin`, `ground.{vs,fs}`): `1280×800` albedo + `80×50` fog
+  texture bound via `MaterialMapIndex.METALNESS` (`texture1`) for bilinear FBM mist.
+- Trees & units (`client/art/`): procedural oak/pine trees, boulders, ferns, and
+  26-bone CPU-skinned Mamluk meshes; props pass vertex `uv.y < 0.0` (skipped AO/rim).
+- Render scene to a full-resolution `RenderTexture2D` (`.BILINEAR`, min `640×360`),
+  then apply `assets/shaders/watercolor.fs` (`--no-shader` bypasses; `pixelart.fs` retired).
+- Edge scroll needs `app.edge_armed` (arm only after first window mouse activity
+  inside frame) on tiling WMs so launch border cursor position never steals `CAM FOLLOW`.
+- `wasm-ld` on Arch Linux lives under `/usr/lib/llvm20/bin` (handled in `build.sh`/`web/build.sh`).
 - HUD and health bars draw after the post pass at full resolution.
 - Minimap and ASCII fog stay top-down.
 
 ## Legacy Warrior GLB Pipeline (Unused)
 
-- `odin/assets/warrior/*.glb` and `odin/tools/warrior/` are legacy reference
-  only; the native client builds and animates units procedurally in Odin.
+- `legacy/warrior-glb/` and `legacy/rust/` are archived reference only; native
+  units and environment props are built procedurally in `odin/client/art/`.
 
 ## Web / WASM
 

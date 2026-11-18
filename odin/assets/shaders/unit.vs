@@ -1,6 +1,6 @@
 // Unit model vertex shader: passes world-space data for painterly lighting.
 // Positions are already world-space for units (CPU skinned, identity model),
-// while props such as trees use matModel.
+// while props such as trees and banners use matModel (including non-uniform scales).
 #version 330
 
 in vec3 vertexPosition;
@@ -20,7 +20,7 @@ void main()
 {
     vec4 world = matModel * vec4(vertexPosition, 1.0);
     fragPosition = world.xyz;
-    fragNormal = mat3(matModel) * vertexNormal;
+    fragNormal = transpose(inverse(mat3(matModel))) * vertexNormal;
     fragAlbedo = vertexColor;
     fragLook = vertexTexCoord;
     gl_Position = mvp * vec4(vertexPosition, 1.0);

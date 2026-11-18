@@ -12,7 +12,7 @@ Measured on this machine (Apple Silicon):
 |-------|------|
 | Odin client + headless, `-o:speed` | ~2.8 s total |
 | Bevy client, incremental | tens of seconds to minutes |
-| Odin unit tests (74 tests) | < 30 ms runtime |
+| Odin unit tests (87 tests) | < 35 ms runtime |
 
 ## Why Odin for an RTS
 
@@ -29,12 +29,13 @@ Measured on this machine (Apple Silicon):
 ```
 odin/
 ├── game/        # pure simulation, imports no rendering libraries
-├── client/      # raylib 3D isometric renderer, input, HUD
+├── client/      # raylib 3D isometric renderer, input, HUD, minimap, shaders, VFX
+│   └── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props
 ├── control/     # JSON command model + localhost HTTP server
 ├── headless/    # JSONL scripts, file polling, --serve, replay
 ├── web/         # js_wasm32 build, 2:1 canvas renderer, DOM HUD
-├── assets/      # warrior GLBs and pixel-art shader
-├── tools/       # Blender warrior pipeline
+├── assets/
+│   └── shaders/ # ground.{vs,fs}, unit.{vs,fs}, watercolor.fs
 └── tests/       # shell/JSONL smoke tests
 ```
 
@@ -285,8 +286,8 @@ Validator branches are tested by deliberately corrupting state.
 Bevy BRP MCP was removed:
 
 - deleted `bevy_brp` from `.opencode/opencode.json`
-- removed `bevy_remote` feature and `bevy_brp_extras` from `Cargo.toml`
-- removed `RemotePlugin` and `BrpExtrasPlugin` from `src/main.rs`
+- removed `bevy_remote` feature and `bevy_brp_extras` from `legacy/rust/Cargo.toml`
+- removed `RemotePlugin` and `BrpExtrasPlugin` from `legacy/rust/src/main.rs`
 
 Replacement endpoints (`control/http.odin`):
 
@@ -367,15 +368,20 @@ Layers:
 
 ## Native 3D Renderer
 
-- Orthographic `Camera3D`: 45° yaw, ~30° pitch, ortho height 20.
-- Ground is one textured plane; 320×200 fog/goal texture, 4 texels per cell.
-- Trees are low-poly cylinders/cones; units are animated GLB models.
-- Scene renders to a half-resolution `RenderTexture2D`, then upscales with
-  nearest filtering and `assets/shaders/pixelart.fs` (posterize, dither,
-  outline).
+- Orthographic `Camera3D`: 45° yaw, ~30° pitch, ortho height 20 (`DEFAULT_ZOOM = 0.55`).
+- Ground (`ground_tex.odin`, `ground.{vs,fs}`): `1280×800` procedural albedo
+  texture with obstacle-aware Catmull-Rom trail + `80×50` fog texture rendered
+  with bilinear FBM mist and world-edge fade.
+- Forest & props (`client/art/`): AoE-proportioned procedural pine & oak trees
+  (`2.65–3.45` world units), mossy boulders, ferns, stone waypoints, banners.
+- Units: procedural CPU-skinned 26-bone Mamluk models (`WARRIOR_SCALE = 0.74`)
+  with kinetic-chain animations, turn/stop dynamics, and double-crescent
+  `slash_vfx.odin` attack ribbons; shaded by `assets/shaders/unit.{vs,fs}`.
+- Scene renders to a full-resolution `RenderTexture2D` (bilinear) and finishes
+  with `assets/shaders/watercolor.fs` wash post-processing (`--no-shader` bypasses).
 - HUD, minimap, health bars and selection box stay full resolution.
 - Picking casts a camera ray at the ground plane.
-- One model instance per unit, so idle/walk/attack can differ per unit.
+- One model instance per unit, so idle/walk/attack/dynamics differ per unit.
 
 ## Web Build
 
@@ -433,6 +439,7 @@ Native client:
   timeout.
 - Native client is full 3D; the web build keeps the fixed 2:1 canvas view.
 - Web HUD is DOM; web units remain simple colored pixel markers.
-- One GLB model instance per unit costs memory; the tutorial and normal test
-  spawn counts are small.
-- Rust/Bevy files remain as a legacy reference and are not built or tested.
+- Each spawned unit owns one CPU-skinned procedural mesh buffer; tutorial and
+  normal test spawn counts stay small (`<= MAX_UNITS`).
+- Deprecated archives live in `legacy/` (`rust/`, `web-console/`, `warrior-glb/`,
+  `reference.jpg`) and are not built or tested.

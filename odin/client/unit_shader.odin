@@ -11,6 +11,8 @@ Unit_Shader :: struct {
 	camera:  i32,
 	time:    i32,
 	key_dir: i32,
+	tint:    i32,
+	fog_vis: i32,
 }
 
 // Light comes from the upper-left of the screen, a little toward the camera.
@@ -26,6 +28,8 @@ init_unit_shader :: proc() {
 	app.unit_shader.camera = rl.GetShaderLocation(loaded.shader, "u_camera")
 	app.unit_shader.time = rl.GetShaderLocation(loaded.shader, "u_time")
 	app.unit_shader.key_dir = rl.GetShaderLocation(loaded.shader, "u_key_dir")
+	app.unit_shader.tint = rl.GetShaderLocation(loaded.shader, "u_tint")
+	app.unit_shader.fog_vis = rl.GetShaderLocation(loaded.shader, "u_fog_vis")
 }
 
 @(private)
@@ -58,6 +62,21 @@ set_unit_shader_uniforms :: proc(time: f32) {
 	rl.SetShaderValue(app.unit_shader.shader, app.unit_shader.camera, &camera, .VEC3)
 	rl.SetShaderValue(app.unit_shader.shader, app.unit_shader.time, &clock, .FLOAT)
 	rl.SetShaderValue(app.unit_shader.shader, app.unit_shader.key_dir, &direction, .VEC3)
+	set_unit_tint(rl.Vector3{1, 1, 1}, 1.0)
+}
+
+set_unit_tint :: proc(tint: rl.Vector3, fog_vis: f32) {
+	if !app.unit_shader.ready {
+		return
+	}
+	t := tint
+	f := fog_vis
+	if app.unit_shader.tint >= 0 {
+		rl.SetShaderValue(app.unit_shader.shader, app.unit_shader.tint, &t, .VEC3)
+	}
+	if app.unit_shader.fog_vis >= 0 {
+		rl.SetShaderValue(app.unit_shader.shader, app.unit_shader.fog_vis, &f, .FLOAT)
+	}
 }
 
 unload_unit_shader :: proc() {

@@ -18,8 +18,8 @@ Interpolated unit positions use the same conversion from `units.world`
 
 - `Camera3D`, orthographic, up `{0,1,0}`.
 - Offset: `normalize({1, 0.816, 1}) * 40` (45° yaw, ~30° pitch).
-- Ortho height: `fovy = 20 * zoom`; default `zoom = 0.65` (≈13 world units
-  visible vertically, unit ≈15 % of screen height).
+- Ortho height: `fovy = 20 * zoom`; default `zoom = 0.55` (≈11 world units
+  visible vertically, towering trees 1.8–2.3× infantry height).
 - Mouse wheel zooms between `0.08` and `2.0`; `--zoom=<n>` sets it for dev runs.
 - Target: player ground position (Y=0); units stand above the screen center.
 - Follow is exact; WASD/edge scroll/minimap click switch to FREE.
@@ -41,26 +41,28 @@ rectangles. Health bars use the same projection above the model head.
 
 ## 3D World
 
-- Ground: one textured plane. The texture is 4×4 texels per cell
-  (`320×200`), updated from fog/goal state each frame; point filtered.
-  Per-cell and per-texel drift give it a painted wash instead of flat tiles.
-  One soft line every 4 cells keeps the grid readable. Cells next to fog are
-  dimmed so the play area fades out instead of ending on a hard tile border.
-- Contact shadows: one radial-gradient texture drawn as a horizontal quad for
-  units and trees.
-- Trees: three stacked cone tiers with per-tree tint variation. Unexplored
-  trees are skipped; explored trees are darkened.
-- Waypoints: `DrawCircle3D` rings on the ground.
+- Ground (`ground_tex.odin`, `ground.vs`/`ground.fs`): `1280×800` procedural
+  painterly albedo texture with grass washes, mossy understory around obstacles,
+  obstacle-aware 75-segment Catmull-Rom dirt trail connecting start → waypoints →
+  goal, sandstone goal mosaic, and wildflowers, paired with an `80×50` fog state
+  texture sampled via bilinear FBM mist and world-edge fade.
+- Contact shadows (`ground_shadow.odin`): elliptical soft shadow model drawn on
+  ground for units and trees.
+- Forest & props (`art/trees.odin`, `art/props.odin`, `env_assets.odin`, `env_render.odin`):
+  four deterministic AoE-scale procedural tree variants (~2.65–3.45 world units:
+  three pines with flattened bough tiers and scalloped rim puffs, plus multi-blob
+  oak canopies), mossy boulders, ferns, octagon stone waypoint medallions, and
+  goal banners. Unexplored clusters are skipped; explored clusters dim smoothly.
 - Paths: `DrawLine3D` plus small spheres for selected units.
-- Units: procedurally generated, CPU-skinned Mamluk models with a soft contact
-  shadow and a gold selection ring.
-- Goal: gold ground tiles plus a segmented boundary line.
+- Units: procedurally generated, CPU-skinned Mamluk models (`WARRIOR_SCALE = 0.74`)
+  with soft contact shadows, custom bevelled selection ring, and curved
+  double-crescent `slash_vfx.odin` combat ribbons.
 - Depth comes from the GPU Z-buffer; no manual painter's ordering.
 
 ## Watercolour Pipeline
 
-1. Render the 3D scene to a `RenderTexture2D` at half the window resolution
-   (minimum `320×180`).
+1. Render the 3D scene to a full-resolution `RenderTexture2D` (`BILINEAR` filter,
+   minimum `640×360`, via `pixel.odin`).
 2. Draw that texture to the window with `assets/shaders/watercolor.fs`:
    - small wet-bleed wobble plus a five-tap wash,
    - pigment pooling on luminance edges (darken + saturate),
@@ -75,13 +77,13 @@ post pass.
 
 ## Unit Material Shader
 
-`assets/shaders/unit.vs` / `unit.fs` render units, and any mesh drawn with the
-same material, using:
+`assets/shaders/unit.vs` / `unit.fs` render units and environment props (`u_tint`,
+`u_fog_vis`), using:
 
 - vertex colour `rgb` = albedo, `a` = baked ambient occlusion,
 - `texcoord.xy` = (metalness, glow),
 - warm key light, cool fill, wrapped diffuse,
-- six soft tone washes with a noise-wobbled terminator,
+- crisp 4-tone wash steps with a soft wobbled terminator,
 - Beer–Lambert pigment compositing (`paper * pigment^density`) so shadows get
   heavier, cooler pigment instead of turning grey,
 - narrow metal specular, silhouette pigment pooling, warm rim light,
@@ -89,14 +91,14 @@ same material, using:
 
 ## Procedural Unit Model
 
-- Assembled from code at spawn: `build_mamluk(enemy) -> Mesh_Builder`.
-- `body_point` remaps the bind pose (longer legs and torso, narrower frame);
-  joint heads go through the same function so animation pivots stay attached.
-- 25 joints; rigid skinning; three analytic clips plus secondary cape/sash/
-  plume motion.
+- Assembled from code at spawn (`odin/client/art/`): `build_mamluk(enemy) -> Mesh_Builder`.
+- Heroic 5.36-head proportions built directly in rest coordinates (`body_point` is
+  identity; joints align 1:1 with `BONES` in `Y = 0..1.945`).
+- 26 joints; rigid skinning; kinetic-chain analytic clips plus traveling S-wave
+  cape/sash/plume secondary motion and turn/stop dynamics (`unit_visuals.odin`).
 - Meshes are uploaded once per unit (raylib-owned arrays) and only positions
   and normals are rewritten per frame.
-- `./bin/dreamcraft-dev --sheet` renders reference views through the full
+- `./bin/dreamcraft-dev --sheet` renders 12 reference views through the full
   pipeline to `build/sheet/`.
 
 ## Web Client
@@ -106,9 +108,9 @@ renderer. The native client is the full 3D target.
 
 ## Tests
 
-- `angle_toward` maps grid steps to model yaw (0° +Z, 90° +X).
-- Mesh build size, finite normals, bounds and bone indices.
-- Bind remap keeps the feet grounded and stretches the legs.
-- Rotating a joint moves only its children.
-- Animation clips stay finite; the attack clip returns to the guard pose.
-- Face geometry stays below the turban rim.
+- `odin test client/art`: Mamluk mesh counts/bounds/normals/grounding (`min_y` at `Y=0`,
+  heroic height), Richard Williams walk weight arc (`down < contact < pass < up`) and
+  32-phase foot grounding, 16-phase idle grounding, joint child isolation, attack windup/return,
+  face clearance, and tree/prop mesh validity (12 tests).
+- `odin test client`: deterministic cell hashes, `angle_toward` (`0° +Z`, `90° +X`),
+  and shortest-arc `turn_toward` (3 tests).

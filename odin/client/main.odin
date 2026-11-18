@@ -32,10 +32,19 @@ App :: struct {
 	shader_tex_size: i32,
 	unit_shader: Unit_Shader,
 	ground_texture: rl.Texture2D,
+	fog_texture: rl.Texture2D,
+	ground_shader: rl.Shader,
+	ground_time: i32,
+	ground_ready: bool,
 	ground_model: rl.Model,
+	fog_pixels: [g.GRID_CELLS]rl.Color,
+	fog_last_tick: u64,
+	fog_dirty: bool,
 	shadow_texture: rl.Texture2D,
 	shadow_model: rl.Model,
 	shadow_ready: bool,
+	env: Env_Assets,
+	slash: Slash_Vfx,
 	accumulator: f64,
 	menu_open: bool,
 	command_mode: Command_Mode,
@@ -51,6 +60,7 @@ App :: struct {
 	resume_button: rl.Rectangle,
 	last_fps: int,
 	camera_follow: bool,
+	edge_armed: bool,
 	zoom: f32,
 	models: [g.MAX_UNITS]Unit_Model,
 	visuals: [g.MAX_UNITS]Unit_Visual,
@@ -62,27 +72,9 @@ App :: struct {
 app: App
 
 main :: proc() {
-	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
-	dev := DEV_BUILD || is_dev_executable()
-	window_title: cstring = WINDOW_TITLE
-	if dev {
-		window_title = DEV_WINDOW_TITLE
-	}
 	sheet := has_arg(os.args, "--sheet")
-	width := 1280
-	height := 720
-	if sheet {
-		width = SHEET_SIZE
-		height = SHEET_SIZE
-	}
-	rl.InitWindow(i32(width), i32(height), window_title)
-	if dev {
-		fmt.println("DEV build window:", window_title)
-	}
+	open_window(sheet)
 	defer rl.CloseWindow()
-	rl.SetWindowMinSize(800, 600)
-	rl.SetTargetFPS(60)
-	rl.SetExitKey(.KEY_NULL)
 
 	g.game_init(&app.game)
 	if port, ok := find_control_port(os.args); ok {
@@ -98,33 +90,70 @@ main :: proc() {
 		run_model_sheet()
 		return
 	}
+	init_world_assets()
+	for !rl.WindowShouldClose() {
+		step_client_frame()
+	}
+	unload_world_assets()
+}
+
+@(private)
+open_window :: proc(sheet: bool) {
+	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
+	dev := DEV_BUILD || is_dev_executable()
+	window_title: cstring = WINDOW_TITLE
+	if dev {
+		window_title = DEV_WINDOW_TITLE
+	}
+	width := sheet ? SHEET_SIZE : 1280
+	height := sheet ? SHEET_SIZE : 720
+	rl.InitWindow(i32(width), i32(height), window_title)
+	if dev {
+		fmt.println("DEV build window:", window_title)
+	}
+	rl.SetWindowMinSize(800, 600)
+	rl.SetTargetFPS(60)
+	rl.SetExitKey(.KEY_NULL)
+}
+
+@(private)
+step_client_frame :: proc() {
+	dt := f64(rl.GetFrameTime())
+	update_layout()
+	handle_input()
+	update_simulation(dt)
+	update_camera(dt)
+	update_warrior_visuals(f32(dt))
+	update_minimap_pixels()
+	draw_frame()
+	if app.serving {
+		control.server_poll(&app.server)
+	}
+	free_all(context.temp_allocator)
+}
+
+@(private)
+init_world_assets :: proc() {
 	init_ground()
 	init_shadow_assets()
+	init_env_assets()
+	init_slash_vfx()
 	init_warrior_assets()
 	reset_warrior_visuals()
 	app.camera_follow = true
-	app.zoom = 0.65
+	app.zoom = DEFAULT_ZOOM
 	if zoom, ok := find_zoom(os.args); ok {
 		app.zoom = zoom
 	}
 	reset_camera()
 	update_layout()
+}
 
-	for !rl.WindowShouldClose() {
-		dt := f64(rl.GetFrameTime())
-		update_layout()
-		handle_input()
-		update_simulation(dt)
-		update_camera(dt)
-		update_warrior_visuals(f32(dt))
-		update_minimap_pixels()
-		draw_frame()
-		if app.serving {
-			control.server_poll(&app.server)
-		}
-		free_all(context.temp_allocator)
-	}
+@(private)
+unload_world_assets :: proc() {
 	unload_warrior_assets()
+	unload_slash_vfx()
+	unload_env_assets()
 	unload_shadow_assets()
 	unload_ground()
 	unload_pixel_pipeline()
@@ -142,7 +171,7 @@ init_minimap_texture :: proc() {
 update_layout :: proc() {
 	width := f32(rl.GetScreenWidth())
 	height := f32(rl.GetScreenHeight())
-	ensure_pixel_target(int(width) / 2, int(height) / 2)
+	ensure_pixel_target(int(width), int(height))
 	app.minimap_rect = rl.Rectangle{20, height - 150, 200, 125}
 	app.move_button = rl.Rectangle{width - 104, height - 52, 84, 32}
 	app.patrol_button = rl.Rectangle{width - 104, height - 92, 84, 32}

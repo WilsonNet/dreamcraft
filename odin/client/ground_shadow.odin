@@ -3,6 +3,7 @@ package main
 
 import rl "vendor:raylib"
 import g "../game"
+import art "./art"
 
 @(private)
 ground_hash :: proc(x, y: int) -> f32 {
@@ -58,6 +59,10 @@ ground_fog_shade :: proc(cell: g.Grid_Pos, state: int) -> f32 {
 }
 
 draw_unit_shadow :: proc(ground: rl.Vector3, size: f32, alpha: u8) {
+	draw_ground_shadow(ground, size, alpha, rl.Vector3{0, 0, 0})
+}
+
+draw_ground_shadow :: proc(ground: rl.Vector3, diameter: f32, alpha: u8, offset: rl.Vector3) {
 	if !app.shadow_ready {
 		return
 	}
@@ -65,7 +70,7 @@ draw_unit_shadow :: proc(ground: rl.Vector3, size: f32, alpha: u8) {
 	if mat.maps != nil {
 		mat.maps[0].color = rl.Color{255, 255, 255, alpha}
 	}
-	transform := xf_mul(rl.MatrixTranslate(ground.x, 0.022, ground.z), rl.MatrixScale(size, 1, size))
+	transform := art.xf_mul(rl.MatrixTranslate(ground.x + offset.x, 0.022, ground.z + offset.z), rl.MatrixScale(diameter, 1, diameter))
 	rl.DrawMesh(app.shadow_model.meshes[0], mat, transform)
 }
 
@@ -74,7 +79,7 @@ init_shadow_assets :: proc() {
 	app.shadow_texture = rl.LoadTextureFromImage(image)
 	rl.UnloadImage(image)
 	rl.SetTextureFilter(app.shadow_texture, .BILINEAR)
-	app.shadow_model = rl.LoadModelFromMesh(rl.GenMeshPlane(1.55, 1.55, 1, 1))
+	app.shadow_model = rl.LoadModelFromMesh(rl.GenMeshPlane(1.0, 1.0, 1, 1))
 	rl.SetMaterialTexture(&app.shadow_model.materials[0], .ALBEDO, app.shadow_texture)
 	app.shadow_ready = true
 }

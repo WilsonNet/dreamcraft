@@ -29,12 +29,8 @@ The dev client window title always starts with `DEV - `. The build passes
 `-define:DREAMCRAFT_DEV=true`, and `bin/dreamcraft-dev` is also detected by
 executable name, so the prefix stays even for a manual dev build.
 
-Warrior assets are committed. To regenerate the Blender model and animations:
-
-```bash
-cd tools/warrior
-./build.sh
-```
+Retired Blender warrior assets & script are archived in `../legacy/warrior-glb/`
+and are not part of the build; units are built procedurally in `client/art/`.
 
 Web:
 
@@ -60,17 +56,19 @@ Runs (against dev binaries; the stable build is not touched):
 
 1. `odin test game` — simulation unit tests
 2. `odin test control` — command/HTTP tests
-3. `odin test client` — warrior facing tests
-4. headless JSONL smoke script
-5. replay hash verification
-6. web wasm smoke test (Node)
-7. HTTP control smoke test
+3. `odin test client/art` — Mamluk mesh, gait weight-wave, & tree/prop geometry tests
+4. `odin test client` — unit facing/turn & hash tests
+5. headless JSONL smoke script
+6. replay hash verification
+7. web wasm smoke test (Node)
+8. HTTP control smoke test
 
 Individual:
 
 ```bash
 odin test game -vet -strict-style
 odin test control -vet -strict-style
+odin test client/art -vet -strict-style
 odin test client -vet -strict-style
 ./bin/headless --script tests/smoke.jsonl
 ./tests/control_smoke.sh

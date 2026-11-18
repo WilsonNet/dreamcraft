@@ -11,21 +11,30 @@ import "core:fmt"
 import "core:os"
 import "core:strings"
 import rl "vendor:raylib"
+import art "./art"
 
 SHEET_SIZE :: 900
-
-Sheet_Shot :: struct {
-	name:   string,
-	angle:  f32,
-	clip:   Sheet_Clip,
-	fovy:   f32,
-	target: f32,
-}
 
 Sheet_Clip :: enum {
 	Idle,
 	Walk,
 	Attack,
+}
+
+Sheet_Cam :: enum {
+	Eye,
+	Iso,
+	Side,
+}
+
+Sheet_Shot :: struct {
+	name:   string,
+	angle:  f32,
+	clip:   Sheet_Clip,
+	phase:  f32,
+	fovy:   f32,
+	target: f32,
+	cam:    Sheet_Cam,
 }
 
 run_model_sheet :: proc() {
@@ -41,54 +50,54 @@ run_model_sheet :: proc() {
 	}
 	fmt.printf("sheet: %d verts, %d tris\n", len(model.pos), model.tri_count)
 
-	shots := [8]Sheet_Shot{
-		{"01_idle_front", 0, .Idle, 2.35, 1.10},
-		{"02_idle_threequarter", 42, .Idle, 2.35, 1.10},
-		{"03_idle_side", 92, .Idle, 2.35, 1.10},
-		{"04_idle_back", 180, .Idle, 2.35, 1.10},
-		{"05_walk", 42, .Walk, 2.35, 1.10},
-		{"06_attack", 42, .Attack, 2.35, 1.10},
-		{"07_head", 0, .Idle, 0.52, 1.80},
-		{"08_helm_side", 90, .Idle, 0.52, 1.80},
+	shots := [10]Sheet_Shot{
+		{"01_idle_front", 0, .Idle, 0.20, 2.25, 0.98, .Eye},
+		{"02_idle_threequarter", 42, .Idle, 0.20, 2.25, 0.98, .Eye},
+		{"03_idle_side", 92, .Idle, 0.20, 2.25, 0.98, .Iso},
+		{"04_idle_back", 180, .Idle, 0.20, 2.25, 0.98, .Iso},
+		{"05_walk", 42, .Walk, 0.75, 2.25, 0.98, .Eye},
+		{"06_attack", 42, .Attack, 0.46, 2.25, 0.98, .Eye},
+		{"07_head", 0, .Idle, 0.20, 0.58, 1.66, .Eye},
+		{"08_helm_side", 90, .Idle, 0.20, 0.58, 1.66, .Side},
+		{"11_walk_side", 90, .Walk, 0.00, 2.25, 0.98, .Side},
+		{"12_walk_pass", 90, .Walk, 0.25, 2.25, 0.98, .Side},
 	}
 	for shot in shots {
-		pose: Pose
-		switch shot.clip {
-		case .Walk:
-			pose_walk(0.12, &pose)
-			pose_secondary(0.12, 1.0, &pose)
-		case .Attack:
-			pose_idle(0.30, &pose)
-			pose_attack(0.42, &pose)
-			pose_secondary(0.3, 0.2, &pose)
-		case .Idle:
-			pose_idle(0.20, &pose)
-			pose_secondary(0.20, 0.15, &pose)
-		}
-		app.camera = sheet_camera(shot.fovy, shot.target, shot.angle < 45)
-		set_unit_shader_uniforms(0.6)
-		draw_sheet_frame(&model, shot.angle, &pose)
-		path := fmt.tprintf("build/sheet/%s.png", shot.name)
-		save_pixel_target(strings.clone_to_cstring(path, context.temp_allocator))
+		render_sheet_shot(&model, shot)
 	}
 	enemy := build_unit_model(true)
 	defer unload_unit_model(&enemy)
 	if enemy.loaded {
 		for shot in ([2]Sheet_Shot{
-			{"09_enemy_front", 18, .Idle, 2.35, 1.10},
-			{"10_enemy_head", 0, .Idle, 0.52, 1.80},
+			{"09_enemy_front", 18, .Idle, 0.20, 2.25, 0.98, .Eye},
+			{"10_enemy_head", 0, .Idle, 0.20, 0.58, 1.66, .Eye},
 		}) {
-			pose: Pose
-			pose_idle(0.2, &pose)
-			pose_secondary(0.2, 0.15, &pose)
-			app.camera = sheet_camera(shot.fovy, shot.target, shot.angle < 45)
-			set_unit_shader_uniforms(0.6)
-			draw_sheet_frame(&enemy, shot.angle, &pose)
-			path := fmt.tprintf("build/sheet/%s.png", shot.name)
-			save_pixel_target(strings.clone_to_cstring(path, context.temp_allocator))
+			render_sheet_shot(&enemy, shot)
 		}
 	}
 	fmt.println("sheet: wrote build/sheet/*.png")
+}
+
+@(private)
+render_sheet_shot :: proc(m: ^Unit_Model, shot: Sheet_Shot) {
+	pose: art.Pose
+	switch shot.clip {
+	case .Walk:
+		art.pose_walk(shot.phase, &pose)
+		art.pose_secondary(shot.phase, 1.0, &pose)
+	case .Attack:
+		art.pose_idle(0.30, &pose)
+		art.pose_attack(shot.phase, &pose)
+		art.pose_secondary(0.30, 0.20, &pose)
+	case .Idle:
+		art.pose_idle(shot.phase, &pose)
+		art.pose_secondary(shot.phase, 0.15, &pose)
+	}
+	app.camera = sheet_camera(shot.fovy, shot.target, shot.cam)
+	set_unit_shader_uniforms(0.6)
+	draw_sheet_frame(m, shot.angle, &pose)
+	path := fmt.tprintf("build/sheet/%s.png", shot.name)
+	save_pixel_target(strings.clone_to_cstring(path, context.temp_allocator))
 }
 
 @(private)
@@ -100,11 +109,16 @@ save_pixel_target :: proc(path: cstring) {
 }
 
 @(private)
-sheet_camera :: proc(fovy, target_y: f32, frontal: bool) -> rl.Camera3D {
+sheet_camera :: proc(fovy, target_y: f32, cam: Sheet_Cam) -> rl.Camera3D {
 	target := rl.Vector3{0, target_y, 0}
 	dir := rl.Vector3{1, 0.816, 1}
-	if frontal {
+	switch cam {
+	case .Eye:
 		dir = rl.Vector3{0.22, 0.16, 1.0}
+	case .Iso:
+		dir = rl.Vector3{1, 0.816, 1}
+	case .Side:
+		dir = rl.Vector3{0.06, 0.08, 1.0}
 	}
 	return rl.Camera3D{
 		position = target + rl.Vector3Normalize(dir) * 6.0,
@@ -116,7 +130,7 @@ sheet_camera :: proc(fovy, target_y: f32, frontal: bool) -> rl.Camera3D {
 }
 
 @(private)
-draw_sheet_frame :: proc(m: ^Unit_Model, angle_deg: f32, pose: ^Pose) {
+draw_sheet_frame :: proc(m: ^Unit_Model, angle_deg: f32, pose: ^art.Pose) {
 	unit := rl.MatrixRotateY(angle_deg * 3.14159265 / 180.0)
 	rl.BeginTextureMode(app.pixel)
 	rl.ClearBackground(rl.Color{26, 34, 27, 255})

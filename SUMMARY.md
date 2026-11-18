@@ -40,14 +40,14 @@ Build a fantasy RTS called **DreamCraft** with:
 - 8-way A*, fog of war, waypoints, goal
 - 256-slot SoA unit pool with generation handles
 - Melee combat, enemy chase AI, patrol loops
-- Native raylib full 3D isometric client with pixel-art post shader
-- Animated low-poly warrior models (Blue/Red) with idle/walk/attack
+- Native raylib full 3D isometric client with Age of Empires × Toriyama world scale and watercolour post shader
+- Procedural 26-bone Mamluk warrior & forest props in `odin/client/art/`, kinetic-chain idle/walk/attack animations, and double-crescent slash VFX
 - Two-lane build: stable `bin/dreamcraft` on `:7777`, dev binaries on `:7778`
 - Browser WASM/canvas client with DOM HUD and `window.dreamcraft` API
 - Headless JSONL scripts, HTTP control server, hash-verified replays
 - Curve/state validation after every tick
-- 74 native tests + web WASM smoke: invariants, allocations, determinism,
-  HTTP round trip, browser API
+- 87 native unit tests + web WASM/headless/replay/HTTP smoke: invariants,
+  allocations, determinism, HTTP round trip, browser API
 - Bevy BRP MCP removed; control API replaces it
 
 ## Relevant files / directories
@@ -55,18 +55,20 @@ Build a fantasy RTS called **DreamCraft** with:
 ```
 odin/
 ├── game/       # pure simulation
-├── client/     # raylib renderer/input/HUD/minimap
+├── client/     # raylib renderer/input/HUD/minimap/VFX/shaders
+│   └── art/    # procedural Mamluk model, 26-bone rig, anims, trees, props
 ├── control/    # JSON API + localhost HTTP server
 ├── headless/   # scripts, polling, --serve, record/replay
 ├── web/        # js_wasm32 2:1 canvas client + DOM HUD
-├── assets/     # warrior GLBs + pixel shader
-├── tools/      # Blender warrior pipeline
+├── assets/
+│   └── shaders/# ground.{vs,fs}, unit.{vs,fs}, watercolor.fs
 ├── tests/      # smoke, replay, control tests
 ├── build.sh       # stable lane
 ├── test.sh        # tests + dev lane
 ├── run.sh
 ├── run-dev.sh
 └── restart-build.sh
+legacy/            # rust/, web-console/, warrior-glb/, reference.jpg
 specs/
 └── 08-odin-port.md
 ```

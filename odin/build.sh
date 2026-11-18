@@ -26,7 +26,7 @@ odin build headless -out:bin/headless -o:speed -vet -strict-style
 echo "built bin/dreamcraft and bin/headless"
 
 if ! command -v wasm-ld >/dev/null 2>&1; then
-  for dir in /opt/homebrew/opt/lld@22/bin /opt/homebrew/opt/lld/bin /usr/lib/llvm-22/bin /usr/lib/llvm-21/bin /usr/lib/llvm-20/bin; do
+  for dir in /opt/homebrew/opt/lld@22/bin /opt/homebrew/opt/lld/bin /usr/lib/llvm-22/bin /usr/lib/llvm-21/bin /usr/lib/llvm-20/bin /usr/lib/llvm22/bin /usr/lib/llvm21/bin /usr/lib/llvm20/bin /usr/lib/llvm/bin; do
     if [ -x "$dir/wasm-ld" ]; then
       export PATH="$dir:$PATH"
       break

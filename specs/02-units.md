@@ -47,31 +47,39 @@
 
 ### Unit Model: Mamluk
 
-The native client builds every melee unit from code. There is no GLB, no
-Blender step, and no asset pipeline for units.
+The native client builds every melee unit from code in `odin/client/art/`. There
+is no GLB, no Blender step, and no external asset pipeline for units.
 
-- `odin/client/mamluk_model.odin` + `mamluk_head.odin` assemble the model from
-  parametric primitives (lathes, ellipsoids, tori, swept blades, domed plates).
-- 25-joint rig (`odin/client/unit_rig.odin`): root, pelvis, spine, chest, neck,
+- `odin/client/art/mamluk_model.odin` + `mamluk_head.odin` assemble the 5.36-head
+  heroic model (`Y = 0..1.945`) from parametric primitives (`prims.odin`, `loft.odin`:
+  lathes, lofts, ellipsoids, tori, dome-star relief, swept blade, cloth sheets).
+- 26-joint rig (`odin/client/art/rig.odin`): root, pelvis, spine, chest, neck,
   head, plume, shoulders/arms/hands, legs/feet, three cape joints, sash.
-- Clips are analytic functions, not keyframes:
-  `idle` 2.40 s loop, `walk` 0.72 s loop, `attack` 0.46 s one-shot
-  (`odin/client/unit_anim.odin`).
+- Clips are analytic kinetic-chain functions, not keyframes (`odin/client/art/anim.odin`):
+  `idle` 3.60 s polyrhythmic weight-shift loop, `walk` 0.40 s (~58/42 asymmetric
+  stance/swing, Richard Williams Contact/Down/Passing/Up weight wave, lagged
+  spine/shoulder/elbow/wrist whip), `attack` 0.50 s (`attack_pulse` with
+  anticipation, staggered strike overshoot, follow-through, lunge footwork), and
+  S-wave traveling cape/sash/plume secondary motion.
+- Runtime motion in `odin/client/unit_visuals.odin` (`WARRIOR_SCALE = 0.74`,
+  `STRIDE_DISTANCE = 1.85`) adds smooth Idle/Walk blending, coast-to-plant
+  stops, damped stop-settle cushion, acceleration lean, inward corner banking,
+  and head/chest look-ahead into turns.
 - Skin is rigid per part and done on the CPU each frame; the mesh buffer is
   rewritten with skinned positions and normals.
-- Face direction follows the next path cell, or the attack target.
-- Attack triggers when the simulation attack cooldown resets and always eases
-  back into the guard pose.
+- Attack triggers when the simulation attack cooldown resets, spawns a curved
+  double-crescent `slash_vfx.odin` ribbon during `t ∈ [0.28, 0.68]`, and always
+  eases cleanly back into the guard pose.
 - Blue/red cloth and turban bands mark the team; the model is otherwise shared.
-- Look: Toriyama / Dragon Quest proportions and palette with Diablo 2 framing.
-  See `.agents/skills/art-direction/SKILL.md`.
-- Reference renders: `./bin/dreamcraft-dev --sheet` writes `build/sheet/*.png`
-  (front, 3/4, side, back, walk, attack, head, helm).
+- Look: Toriyama / Dragon Quest proportions and palette with Age of Empires / Diablo 2
+  framing. See `.agents/skills/art-direction/SKILL.md`.
+- Reference renders: `./bin/dreamcraft-dev --sheet` writes 12 views to `build/sheet/*.png`
+  (front, 3/4, side, back, walk, attack, head, helm, enemy, walk side contact & pass).
 
 ### Legacy Unit Asset
 
-`odin/assets/warrior/*.glb` and `odin/tools/warrior/` are kept for reference
-only. The client no longer loads them.
+`legacy/warrior-glb/` holds the retired Blender pipeline and GLB exports for
+reference only. The client no longer loads them.
 
 ### Health Bars
 
