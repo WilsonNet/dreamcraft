@@ -1,6 +1,6 @@
 ---
 name: bevy
-description: Bevy ECS patterns, common errors, UI patterns, native/WASM setup, headless commands
+description: Legacy Rust/Bevy ECS reference patterns for src/ only. Use only when inspecting or maintaining the deprecated Rust prototype in src/, not for current Odin work in odin/.
 ---
 
 # Bevy Game Engine Skill

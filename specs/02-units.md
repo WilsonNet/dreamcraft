@@ -64,7 +64,7 @@ Blender step, and no asset pipeline for units.
   back into the guard pose.
 - Blue/red cloth and turban bands mark the team; the model is otherwise shared.
 - Look: Toriyama / Dragon Quest proportions and palette with Diablo 2 framing.
-  See `.opencode/skills/art-direction/SKILL.md`.
+  See `.agents/skills/art-direction/SKILL.md`.
 - Reference renders: `./bin/dreamcraft-dev --sheet` writes `build/sheet/*.png`
   (front, 3/4, side, back, walk, attack, head, helm).
 

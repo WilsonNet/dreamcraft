@@ -8,7 +8,7 @@ reference only.
 
 **BEFORE implementing ANY feature, ALWAYS check:**
 1. `specs/` for existing specifications
-2. `.opencode/skills/specs/SKILL.md` for update guidelines
+2. `.agents/skills/specs/SKILL.md` for update guidelines
 
 **AFTER completing ANY feature, ALWAYS:**
 1. Update relevant spec files in `specs/`
@@ -115,8 +115,8 @@ odin/
 ├── control/     # JSON commands + localhost HTTP server
 ├── headless/    # script runner, polling, --serve, record/replay
 ├── web/         # js_wasm32 2:1 canvas client + DOM HUD
-├── assets/      # warrior GLBs + pixel-art shader
-├── tools/       # Blender warrior pipeline
+├── assets/      # shaders (unit, watercolor) + legacy warrior GLBs
+├── tools/       # legacy Blender warrior pipeline
 └── tests/       # smoke and replay scripts
 ```
 
@@ -203,7 +203,8 @@ responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 
 ## Skills Map
 
-Skills live in `.opencode/skills/` and `.claude/skills/`:
+Skills live in `.agents/skills/` (symlinked from `.opencode/skills/` and
+`.claude/skills/`):
 
 | Skill | Purpose |
 |-------|---------|
@@ -222,5 +223,3 @@ or found information that would have helped. Add concise, actionable notes.
 `src/` and `Cargo.toml` remain for reference. The Rust build is slow (Bevy).
 Do not use it for new features. `bevy_remote` and `bevy_brp_extras` were
 removed. Use `odin/` for all current work.
-
-Today's date: Mon Nov 16 2026

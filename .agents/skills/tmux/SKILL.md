@@ -1,6 +1,6 @@
 ---
 name: tmux
-description: Terminal multiplexing, session management, troubleshooting
+description: Manage tmux sessions, windows, and terminal output for long-running processes such as DreamCraft's stable game session. Use when checking, starting, or restarting background sessions in tmux.
 ---
 
 # Tmux Skill
@@ -54,14 +54,13 @@ Use this skill when working with tmux sessions and terminal multiplexing.
 tmux list-sessions
 tmux list-windows -t dreamcraft
 
-# Create new window and start server
-tmux new-window -t dreamcraft -n trunk
-tmux send-keys -t dreamcraft:trunk '/home/wilsonn/.asdf/installs/rust/stable/bin/trunk serve' C-m
+# Create new window and start stable client
+tmux new-window -t dreamcraft -n game
+tmux send-keys -t dreamcraft:game 'cd odin && ./run.sh --control' C-m
 
-# Check server output (ALWAYS do this!)
-tmux capture-pane -t dreamcraft:trunk -p
+# Check output (ALWAYS do this!)
+tmux capture-pane -t dreamcraft:game -p
 
-# Restart if stuck
-tmux send-keys -t dreamcraft:trunk C-c
-tmux send-keys -t dreamcraft:trunk '/home/wilsonn/.asdf/installs/rust/stable/bin/trunk serve' C-m
+# Restart stable build cleanly
+cd odin && ./restart-build.sh
 ```

@@ -1,6 +1,6 @@
 ---
 name: odin
-description: Odin language patterns, allocators, testing, raylib client, HTTP control server, compile speed
+description: Odin language patterns, allocators, testing, raylib 3D client, HTTP control server, and WASM builds. Use when writing, building, testing, or debugging Odin code in odin/.
 ---
 
 # Odin Skill
@@ -88,30 +88,22 @@ my_test :: proc(t: ^testing.T) {
 - Native client is full 3D; simulation stays orthogonal.
 - `Camera3D` orthographic:
   - position = target + `normalize({1,0.816,1})*40`,
-  - `up = {0,1,0}`, `fovy = 20`, `projection = .ORTHOGRAPHIC`.
+  - `up = {0,1,0}`, `fovy` zoomable (see `camera3d.odin`), `projection = .ORTHOGRAPHIC`.
 - Grid center mapping: `x = gx + .5 - GRID_W/2`, `z = gy + .5 - GRID_H/2`.
 - Picking: `GetScreenToWorldRay` then intersect `y=0`.
 - Selection/health bars: `GetWorldToScreen`.
 - Ground: one textured `GenMeshPlane`; 4 texels per cell, point filtered,
   fog/goal colors updated with `UpdateTexture`.
-- Trees: low-poly `DrawCylinder` cones; units: animated GLB models.
+- Trees: layered low-poly pine tiers; units: procedural skinned Mamluk mesh.
 - Render scene to a half-size `RenderTexture2D`, upscale nearest, then apply
-  `assets/shaders/pixelart.fs` (posterize + dither + outline).
-- HUD and health bars draw after the pixel pass at full resolution.
+  `assets/shaders/watercolor.fs` (`--no-shader` bypasses; `pixelart.fs` retired).
+- HUD and health bars draw after the post pass at full resolution.
 - Minimap and ASCII fog stay top-down.
 
-## Warrior Model Pipeline
+## Legacy Warrior GLB Pipeline (Unused)
 
-- `odin/tools/warrior/build.sh` runs Blender headless; no MCP needed.
-- Blender 5.3, Workbench preview, GLB export with `export_animation_mode='ACTIONS'`.
-- Actions: idle 33 frames, walk 17, attack 11 at 24 fps.
-- Raylib: `LoadModel`, `LoadModelAnimations`, `UpdateModelAnimation`,
-  `DrawModelEx`.
-- One model instance per unit; a shared model cannot show two animations.
-- Model faces +Z at 0 degrees; yaw = `atan2(dx, dy)` in grid space.
-- Trigger attack when `units.cooldown[i]` increases (simulation reset it).
-- Move the preview ground plane `hide_render = True` or every transparent
-  frame gets an opaque ground.
+- `odin/assets/warrior/*.glb` and `odin/tools/warrior/` are legacy reference
+  only; the native client builds and animates units procedurally in Odin.
 
 ## Web / WASM
 

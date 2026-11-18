@@ -1,6 +1,6 @@
 ---
 name: specs
-description: Keeping specs/ folder updated with new features - NEVER FORGET SPECS!
+description: Guidelines for reading and updating specifications in specs/. Use before implementing any feature to inspect existing specs and after completing any feature to keep specs synchronized.
 ---
 
 # Specs Update Skill
@@ -60,9 +60,12 @@ Update specs after completing any of these tasks:
 
 ### Other Specs Files
 - `02-units.md` - Unit stats, abilities, behaviors
-- `03-isometric.md` - Grid rendering, coordinate systems
+- `03-isometric.md` - Grid rendering, coordinate systems, shaders
 - `04-input.md` - Control schemes, input handling
 - `05-networking.md` - Multiplayer architecture, sync protocols
+- `06-agent-console.md` - Diagnostics, control API, headless testing
+- `07-minimap.md` - Minimap implementation
+- `08-odin-port.md` - Odin data layout, allocation rules, control server
 
 ## Update Format
 
