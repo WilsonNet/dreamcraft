@@ -113,4 +113,4 @@ renderer. The native client is the full 3D target.
   32-phase foot grounding, 16-phase idle grounding, joint child isolation, attack windup/return,
   face clearance, and tree/prop mesh validity (12 tests).
 - `odin test client`: deterministic cell hashes, `angle_toward` (`0° +Z`, `90° +X`),
-  and shortest-arc `turn_toward` (3 tests).
+  shortest-arc `turn_toward`, and isometric `camera_pan_axes` (4 tests).

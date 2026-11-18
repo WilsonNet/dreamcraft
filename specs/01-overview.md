@@ -54,7 +54,7 @@ capacity arrays.
   - [x] `POST /command`: move, patrol, attack, stop, run, reset, verify,
         select, spawn, kill, set_hp, teleport
   - [x] Every response carries `valid` + `validation`
-- [x] 87 unit/integration tests (61 game, 11 control, 12 art, 3 client)
+- [x] 88 unit/integration tests (61 game, 11 control, 12 art, 4 client)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator

@@ -30,8 +30,8 @@
 - Camera is clamped to grid bounds (+200px margin)
 
 ### Mouse Wheel Zoom
-- Wheel zooms the orthographic camera between `0.08x` and `2.0x`
-- Default zoom is `0.65` (unit ≈15 % of screen height, Diablo 2 framing)
+- Wheel zooms the orthographic camera between `0.25x` and `2.0x` (`--zoom` clamp `0.08`..`2.0`)
+- Default zoom is `0.55`
 - `--zoom=<n>` sets the initial zoom for dev runs
 - Picking uses the live camera, so selection and commands stay accurate
 
@@ -85,8 +85,10 @@
   left-click/drag selection, right-click move/attack, Move/Patrol command
   modes, WASD/arrow pan, edge scroll, Escape menu, minimap click.
 - Losing window focus while the cursor is outside the window no longer causes
-  edge-scroll drift: edge scroll requires both `IsWindowFocused()` and
-  `IsCursorOnScreen()`.
+  edge-scroll drift: edge scroll requires `IsWindowFocused()`, `IsCursorOnScreen()`,
+  and `edge_armed` (arming only after cursor activity inside the inner viewport).
+- Keyboard WASD/arrows and screen-edge scroll derive `forward` and `right` from
+  `camera_pan_axes()` (`cross(forward, up)`) so left/right match isometric screen axes.
 - Camera follow is on by default. It tracks the unit's interpolated world
   position exactly (no smoothing) and runs after the simulation tick, so the
   unit stays screen-centered without catch-up drift or rollback.

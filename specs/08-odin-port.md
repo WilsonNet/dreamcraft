@@ -12,7 +12,7 @@ Measured on this machine (Apple Silicon):
 |-------|------|
 | Odin client + headless, `-o:speed` | ~2.8 s total |
 | Bevy client, incremental | tens of seconds to minutes |
-| Odin unit tests (87 tests) | < 35 ms runtime |
+| Odin unit tests (88 tests) | < 35 ms runtime |
 
 ## Why Odin for an RTS
 

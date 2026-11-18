@@ -17,6 +17,14 @@ camera_offset :: proc() -> rl.Vector3 {
 	return rl.Vector3Normalize(rl.Vector3{1, 0.816, 1}) * CAMERA_DISTANCE
 }
 
+// Normalized horizontal screen-space pan axes derived from the camera offset.
+camera_pan_axes :: proc() -> (forward, right: rl.Vector3) {
+	off := camera_offset()
+	forward = rl.Vector3Normalize(rl.Vector3{-off.x, 0, -off.z})
+	right = rl.Vector3Normalize(rl.Vector3CrossProduct(forward, rl.Vector3{0, 1, 0}))
+	return
+}
+
 cell_center :: proc(cell: g.Grid_Pos) -> rl.Vector3 {
 	return rl.Vector3{
 		f32(cell.x) - f32(g.GRID_W) * 0.5 + 0.5,
@@ -67,8 +75,7 @@ update_camera :: proc(dt: f64) {
 		apply_camera()
 	}
 	delta := f32(dt)
-	forward := rl.Vector3{-1, 0, -1}
-	right := rl.Vector3{-1, 0, 1}
+	forward, right := camera_pan_axes()
 	move := rl.Vector3{0, 0, 0}
 	if rl.IsKeyDown(.W) || rl.IsKeyDown(.UP) {
 		move += forward
@@ -114,8 +121,7 @@ apply_edge_scroll :: proc(dt: f32) -> bool {
 	if mouse.x <= 0 || mouse.x >= width || mouse.y <= 0 || mouse.y >= height {
 		return false
 	}
-	forward := rl.Vector3{-1, 0, -1}
-	right := rl.Vector3{-1, 0, 1}
+	forward, right := camera_pan_axes()
 	velocity := rl.Vector3{0, 0, 0}
 	if mouse.x < ZONE {
 		velocity -= right * (CAMERA_EDGE_BASE + (CAMERA_EDGE_MAX - CAMERA_EDGE_BASE) * (1 - mouse.x / ZONE))

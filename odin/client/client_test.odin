@@ -1,7 +1,9 @@
 #+build !js
 package main
 
+import "core:math"
 import "core:testing"
+import rl "vendor:raylib"
 import g "../game"
 
 @(test)
@@ -34,4 +36,20 @@ turn_toward_takes_shortest_arc :: proc(t: ^testing.T) {
 	b := turn_toward(-170, 170, 15)
 	testing.expect(t, abs(b - 175) < 0.001 || abs(b + 185) < 0.001)
 	testing.expect_value(t, turn_toward(10, 14, 10), f32(14))
+}
+
+@(test)
+camera_pan_axes_match_isometric_screen_directions :: proc(t: ^testing.T) {
+	forward, right := camera_pan_axes()
+	back := rl.Vector3Normalize(camera_offset())
+	cam_right := rl.Vector3Normalize(rl.Vector3CrossProduct(rl.Vector3{0, 1, 0}, back))
+	cam_up := rl.Vector3Normalize(rl.Vector3CrossProduct(back, cam_right))
+	testing.expect(t, abs(rl.Vector3Length(forward) - 1.0) < 0.001)
+	testing.expect(t, abs(rl.Vector3Length(right) - 1.0) < 0.001)
+	testing.expect(t, abs(rl.Vector3DotProduct(forward, right)) < 0.001)
+	testing.expect(t, rl.Vector3DotProduct(right, cam_right) > 0.99)
+	testing.expect(t, rl.Vector3DotProduct(forward, cam_up) > 0.49)
+	// Orthographic projection keeps cam_up aligned with -X/-Z and cam_right along +X/-Z.
+	testing.expect(t, right.x > 0 && right.z < 0)
+	testing.expect(t, math.abs(right.x + right.z) < 0.001)
 }
