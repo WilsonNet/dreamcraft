@@ -48,7 +48,7 @@ Two binaries stay separate so manual play never interrupts development:
 
 | Lane | Binary | Control port | Purpose |
 |------|--------|--------------|---------|
-| Stable | `bin/dreamcraft` | `:7777` | user play session, tmux `dreamcraft:game` |
+| Stable | `bin/dreamcraft` | `:7777` | user play session, Herdr `game` pane |
 | Dev | `bin/dreamcraft-dev` | `:7778` | agent reproduction and visual checks |
 | Dev headless | `bin/headless-dev` | `:7778` | deterministic `run`/`tick` stepping |
 
@@ -58,7 +58,7 @@ Two binaries stay separate so manual play never interrupts development:
 - `./build.sh --dev` builds only the dev lane.
 - `./test.sh` builds dev binaries and never overwrites the stable lane.
 - `./build.sh` builds the stable lane plus the web build.
-- `./restart-build.sh` restarts the stable tmux session.
+- `./restart-build.sh` restarts the stable Herdr `game` pane.
 - Close-out order: tests → stable build → restart → update docs/specs.
 - `GET /units` returns `world` (float world position), `progress` (cells
   between `position` and `next`) and `next` (current path cell). These make

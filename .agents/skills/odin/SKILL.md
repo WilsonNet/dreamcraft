@@ -26,7 +26,7 @@ odin build headless -out:bin/headless -o:speed
 
 ## Two-Lane Workflow
 
-- Stable lane: `bin/dreamcraft` in tmux `dreamcraft:game`, control `:7777`.
+- Stable lane: `bin/dreamcraft` in a dedicated Herdr `game` pane, control `:7777`.
   The user plays this. Do not rebuild or restart it mid-task.
 - Dev lane: `./build.sh --dev` -> `bin/dreamcraft-dev`, `bin/headless-dev`.
   Use `--control=7778` or `bin/headless-dev --serve=7778 --paused`.

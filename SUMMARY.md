@@ -16,7 +16,7 @@ Build a fantasy RTS called **DreamCraft** with:
   - `bin/dreamcraft --control=7777`
   - `bin/headless --serve=7777`
   - `GET /state`, `/units`, `/fog`, `/screenshot`; `POST /command`
-- Use tmux windows (not split panes) for long-running processes
+- Use Herdr tabs/panes (`--no-focus`) for long-running processes
 - Max 3 attempts before searching online docs
 - Bevy docs at `bevy-docs/` are legacy reference only
 

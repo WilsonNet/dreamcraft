@@ -38,7 +38,7 @@ cd odin
 ./build.sh                  # stable build: bin/dreamcraft + bin/headless + web
 ./build.sh --dev            # dev build: bin/dreamcraft-dev + bin/headless-dev
 ./test.sh                   # tests + dev build only (stable lane untouched)
-./restart-build.sh          # restart the stable tmux session on :7777
+./restart-build.sh          # restart the stable herdr game pane on :7777
 cd web && ./build.sh && ./serve.sh 8080   # browser build
 
 odin test game -vet -strict-style
@@ -75,7 +75,7 @@ Keep the user's play session and the agent's edit loop separate:
 | Build | `bin/dreamcraft` | `:7777` | user plays |
 | Dev | `bin/dreamcraft-dev`, `bin/headless-dev` | `:7778` | agent |
 
-- The stable build runs in tmux `dreamcraft:game`.
+- The stable build runs in a dedicated Herdr `game` pane (`HERDR_WORKSPACE_ID`).
 - The dev client window title always starts with `DEV - `. The build sets
   `-define:DREAMCRAFT_DEV=true`, and the executable name (`dreamcraft-dev`)
   is also checked at runtime, so the prefix survives a manual dev build.
@@ -216,7 +216,7 @@ Skills live in `.agents/skills/` (symlinked from `.opencode/skills/` and
 | **odin** | Odin patterns, allocators, testing, raylib, control server |
 | **art-direction** | Toriyama/DQ character look, palette, watercolour shading |
 | **bevy** | Legacy Bevy reference only |
-| **tmux** | Long-running process management |
+| **herdr** | Herdr workspace, tab, pane, and background session management |
 | **specs** | Keeping `specs/` updated |
 
 ### Skill Update Rule

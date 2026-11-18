@@ -19,10 +19,10 @@ Two lanes while developing:
 ./build.sh --dev           # bin/dreamcraft-dev + bin/headless-dev, stable untouched
 ./run-dev.sh --control=7778
 ./bin/headless-dev --serve=7778 --paused   # deterministic agent lane
-./restart-build.sh         # close-out: restart stable game in tmux on :7777
+./restart-build.sh         # close-out: restart stable game in herdr on :7777
 ```
 
-The stable build runs in tmux `dreamcraft:game`. Tests build dev binaries only;
+The stable build runs in a dedicated Herdr `game` pane. Tests build dev binaries only;
 the agent restarts the stable build when a task is finished.
 
 The dev client window title always starts with `DEV - `. The build passes
