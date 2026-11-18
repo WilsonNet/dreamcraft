@@ -39,6 +39,7 @@ Unit_Info :: struct {
 	path_index: int `json:"path_index"`,
 	selected: bool `json:"selected"`,
 	patrol: bool `json:"patrol"`,
+	attack_move: bool `json:"attack_move"`,
 	attack_target: int `json:"attack_target"`,
 }
 
@@ -107,6 +108,21 @@ encode_snapshot :: proc(game: ^g.Game) -> (data: []byte, err: json.Marshal_Error
 	return json.marshal(snapshot)
 }
 
+@(private)
+unit_state_string :: proc(s: g.Unit_State) -> string {
+	switch s {
+	case .Idle:
+		return "idle"
+	case .Moving:
+		return "moving"
+	case .Patrol:
+		return "patrol"
+	case .Attack_Move:
+		return "attack_move"
+	}
+	return "idle"
+}
+
 encode_units :: proc(game: ^g.Game) -> (data: []byte, err: json.Marshal_Error) {
 	infos: [g.MAX_UNITS]Unit_Info
 	count := 0
@@ -119,15 +135,7 @@ encode_units :: proc(game: ^g.Game) -> (data: []byte, err: json.Marshal_Error) {
 		if units.team[i] == .Player {
 			team = "player"
 		}
-		state := "idle"
-		switch units.state[i] {
-		case .Idle:
-			state = "idle"
-		case .Moving:
-			state = "moving"
-		case .Patrol:
-			state = "patrol"
-		}
+		state := unit_state_string(units.state[i])
 		target := -1
 		if g.handle_is_valid(units.attack_target[i]) {
 			target = int(units.attack_target[i].index)
@@ -151,6 +159,7 @@ encode_units :: proc(game: ^g.Game) -> (data: []byte, err: json.Marshal_Error) {
 			path_index = int(units.path_index[i]),
 			selected = units.selected[i],
 			patrol = units.patrol_active[i],
+			attack_move = units.attack_move_active[i],
 			attack_target = target,
 		}
 		count += 1

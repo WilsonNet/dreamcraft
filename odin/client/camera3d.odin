@@ -155,20 +155,31 @@ clamp_camera_target :: proc(target: rl.Vector3) -> rl.Vector3 {
 	}
 }
 
-screen_to_grid :: proc(screen: rl.Vector2) -> g.Grid_Pos {
+screen_to_world_ground :: proc(screen: rl.Vector2) -> (rl.Vector3, bool) {
 	ray := rl.GetScreenToWorldRay(screen, app.camera)
 	if abs(ray.direction.y) < 0.00001 {
-		return g.START_POS
+		return {}, false
 	}
 	t := -ray.position.y / ray.direction.y
 	if t < 0 {
-		return g.START_POS
+		return {}, false
 	}
-	point := ray.position + ray.direction * t
+	return ray.position + ray.direction * t, true
+}
+
+world_to_grid_clamped :: proc(point: rl.Vector3) -> g.Grid_Pos {
 	gx := i32(math.floor(f64(point.x + f32(g.GRID_W) * 0.5)))
 	gy := i32(math.floor(f64(point.z + f32(g.GRID_H) * 0.5)))
 	return g.Grid_Pos{
 		x = clamp(gx, 0, g.GRID_W - 1),
 		y = clamp(gy, 0, g.GRID_H - 1),
 	}
+}
+
+screen_to_grid :: proc(screen: rl.Vector2) -> g.Grid_Pos {
+	point, ok := screen_to_world_ground(screen)
+	if !ok {
+		return g.START_POS
+	}
+	return world_to_grid_clamped(point)
 }

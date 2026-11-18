@@ -187,3 +187,25 @@ control_http_keep_alive_parser :: proc(t: ^testing.T) {
 	old := "GET /state HTTP/1.0\r\nHost: x\r\n\r\n"
 	testing.expect(t, !request_keep_alive(transmute([]byte)old))
 }
+
+@(test)
+control_attack_move_and_patrol_to :: proc(t: ^testing.T) {
+	game: g.Game
+	g.game_init(&game)
+	enemy_index, _ := g.game_enemy_index(&game)
+	g.unit_destroy(&game.units, enemy_index)
+
+	testing.expect(t, execute(&game, Command{cmd = "spawn", team = "enemy", x = 6, y = 26, value = 30}).ok)
+	res := execute(&game, Command{cmd = "attack_move", x = 14, y = 25})
+	testing.expect(t, res.ok)
+	_ = execute(&game, Command{cmd = "run", ticks = 350})
+	testing.expect(t, execute(&game, Command{cmd = "verify", verify = Verify{type = "enemy_dead"}}).ok)
+	testing.expect(t, execute(&game, Command{cmd = "verify", verify = Verify{type = "player_at", x = 14, y = 25}}).ok)
+
+	res = execute(&game, Command{cmd = "patrol_to", x = 20, y = 25})
+	testing.expect(t, res.ok)
+	_ = execute(&game, Command{cmd = "run", ticks = 220})
+	player, _ := g.game_player_index(&game)
+	testing.expect(t, game.units.patrol_active[player])
+	testing.expect(t, res.valid)
+}

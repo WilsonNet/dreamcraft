@@ -13,6 +13,7 @@ import g "../game"
 Command_Mode :: enum {
 	None,
 	Move,
+	Attack,
 	Patrol,
 }
 
@@ -48,13 +49,16 @@ App :: struct {
 	accumulator: f64,
 	menu_open: bool,
 	command_mode: Command_Mode,
-	patrol_first: g.Grid_Pos,
 	dragging: bool,
 	drag_start: rl.Vector2,
 	minimap: rl.Texture2D,
 	minimap_pixels: [g.GRID_CELLS]rl.Color,
 	move_button: rl.Rectangle,
+	attack_button: rl.Rectangle,
 	patrol_button: rl.Rectangle,
+	stop_button: rl.Rectangle,
+	cmd_fx: [MAX_CMD_FX]Cmd_Fx,
+	cmd_fx_next: int,
 	minimap_rect: rl.Rectangle,
 	retry_button: rl.Rectangle,
 	resume_button: rl.Rectangle,
@@ -124,6 +128,7 @@ step_client_frame :: proc() {
 	update_simulation(dt)
 	update_camera(dt)
 	update_warrior_visuals(f32(dt))
+	update_command_fx(f32(dt))
 	update_minimap_pixels()
 	draw_frame()
 	if app.serving {
@@ -173,8 +178,10 @@ update_layout :: proc() {
 	height := f32(rl.GetScreenHeight())
 	ensure_pixel_target(int(width), int(height))
 	app.minimap_rect = rl.Rectangle{20, height - 150, 200, 125}
-	app.move_button = rl.Rectangle{width - 104, height - 52, 84, 32}
-	app.patrol_button = rl.Rectangle{width - 104, height - 92, 84, 32}
+	app.move_button = rl.Rectangle{width - 208, height - 100, 92, 34}
+	app.attack_button = rl.Rectangle{width - 108, height - 100, 92, 34}
+	app.patrol_button = rl.Rectangle{width - 208, height - 58, 92, 34}
+	app.stop_button = rl.Rectangle{width - 108, height - 58, 92, 34}
 	app.retry_button = rl.Rectangle{width * 0.5 - 150, height * 0.5 + 20, 140, 36}
 	app.resume_button = rl.Rectangle{width * 0.5 + 10, height * 0.5 + 20, 140, 36}
 }

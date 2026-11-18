@@ -39,12 +39,12 @@ cd odin
 
 ## Controls
 
-- **Right-click**: move, or attack an enemy
-- **Left-click / drag**: select units
-- **WASD / Arrows**: pan camera (switches to FREE)
+- **Right-click**: move, or attack an enemy (with 3D ground confirmation FX)
+- **Left-click / drag**: select units (Shift+click adds)
+- **M / A / P / S (or HUD card)**: Move, Attack-Move (StarCraft-style), 1-click Patrol, Stop
+- **WASD / Arrows / Screen edges**: pan camera (switches to FREE)
 - **F**: toggle camera FOLLOW / FREE
-- **Move / Patrol HUD buttons**: command modes
-- **Esc**: pause menu (Retry / Resume)
+- **Esc**: cancel command mode, or open pause menu (Retry / Resume)
 
 ## Tech Stack
 
@@ -117,8 +117,9 @@ curl -s -X POST localhost:7777/command \
   -d '{"cmd":"run","ticks":140}'
 ```
 
-Commands: `status`, `goto`, `patrol`, `attack`, `stop`, `run`, `reset`,
-`verify`, `select`, `select_all`, `spawn`, `kill`, `set_hp`, `teleport`.
+Commands: `status`, `goto`, `patrol`, `patrol_to`, `attack`, `attack_move`,
+`stop`, `run`, `reset`, `verify`, `select`, `select_all`, `spawn`, `kill`,
+`set_hp`, `teleport`.
 
 Every response includes `valid` and `validation`, so an agent can detect
 simulation invariant violations immediately.

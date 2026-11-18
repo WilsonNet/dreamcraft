@@ -28,6 +28,7 @@ Command_Kind :: enum u8 {
 	Attack,
 	Patrol,
 	Stop,
+	Attack_Move,
 }
 
 Command :: struct {
@@ -36,6 +37,7 @@ Command :: struct {
 	position: Grid_Pos,
 	point_b: Grid_Pos,
 	target: Unit_Handle,
+	from_current: bool,
 }
 
 Command_Queue :: struct {
@@ -93,8 +95,13 @@ command_is_valid :: proc(command: Command, units: ^Units, grid: ^Grid) -> bool {
 		index, ok := unit_index(units, command.target)
 		return ok && units.team[index] == .Enemy
 	case .Patrol:
+		if command.from_current {
+			return grid_is_walkable(grid, command.point_b)
+		}
 		return grid_is_walkable(grid, command.position) &&
 			grid_is_walkable(grid, command.point_b)
+	case .Attack_Move:
+		return grid_is_walkable(grid, command.position)
 	case .Stop:
 		return true
 	}
@@ -190,6 +197,16 @@ game_issue_attack :: proc(game: ^Game, target: Unit_Handle) -> bool {
 
 game_issue_patrol :: proc(game: ^Game, a, b: Grid_Pos) -> bool {
 	command := Command{kind = .Patrol, position = a, point_b = b}
+	return command_push(&game.commands, command, &game.units, &game.grid)
+}
+
+game_issue_patrol_to :: proc(game: ^Game, destination: Grid_Pos) -> bool {
+	command := Command{kind = .Patrol, point_b = destination, from_current = true}
+	return command_push(&game.commands, command, &game.units, &game.grid)
+}
+
+game_issue_attack_move :: proc(game: ^Game, destination: Grid_Pos) -> bool {
+	command := Command{kind = .Attack_Move, position = destination}
 	return command_push(&game.commands, command, &game.units, &game.grid)
 }
 

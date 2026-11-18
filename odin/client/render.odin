@@ -30,6 +30,7 @@ draw_world_3d :: proc() {
 	draw_ground_3d()
 	draw_waypoints_3d()
 	draw_paths_3d()
+	draw_command_fx_3d()
 	draw_tree_shadows_3d()
 	draw_unit_shadows_3d()
 	draw_trees_3d()
@@ -42,20 +43,40 @@ draw_world_3d :: proc() {
 draw_paths_3d :: proc() {
 	units := &app.game.units
 	for i in 0..<g.MAX_UNITS {
-		if !units.alive[i] || !units.selected[i] || !g.unit_has_path(units, i) {
+		if !units.alive[i] || !units.selected[i] {
 			continue
 		}
-		previous := unit_ground(i) + rl.Vector3{0, 0.06, 0}
-		drawn := 0
-		for p := int(units.path_index[i]); p < int(units.path_len[i]) && drawn < 24; p += 1 {
-			cell := g.cell_position(int(units.path[i][p]))
-			point := cell_center(cell) + rl.Vector3{0, 0.06, 0}
-			rl.DrawLine3D(previous, point, rl.Color{90, 200, 120, 120})
-			rl.DrawSphere(point, 0.055, rl.Color{120, 230, 140, 170})
-			previous = point
-			drawn += 1
+		line_col, dot_col := path_colors(units, i)
+		if g.unit_has_path(units, i) {
+			previous := unit_ground(i) + rl.Vector3{0, 0.06, 0}
+			drawn := 0
+			for p := int(units.path_index[i]); p < int(units.path_len[i]) && drawn < 24; p += 1 {
+				cell := g.cell_position(int(units.path[i][p]))
+				point := cell_center(cell) + rl.Vector3{0, 0.06, 0}
+				rl.DrawLine3D(previous, point, line_col)
+				rl.DrawSphere(point, 0.055, dot_col)
+				previous = point
+				drawn += 1
+			}
+		}
+		if units.patrol_active[i] {
+			a := cell_center(units.patrol_a[i]) + rl.Vector3{0, 0.04, 0}
+			b := cell_center(units.patrol_b[i]) + rl.Vector3{0, 0.04, 0}
+			rl.DrawCircle3D(a, 0.28, {1, 0, 0}, 90, rl.Color{90, 215, 250, 180})
+			rl.DrawCircle3D(b, 0.28, {1, 0, 0}, 90, rl.Color{255, 212, 92, 220})
 		}
 	}
+}
+
+@(private)
+path_colors :: proc(units: ^g.Units, index: int) -> (line_col, dot_col: rl.Color) {
+	if units.patrol_active[index] {
+		return rl.Color{90, 215, 250, 145}, rl.Color{135, 235, 255, 190}
+	}
+	if units.attack_move_active[index] || g.handle_is_valid(units.attack_target[index]) {
+		return rl.Color{245, 95, 75, 145}, rl.Color{255, 130, 100, 190}
+	}
+	return rl.Color{90, 200, 120, 120}, rl.Color{120, 230, 140, 170}
 }
 
 draw_unit_shadows_3d :: proc() {

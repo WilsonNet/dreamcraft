@@ -43,17 +43,22 @@ apply_to_unit :: proc(game: ^Game, index: int, command: Command) {
 		if issue_move_path(game, index, command.position) {
 			units := &game.units
 			units.patrol_active[index] = false
+			units.attack_move_active[index] = false
 			units.attack_target[index] = INVALID_HANDLE
+			units.state[index] = .Moving
 		}
 	case .Attack:
 		apply_attack(game, index, command.target)
 	case .Patrol:
-		apply_patrol(game, index, command.position, command.point_b)
+		apply_patrol(game, index, command)
+	case .Attack_Move:
+		apply_attack_move(game, index, command.position)
 	case .Stop:
 		units := &game.units
 		unit_clear_path(units, index)
 		units.attack_target[index] = INVALID_HANDLE
 		units.patrol_active[index] = false
+		units.attack_move_active[index] = false
 		units.state[index] = .Idle
 	}
 }
@@ -82,7 +87,7 @@ issue_move_path :: proc(game: ^Game, index: int, destination: Grid_Pos) -> bool 
 
 	units.path_len[index] = u16(length)
 	units.path_index[index] = 0
-	units.state[index] = .Moving
+	units.state[index] = unit_move_state(units, index)
 	if !mid_segment {
 		units.progress[index] = 0
 		units.world[index] = grid_to_world(current)
@@ -99,26 +104,46 @@ apply_attack :: proc(game: ^Game, index: int, target: Unit_Handle) {
 	units := &game.units
 	units.attack_target[index] = target
 	units.patrol_active[index] = false
+	units.attack_move_active[index] = false
 	// Keep the current path. attack_movement replans from the segment the unit
 	// is already walking, so an attack order cannot snap it back to a cell
 	// center. If the target is already in range it stops after this segment.
-	if !unit_has_path(units, index) {
-		units.state[index] = .Idle
-	}
+	units.state[index] = unit_has_path(units, index) ? .Moving : .Idle
 }
 
 @(private)
-apply_patrol :: proc(game: ^Game, index: int, a, b: Grid_Pos) {
+apply_patrol :: proc(game: ^Game, index: int, command: Command) {
 	units := &game.units
+	a := command.from_current ? units.position[index] : command.position
+	b := command.point_b
+	at_a := !unit_between_cells(units, index) && cells_equal(units.position[index], a)
+	dest := at_a ? b : a
+	to_b := at_a
+	if !unit_between_cells(units, index) && cells_equal(units.position[index], dest) {
+		unit_clear_path(units, index)
+	} else if !issue_move_path(game, index, dest) {
+		return
+	}
 	units.attack_target[index] = INVALID_HANDLE
+	units.attack_move_active[index] = false
 	units.patrol_active[index] = true
 	units.patrol_a[index] = a
 	units.patrol_b[index] = b
-	units.patrol_to_b[index] = true
-	if !issue_move_path(game, index, a) {
-		units.patrol_active[index] = false
-		units.state[index] = .Idle
+	units.patrol_to_b[index] = to_b
+	units.state[index] = .Patrol
+}
+
+@(private)
+apply_attack_move :: proc(game: ^Game, index: int, dest: Grid_Pos) {
+	units := &game.units
+	if !unit_between_cells(units, index) && cells_equal(units.position[index], dest) {
+		unit_clear_path(units, index)
+	} else if !issue_move_path(game, index, dest) {
 		return
 	}
-	units.state[index] = .Patrol
+	units.attack_target[index] = INVALID_HANDLE
+	units.patrol_active[index] = false
+	units.attack_move_active[index] = true
+	units.attack_move_dest[index] = dest
+	units.state[index] = .Attack_Move
 }

@@ -76,6 +76,22 @@ web_patrol :: proc(x, y, x2, y2: i32) -> i32 {
 }
 
 @(export)
+web_patrol_to :: proc(x, y: i32) -> i32 {
+	if g.game_issue_patrol_to(&Game_State, position(x, y)) {
+		return 1
+	}
+	return 0
+}
+
+@(export)
+web_attack_move :: proc(x, y: i32) -> i32 {
+	if g.game_issue_attack_move(&Game_State, position(x, y)) {
+		return 1
+	}
+	return 0
+}
+
+@(export)
 web_stop :: proc() -> i32 {
 	if g.game_issue_stop(&Game_State) {
 		return 1

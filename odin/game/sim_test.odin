@@ -300,3 +300,64 @@ attack_order_keeps_move_interpolation :: proc(t: ^testing.T) {
 	testing.expect_value(t, after.x - before.x, MOVE_STEP_PER_TICK * CELL_SIZE)
 	testing.expect_value(t, validate_game(game), Validation_Error.None)
 }
+
+@(test)
+attack_move_engages_enemy_and_resumes_to_destination :: proc(t: ^testing.T) {
+	game := new(Game)
+	defer free(game)
+	game_init(game)
+	enemy_idx, _ := game_enemy_index(game)
+	unit_destroy(&game.units, enemy_idx)
+	eh, spawned := unit_spawn(&game.units, &game.grid, .Enemy, Grid_Pos{9, 27})
+	testing.expect(t, spawned)
+	if ei, ok := unit_index(&game.units, eh); ok {
+		game.units.hp[ei] = 30
+	}
+
+	dest := Grid_Pos{18, 25}
+	testing.expect(t, game_issue_attack_move(game, dest))
+	sim_run(game, 500)
+
+	testing.expect_value(t, unit_team_count(&game.units, .Enemy), 0)
+	player, ok := game_player_index(game)
+	testing.expect(t, ok)
+	testing.expect_value(t, game.units.position[player], dest)
+	testing.expect_value(t, game.units.state[player], Unit_State.Idle)
+	testing.expect(t, !game.units.attack_move_active[player])
+	testing.expect_value(t, validate_game(game), Validation_Error.None)
+}
+
+@(test)
+patrol_to_engages_enemy_and_resumes_loop :: proc(t: ^testing.T) {
+	game := new(Game)
+	defer free(game)
+	game_init(game)
+	enemy_idx, _ := game_enemy_index(game)
+	unit_destroy(&game.units, enemy_idx)
+	eh, spawned := unit_spawn(&game.units, &game.grid, .Enemy, Grid_Pos{7, 27})
+	testing.expect(t, spawned)
+	if ei, ok := unit_index(&game.units, eh); ok {
+		game.units.hp[ei] = 30
+	}
+
+	dest := Grid_Pos{12, 25}
+	testing.expect(t, game_issue_patrol_to(game, dest))
+	seen_b := false
+	seen_back_a := false
+	player, _ := game_player_index(game)
+	for _ in 0..<600 {
+		sim_tick(game)
+		if cells_equal(game.units.position[player], dest) {
+			seen_b = true
+		}
+		if seen_b && cells_equal(game.units.position[player], START_POS) {
+			seen_back_a = true
+		}
+		testing.expect_value(t, validate_game(game), Validation_Error.None)
+	}
+	testing.expect_value(t, unit_team_count(&game.units, .Enemy), 0)
+	testing.expect(t, seen_b, "patrol never reached B")
+	testing.expect(t, seen_back_a, "patrol never looped back to A")
+	testing.expect(t, game.units.patrol_active[player])
+	testing.expect_value(t, game.units.state[player], Unit_State.Patrol)
+}

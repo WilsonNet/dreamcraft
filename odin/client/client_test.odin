@@ -53,3 +53,26 @@ camera_pan_axes_match_isometric_screen_directions :: proc(t: ^testing.T) {
 	testing.expect(t, right.x > 0 && right.z < 0)
 	testing.expect(t, math.abs(right.x + right.z) < 0.001)
 }
+
+@(test)
+command_fx_ring_buffer_updates_and_expires :: proc(t: ^testing.T) {
+	app.cmd_fx = {}
+	app.cmd_fx_next = 0
+	for _ in 0..<(MAX_CMD_FX + 2) {
+		spawn_ground_fx(.Move, rl.Vector3{1, 0, 2})
+	}
+	testing.expect_value(t, app.cmd_fx_next, 2)
+	spawn_target_fx(g.Unit_Handle{index = 1, generation = 1}, rl.Vector3{4, 0, 5})
+	update_command_fx(0.30)
+	active_count := 0
+	for &fx in app.cmd_fx {
+		if fx.active {
+			active_count += 1
+		}
+	}
+	testing.expect_value(t, active_count, MAX_CMD_FX)
+	update_command_fx(1.00)
+	for &fx in app.cmd_fx {
+		testing.expect(t, !fx.active)
+	}
+}

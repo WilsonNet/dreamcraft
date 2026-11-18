@@ -96,12 +96,13 @@ All units have StarCraft-style health bars:
 
 ### Combat System
 
-**Melee Combat**:
-- All units have `CombatStats` (damage: 15, range: 3 cells, cooldown: 1s)
-- Units with `AttackTarget(entity)` pathfind toward target and attack when in range
-- Attack cooldown timer decrements each frame; attacks fire when timer reaches 0
-- Damage is applied instantly (no projectile animation yet)
-- Units despawn when health reaches 0
+- **Melee Combat**:
+  - `CombatStats` (damage: 15, range: 3 cells, cooldown: 1s)
+  - Direct `Attack(entity)` chases and attacks until destroyed or re-ordered
+  - **`Attack_Move` (`A` / HUD Attack)**: advances toward destination while auto-acquiring nearest visible enemy within `VISION_RADIUS` (`6` cells, leash `8`), fights until clear, and resumes march to destination before settling to `Idle`
+  - **`Patrol` (`P` / HUD Patrol)**: 1-click patrol from current position to clicked target (or explicit `A <-> B` via API), auto-acquiring enemies within `VISION_RADIUS` (`6` cells) without losing active patrol leg or state, and resuming `A <-> B` after combat
+  - `Move` (Right-click ground / `M`) walks without stopping to engage enemies
+  - Damage applies on cooldown ready; dead units despawn cleanly and clear stale target handles
 
 **Right-Click to Attack**:
 - Right-clicking on an enemy unit sets `AttackTarget` for the player unit

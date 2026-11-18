@@ -69,6 +69,7 @@ Unit_State :: enum u8 {
 	Idle,
 	Moving,
 	Patrol,
+	Attack_Move,
 }
 
 Unit_Handle :: struct {

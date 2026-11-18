@@ -22,12 +22,12 @@ draw_bottom_bar :: proc() {
 }
 
 draw_status_panel :: proc() {
-	rl.DrawRectangleRec(rl.Rectangle{12, 12, 430, 116}, rl.Color{8, 14, 8, 210})
-	rl.DrawRectangleLinesEx(rl.Rectangle{12, 12, 430, 116}, 1, rl.Color{60, 110, 60, 200})
+	rl.DrawRectangleRec(rl.Rectangle{12, 12, 468, 116}, rl.Color{8, 14, 8, 210})
+	rl.DrawRectangleLinesEx(rl.Rectangle{12, 12, 468, 116}, 1, rl.Color{60, 110, 60, 200})
 	buffer: [256]u8
 	rl.DrawText("DREAMCRAFT RTS", 24, 22, 20, rl.Color{235, 215, 120, 255})
 	rl.DrawText("Tutorial Level 1 - Through the Woods", 24, 46, 14, rl.Color{180, 200, 180, 255})
-	rl.DrawText("WASD/Arrows pan | F follow | Right-click move/attack | Esc menu", 24, 66, 12, rl.Color{140, 170, 140, 255})
+	rl.DrawText("WASD/Edge pan | F follow | M Move | A Attack | P Patrol | S Stop | Esc", 24, 66, 11, rl.Color{140, 170, 140, 255})
 
 	position, ok := g.game_player_position(&app.game)
 	if ok {
@@ -48,6 +48,19 @@ draw_status_panel :: proc() {
 draw_hint :: proc() {
 	width := f32(rl.GetScreenWidth())
 	height := f32(rl.GetScreenHeight())
+	if app.command_mode != .None {
+		mode_text := cstring("MOVE: Left-click destination (Esc/Right-click cancel)")
+		mode_col := rl.Color{120, 235, 140, 255}
+		if app.command_mode == .Attack {
+			mode_text = cstring("ATTACK-MOVE: Left-click target or terrain (Esc/Right-click cancel)")
+			mode_col = rl.Color{255, 115, 95, 255}
+		} else if app.command_mode == .Patrol {
+			mode_text = cstring("PATROL: Left-click patrol point (Esc/Right-click cancel)")
+			mode_col = rl.Color{105, 225, 255, 255}
+		}
+		mw := rl.MeasureText(mode_text, 14)
+		rl.DrawText(mode_text, i32(width * 0.5) - mw / 2, i32(height - 96), 14, mode_col)
+	}
 	text := cstring("Bottom center reserved for control groups")
 	text_width := rl.MeasureText(text, 13)
 	rl.DrawText(text, i32(width * 0.5) - text_width / 2, i32(height - 32), 13, rl.Color{110, 140, 110, 255})
@@ -63,8 +76,10 @@ draw_hint :: proc() {
 }
 
 draw_command_buttons :: proc() {
-	draw_button(app.move_button, cstring("Move"), app.command_mode == .Move)
-	draw_button(app.patrol_button, cstring("Patrol"), app.command_mode == .Patrol)
+	draw_button(app.move_button, cstring("[M] Move"), app.command_mode == .Move)
+	draw_button(app.attack_button, cstring("[A] Attack"), app.command_mode == .Attack)
+	draw_button(app.patrol_button, cstring("[P] Patrol"), app.command_mode == .Patrol)
+	draw_button(app.stop_button, cstring("[S] Stop"), false)
 }
 
 draw_button :: proc(rect: rl.Rectangle, label: cstring, active: bool) {

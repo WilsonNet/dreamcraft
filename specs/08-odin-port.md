@@ -12,7 +12,7 @@ Measured on this machine (Apple Silicon):
 |-------|------|
 | Odin client + headless, `-o:speed` | ~2.8 s total |
 | Bevy client, incremental | tens of seconds to minutes |
-| Odin unit tests (88 tests) | < 35 ms runtime |
+| Odin unit tests (93 tests) | < 40 ms runtime |
 
 ## Why Odin for an RTS
 
@@ -306,8 +306,10 @@ Commands:
 |---------|--------|---------|
 | `status`/`state` | — | snapshot |
 | `goto`/`move` | `x,y` | move selected/all player units |
-| `patrol` | `x,y,x2,y2` | A↔B patrol loop |
+| `patrol` | `x,y,x2,y2` | A↔B patrol loop (auto-engages enemies) |
+| `patrol_to` | `x,y` | 1-click patrol between current pos and `(x,y)` |
 | `attack` | `x,y` | attack enemy at cell |
+| `attack_move` | `x,y` | StarCraft Attack-Move to `(x,y)` |
 | `stop` | — | clear path/attack/patrol |
 | `run`/`tick` | `ticks` | advance fixed ticks |
 | `reset` | — | reset level |

@@ -1,7 +1,7 @@
 # dreamcraft-replay v1
-{"cmd":"reset"}
-{"cmd":"goto","x":10,"y":25}
-{"cmd":"run","ticks":140}
-{"cmd":"verify","verify":{"type":"player_at","x":10,"y":25}}
-{"cmd":"verify","verify":{"type":"valid"}}
-# hash 10160054226389569550
+{"cmd":"reset","x":0,"y":0,"x2":0,"y2":0,"value":0,"ticks":0,"team":"","verify":{"type":"","x":0,"y":0,"value":0}}
+{"cmd":"goto","x":10,"y":25,"x2":0,"y2":0,"value":0,"ticks":0,"team":"","verify":{"type":"","x":0,"y":0,"value":0}}
+{"cmd":"run","x":0,"y":0,"x2":0,"y2":0,"value":0,"ticks":140,"team":"","verify":{"type":"","x":0,"y":0,"value":0}}
+{"cmd":"verify","x":0,"y":0,"x2":0,"y2":0,"value":0,"ticks":0,"team":"","verify":{"type":"player_at","x":10,"y":25,"value":0}}
+{"cmd":"verify","x":0,"y":0,"x2":0,"y2":0,"value":0,"ticks":0,"team":"","verify":{"type":"valid","x":0,"y":0,"value":0}}
+# hash 8002298157366554670

@@ -28,6 +28,9 @@ Units :: struct {
 	patrol_b: [MAX_UNITS]Grid_Pos,
 	patrol_to_b: [MAX_UNITS]bool,
 
+	attack_move_active: [MAX_UNITS]bool,
+	attack_move_dest: [MAX_UNITS]Grid_Pos,
+
 	attack_target: [MAX_UNITS]Unit_Handle,
 	cooldown: [MAX_UNITS]u16,
 	selected: [MAX_UNITS]bool,
@@ -100,6 +103,8 @@ unit_spawn :: proc(
 	units.patrol_a[index] = position
 	units.patrol_b[index] = position
 	units.patrol_to_b[index] = false
+	units.attack_move_active[index] = false
+	units.attack_move_dest[index] = position
 	units.attack_target[index] = INVALID_HANDLE
 	units.cooldown[index] = 0
 	units.selected[index] = false
@@ -126,6 +131,7 @@ unit_destroy :: proc(units: ^Units, index: int) {
 	units.progress[index] = 0
 	units.attack_target[index] = INVALID_HANDLE
 	units.patrol_active[index] = false
+	units.attack_move_active[index] = false
 	units.cooldown[index] = 0
 	units.alive_count -= 1
 
@@ -179,6 +185,16 @@ unit_set_path :: proc(units: ^Units, index: int, path: []u16, state: Unit_State)
 	return true
 }
 
+unit_move_state :: proc(units: ^Units, index: int) -> Unit_State {
+	if units.patrol_active[index] {
+		return .Patrol
+	}
+	if units.attack_move_active[index] {
+		return .Attack_Move
+	}
+	return .Moving
+}
+
 unit_clear_path :: proc(units: ^Units, index: int) {
 	units.path_len[index] = 0
 	units.path_index[index] = 0
@@ -212,11 +228,17 @@ unit_between_cells :: proc(units: ^Units, index: int) -> bool {
 unit_stop_after_segment :: proc(units: ^Units, index: int) {
 	if unit_between_cells(units, index) {
 		units.path_len[index] = units.path_index[index] + 1
-		units.state[index] = .Moving
+		units.state[index] = unit_move_state(units, index)
 		return
 	}
 	unit_clear_path(units, index)
-	units.state[index] = .Idle
+	if units.patrol_active[index] {
+		units.state[index] = .Patrol
+	} else if units.attack_move_active[index] {
+		units.state[index] = .Attack_Move
+	} else {
+		units.state[index] = .Idle
+	}
 }
 
 unit_path_destination :: proc(units: ^Units, index: int) -> (Grid_Pos, bool) {

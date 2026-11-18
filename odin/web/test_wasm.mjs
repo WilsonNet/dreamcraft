@@ -88,4 +88,20 @@ assert.equal(exports_.web_set_hp(5, 25, 1), 1);
 assert.equal(exports_.web_kill(5, 25), 1);
 assert.equal(state().valid, true);
 
+// 1-click patrol and attack-move via web WASM exports.
+exports_.web_reset();
+assert.equal(exports_.web_spawn(1, 7, 25, 30), 1);
+assert.equal(exports_.web_attack_move(12, 25), 1);
+exports_.web_run(220);
+assert.equal(units().filter((u) => u.team === "enemy").length, 1);
+s = state();
+assert.deepEqual(s.player_grid, [12, 25]);
+assert.equal(s.valid, true);
+
+exports_.web_reset();
+assert.equal(exports_.web_patrol_to(6, 25), 1);
+exports_.web_run(80);
+assert.equal(units()[0].patrol, true);
+assert.equal(state().valid, true);
+
 console.log("web wasm smoke passed");

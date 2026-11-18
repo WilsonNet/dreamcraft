@@ -50,35 +50,11 @@ execute :: proc(game: ^g.Game, command: Command) -> Result {
 	switch command.cmd {
 	case "status", "state", "snapshot":
 		return make_result(game, true, "Status")
-	case "goto", "move":
-		if g.game_issue_move(game, cell(command.x, command.y)) {
-			return make_result(game, true, fmt.tprintf("Moving to (%d,%d)", command.x, command.y))
-		}
-		return make_result(game, false, "No path or invalid destination")
-	case "patrol":
-		if g.game_issue_patrol(game, cell(command.x, command.y), cell(command.x2, command.y2)) {
-			return make_result(game, true, "Patrol started")
-		}
-		return make_result(game, false, "Invalid patrol points")
-	case "attack":
-		if index, ok := g.unit_at(&game.units, cell(command.x, command.y), .Enemy); ok {
-			handle := g.unit_handle(&game.units, index)
-			if g.game_issue_attack(game, handle) {
-				return make_result(game, true, "Attack ordered")
-			}
-		}
-		return make_result(game, false, "No enemy at target")
-	case "stop":
-		if g.game_issue_stop(game) {
-			return make_result(game, true, "Stopped")
-		}
-		return make_result(game, false, "Stop rejected")
+	case "goto", "move", "patrol", "patrol_to", "attack", "attack_move", "stop":
+		return execute_unit_command(game, command)
 	case "run", "tick":
-		ticks := command.ticks
-		if ticks <= 0 {
-			ticks = 1
-		}
-		if ticks > 100_000 {
+		ticks := clamp(command.ticks <= 0 ? 1 : command.ticks, 1, 100_000)
+		if command.ticks > 100_000 {
 			return make_result(game, false, "Tick count too large")
 		}
 		g.sim_run(game, ticks)
@@ -108,6 +84,45 @@ execute :: proc(game: ^g.Game, command: Command) -> Result {
 	case:
 		return make_result(game, false, fmt.tprintf("Unknown command: %s", command.cmd))
 	}
+}
+
+@(private)
+execute_unit_command :: proc(game: ^g.Game, command: Command) -> Result {
+	switch command.cmd {
+	case "goto", "move":
+		if g.game_issue_move(game, cell(command.x, command.y)) {
+			return make_result(game, true, fmt.tprintf("Moving to (%d,%d)", command.x, command.y))
+		}
+		return make_result(game, false, "No path or invalid destination")
+	case "patrol":
+		if g.game_issue_patrol(game, cell(command.x, command.y), cell(command.x2, command.y2)) {
+			return make_result(game, true, "Patrol started")
+		}
+		return make_result(game, false, "Invalid patrol points")
+	case "patrol_to":
+		if g.game_issue_patrol_to(game, cell(command.x, command.y)) {
+			return make_result(game, true, fmt.tprintf("Patrol to (%d,%d)", command.x, command.y))
+		}
+		return make_result(game, false, "Invalid patrol destination")
+	case "attack":
+		if index, ok := g.unit_at(&game.units, cell(command.x, command.y), .Enemy); ok {
+			if g.game_issue_attack(game, g.unit_handle(&game.units, index)) {
+				return make_result(game, true, "Attack ordered")
+			}
+		}
+		return make_result(game, false, "No enemy at target")
+	case "attack_move":
+		if g.game_issue_attack_move(game, cell(command.x, command.y)) {
+			return make_result(game, true, fmt.tprintf("Attack-move to (%d,%d)", command.x, command.y))
+		}
+		return make_result(game, false, "Invalid attack-move destination")
+	case "stop":
+		if g.game_issue_stop(game) {
+			return make_result(game, true, "Stopped")
+		}
+		return make_result(game, false, "Stop rejected")
+	}
+	return make_result(game, false, "Unknown unit command")
 }
 
 cell :: proc(x, y: int) -> g.Grid_Pos {

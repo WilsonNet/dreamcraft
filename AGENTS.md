@@ -157,8 +157,8 @@ legacy/          # archived prototypes (not built or tested)
   or `bevy_brp` MCP config.
 - Use the Odin control API instead:
   - `GET /state`, `GET /units`, `GET /fog`, `GET /screenshot`
-  - `POST /command` with `goto`, `patrol`, `attack`, `run`, `reset`, `verify`,
-    `select`, `spawn`, `kill`, `set_hp`, `teleport`
+  - `POST /command` with `goto`, `patrol`, `patrol_to`, `attack`, `attack_move`,
+  `run`, `reset`, `verify`, `select`, `spawn`, `kill`, `set_hp`, `teleport`
 - HTTP server is single-threaded and polled from the main loop. Commands
   mutate the same `Game` as rendering.
 - `bin/headless --script` is the CI path; `--serve` is the interactive path.
@@ -198,7 +198,9 @@ responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 - Goal at grid x ≥ 77
 - Melee: 15 damage, range 3 cells, 1.0 s cooldown, 100 HP
 - Enemy chases within 6-cell vision and attacks on cooldown
-- Patrol loops A↔B until a move/stop command
+- Patrol (`P` / 1-click) loops A↔B cleanly and engages enemies within 6-cell vision before resuming the patrol leg
+- Attack-Move (`A`) marches to destination while auto-acquiring enemies within 6-cell vision, resuming to destination once clear
+- SC2/AoE-style 3D ground command confirmation chevrons & pulse rings on right-click / command orders
 - Camera follow by default; manual pan switches to FREE (`F` toggles)
 - Native full 3D orthographic isometric renderer + watercolour post shader
 - Procedural Mamluk unit (`client/art/`): 5.36-head heroic rig (26 joints),

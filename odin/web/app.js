@@ -107,13 +107,17 @@
 		document.getElementById("hash").textContent = `hash ${state.hash}`;
 		document.getElementById("fog").textContent = fog;
 		document.getElementById("level").textContent = state.game_over ? "PLAYER DEAD" : state.level_complete ? "LEVEL COMPLETE" : "";
-		document.getElementById("mode").textContent = mode === "none" ? "Select" : mode === "move" ? "Move: click target" : patrolFirst ? "Patrol: click point B" : "Patrol: click point A";
+		document.getElementById("mode").textContent =
+			mode === "none" ? "Select" :
+			mode === "move" ? "Move: click destination" :
+			mode === "attack" ? "Attack-Move: click target or ground" :
+			"Patrol: click destination";
 	}
 
 	function setMode(next) {
 		mode = next;
 		patrolFirst = null;
-		for (const [id, value] of [["moveBtn", "move"], ["patrolBtn", "patrol"]]) {
+		for (const [id, value] of [["moveBtn", "move"], ["attackBtn", "attack"], ["patrolBtn", "patrol"]]) {
 			document.getElementById(id).classList.toggle("active", mode === value);
 		}
 	}
@@ -143,24 +147,28 @@
 			if (mode === "move") {
 				ex.web_move(x, y);
 				setMode("none");
+			} else if (mode === "attack") {
+				if (!ex.web_attack(x, y)) ex.web_attack_move(x, y);
+				setMode("none");
 			} else if (mode === "patrol") {
-				if (patrolFirst === null) {
-					patrolFirst = [x, y];
-				} else {
-					ex.web_patrol(patrolFirst[0], patrolFirst[1], x, y);
-					setMode("none");
-				}
+				ex.web_patrol_to(x, y);
+				setMode("none");
 			} else {
 				ex.web_select(x, y, event.shiftKey ? 1 : 0);
 			}
 		});
 		document.getElementById("moveBtn").onclick = () => setMode(mode === "move" ? "none" : "move");
+		document.getElementById("attackBtn").onclick = () => setMode(mode === "attack" ? "none" : "attack");
 		document.getElementById("patrolBtn").onclick = () => setMode(mode === "patrol" ? "none" : "patrol");
 		document.getElementById("stopBtn").onclick = () => { ex.web_stop(); setMode("none"); };
 		document.getElementById("selectAllBtn").onclick = () => { ex.web_select_all(); };
 		document.getElementById("resetBtn").onclick = () => { ex.web_reset(); setMode("none"); };
 		window.addEventListener("keydown", (event) => {
 			if (event.key === "Escape") setMode("none");
+			if (event.key === "m" || event.key === "M") setMode("move");
+			if (event.key === "a" || event.key === "A") setMode("attack");
+			if (event.key === "p" || event.key === "P") setMode("patrol");
+			if (event.key === "s" || event.key === "S") { ex.web_stop(); setMode("none"); }
 			if (event.key === "f" || event.key === "F") ex.web_select_all();
 		});
 	}
@@ -199,6 +207,10 @@
 			return result(ex.web_move(x, y) === 1, `Move to (${x},${y})`);
 		case "patrol":
 			return result(ex.web_patrol(x, y, x2, y2) === 1, "Patrol ordered");
+		case "patrol_to":
+			return result(ex.web_patrol_to(x, y) === 1, `Patrol to (${x},${y})`);
+		case "attack_move":
+			return result(ex.web_attack_move(x, y) === 1, `Attack-move to (${x},${y})`);
 		case "attack": {
 			const hit = ex.web_attack(x, y) === 1;
 			return result(hit, hit ? "Attack ordered" : "No visible enemy at target");

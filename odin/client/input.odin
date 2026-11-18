@@ -22,12 +22,36 @@ handle_input :: proc() {
 
 handle_keyboard :: proc() {
 	if rl.IsKeyPressed(.ESCAPE) {
-		app.menu_open = !app.menu_open
-		app.command_mode = .None
-		app.dragging = false
+		if app.command_mode != .None {
+			app.command_mode = .None
+			app.dragging = false
+		} else {
+			app.menu_open = !app.menu_open
+			app.dragging = false
+		}
+	}
+	if app.menu_open {
+		return
 	}
 	if rl.IsKeyPressed(.F) {
 		app.camera_follow = !app.camera_follow
+	}
+	if rl.IsKeyPressed(.M) {
+		app.command_mode = .Move
+		app.dragging = false
+	}
+	if rl.IsKeyPressed(.A) {
+		app.command_mode = .Attack
+		app.dragging = false
+	}
+	if rl.IsKeyPressed(.P) {
+		app.command_mode = .Patrol
+		app.dragging = false
+	}
+	if rl.IsKeyPressed(.S) {
+		_ = g.game_issue_stop(&app.game)
+		app.command_mode = .None
+		app.dragging = false
 	}
 }
 
@@ -38,7 +62,7 @@ update_cursor :: proc() {
 		switch app.command_mode {
 		case .None:
 			rl.SetMouseCursor(.DEFAULT)
-		case .Move, .Patrol:
+		case .Move, .Attack, .Patrol:
 			rl.SetMouseCursor(.CROSSHAIR)
 		}
 	}
@@ -57,15 +81,7 @@ handle_left_press :: proc(mouse: rl.Vector2) {
 		handle_minimap_click(mouse)
 		return
 	}
-	if rl.CheckCollisionPointRec(mouse, app.move_button) {
-		app.command_mode = .Move
-		app.dragging = false
-		return
-	}
-	if rl.CheckCollisionPointRec(mouse, app.patrol_button) {
-		app.command_mode = .Patrol
-		app.patrol_first = g.Grid_Pos{x = -1, y = -1}
-		app.dragging = false
+	if handle_hud_button_click(mouse) {
 		return
 	}
 	if mouse.y >= f32(rl.GetScreenHeight()) - HUD_HEIGHT {
@@ -74,26 +90,74 @@ handle_left_press :: proc(mouse: rl.Vector2) {
 
 	switch app.command_mode {
 	case .Move:
-		issue_move(screen_to_grid(mouse))
+		issue_move_at(mouse)
+		app.command_mode = .None
+	case .Attack:
+		issue_attack_or_move_at(mouse)
 		app.command_mode = .None
 	case .Patrol:
-		handle_patrol_click(screen_to_grid(mouse))
+		issue_patrol_at(mouse)
+		app.command_mode = .None
 	case .None:
 		app.dragging = true
 		app.drag_start = mouse
 	}
 }
 
-handle_patrol_click :: proc(cell: g.Grid_Pos) {
-	if !g.grid_is_walkable(&app.game.grid, cell) {
-		return
+@(private)
+handle_hud_button_click :: proc(mouse: rl.Vector2) -> bool {
+	if rl.CheckCollisionPointRec(mouse, app.move_button) {
+		app.command_mode = app.command_mode == .Move ? .None : .Move
+		app.dragging = false
+		return true
 	}
-	if !g.in_bounds(app.patrol_first) {
-		app.patrol_first = cell
-		return
+	if rl.CheckCollisionPointRec(mouse, app.attack_button) {
+		app.command_mode = app.command_mode == .Attack ? .None : .Attack
+		app.dragging = false
+		return true
 	}
-	if g.game_issue_patrol(&app.game, app.patrol_first, cell) {
+	if rl.CheckCollisionPointRec(mouse, app.patrol_button) {
+		app.command_mode = app.command_mode == .Patrol ? .None : .Patrol
+		app.dragging = false
+		return true
+	}
+	if rl.CheckCollisionPointRec(mouse, app.stop_button) {
+		_ = g.game_issue_stop(&app.game)
 		app.command_mode = .None
+		app.dragging = false
+		return true
+	}
+	return false
+}
+
+@(private)
+click_world_point :: proc(mouse: rl.Vector2, cell: g.Grid_Pos) -> rl.Vector3 {
+	if p, ok := screen_to_world_ground(mouse); ok {
+		return p
+	}
+	return cell_center(cell)
+}
+
+@(private)
+issue_attack_or_move_at :: proc(mouse: rl.Vector2) {
+	if index, ok := unit_at_screen(mouse, .Enemy); ok && g.enemy_is_visible(&app.game, index) {
+		handle := g.unit_handle(&app.game.units, index)
+		if g.game_issue_attack(&app.game, handle) {
+			spawn_target_fx(handle, unit_ground(index))
+		}
+		return
+	}
+	cell := screen_to_grid(mouse)
+	if g.game_issue_attack_move(&app.game, cell) {
+		spawn_ground_fx(.Attack, click_world_point(mouse, cell))
+	}
+}
+
+@(private)
+issue_patrol_at :: proc(mouse: rl.Vector2) {
+	cell := screen_to_grid(mouse)
+	if g.game_issue_patrol_to(&app.game, cell) {
+		spawn_ground_fx(.Patrol, click_world_point(mouse, cell))
 	}
 }
 
@@ -124,15 +188,20 @@ handle_right_click :: proc(mouse: rl.Vector2) {
 	if index, ok := unit_at_screen(mouse, .Enemy); ok {
 		if g.enemy_is_visible(&app.game, index) {
 			handle := g.unit_handle(&app.game.units, index)
-			_ = g.game_issue_attack(&app.game, handle)
+			if g.game_issue_attack(&app.game, handle) {
+				spawn_target_fx(handle, unit_ground(index))
+			}
 			return
 		}
 	}
-	issue_move(screen_to_grid(mouse))
+	issue_move_at(mouse)
 }
 
-issue_move :: proc(cell: g.Grid_Pos) {
-	_ = g.game_issue_move(&app.game, cell)
+issue_move_at :: proc(mouse: rl.Vector2) {
+	cell := screen_to_grid(mouse)
+	if g.game_issue_move(&app.game, cell) {
+		spawn_ground_fx(.Move, click_world_point(mouse, cell))
+	}
 }
 
 select_click :: proc(mouse: rl.Vector2) {

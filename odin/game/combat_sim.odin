@@ -2,8 +2,53 @@
 package game
 
 ATTACK_RANGE_SQUARED :: ATTACK_RANGE * ATTACK_RANGE
+LEASH_RANGE_SQUARED :: (VISION_RADIUS + 2) * (VISION_RADIUS + 2)
+
+// Auto-acquire visible enemies for player units on Patrol or Attack-Move.
+@(private)
+auto_acquire_targets :: proc(game: ^Game) {
+	units := &game.units
+	for i in 0..<MAX_UNITS {
+		if !units.alive[i] || units.team[i] != .Player {
+			continue
+		}
+		if !units.patrol_active[i] && !units.attack_move_active[i] {
+			continue
+		}
+		if target_idx, ok := unit_index(units, units.attack_target[i]); ok {
+			if distance_squared(units.position[i], units.position[target_idx]) > LEASH_RANGE_SQUARED {
+				units.attack_target[i] = INVALID_HANDLE
+			} else {
+				continue
+			}
+		}
+		if enemy, found := find_nearest_enemy(units, i, VISION_RADIUS * VISION_RADIUS); found {
+			units.attack_target[i] = enemy
+		}
+	}
+}
+
+@(private)
+find_nearest_enemy :: proc(units: ^Units, index: int, max_dist_sq: i32) -> (Unit_Handle, bool) {
+	best_dist := max_dist_sq + 1
+	best_handle := INVALID_HANDLE
+	found := false
+	for e in 0..<MAX_UNITS {
+		if !units.alive[e] || units.team[e] != .Enemy {
+			continue
+		}
+		d := distance_squared(units.position[index], units.position[e])
+		if d < best_dist {
+			best_dist = d
+			best_handle = unit_handle(units, e)
+			found = true
+		}
+	}
+	return best_handle, found
+}
 
 attack_movement :: proc(game: ^Game) {
+	auto_acquire_targets(game)
 	units := &game.units
 	for index in 0..<MAX_UNITS {
 		if !units.alive[index] || !handle_is_valid(units.attack_target[index]) {

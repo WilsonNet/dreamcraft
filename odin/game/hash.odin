@@ -90,6 +90,7 @@ hash_commands :: proc(h: ^Hash_Builder, queue: ^Command_Queue) {
 		hash_i32(h, command.point_b.y)
 		hash_u16(h, command.target.index)
 		hash_u32(h, command.target.generation)
+		hash_bool(h, command.from_current)
 	}
 }
 
@@ -129,6 +130,9 @@ hash_units :: proc(h: ^Hash_Builder, units: ^Units) {
 		hash_i32(h, units.patrol_b[i].x)
 		hash_i32(h, units.patrol_b[i].y)
 		hash_bool(h, units.patrol_to_b[i])
+		hash_bool(h, units.attack_move_active[i])
+		hash_i32(h, units.attack_move_dest[i].x)
+		hash_i32(h, units.attack_move_dest[i].y)
 		hash_u16(h, units.attack_target[i].index)
 		hash_u32(h, units.attack_target[i].generation)
 		hash_u16(h, units.cooldown[i])

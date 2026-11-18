@@ -85,6 +85,8 @@ web_refresh_units :: proc() -> i32 {
 			state = "moving"
 		case .Patrol:
 			state = "patrol"
+		case .Attack_Move:
+			state = "attack_move"
 		}
 		target := -1
 		if g.handle_is_valid(units.attack_target[i]) {
@@ -97,7 +99,7 @@ web_refresh_units :: proc() -> i32 {
 		}
 		text := fmt.bprintf(
 			Units_Buffer[offset:len(Units_Buffer) - 8],
-			`{{"index":%d,"team":"%s","position":[%d,%d],"world":[%.2f,%.2f],"progress":%.3f,"next":[%d,%d],"hp":%d,"hp_max":%d,"state":"%s","path_len":%d,"path_index":%d,"selected":%t,"patrol":%t,"attack_target":%d,"visible":%t}}`,
+			`{{"index":%d,"team":"%s","position":[%d,%d],"world":[%.2f,%.2f],"progress":%.3f,"next":[%d,%d],"hp":%d,"hp_max":%d,"state":"%s","path_len":%d,"path_index":%d,"selected":%t,"patrol":%t,"attack_move":%t,"attack_target":%d,"visible":%t}}`,
 			i,
 			team,
 			units.position[i].x,
@@ -114,6 +116,7 @@ web_refresh_units :: proc() -> i32 {
 			units.path_index[i],
 			units.selected[i],
 			units.patrol_active[i],
+			units.attack_move_active[i],
 			target,
 			g.enemy_is_visible(&Game_State, i),
 		)

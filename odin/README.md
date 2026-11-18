@@ -140,7 +140,9 @@ Simulation:
 - `status`, `state`, `snapshot`
 - `goto`/`move`: `x`, `y`
 - `patrol`: `x`, `y`, `x2`, `y2`
+- `patrol_to`: `x`, `y`
 - `attack`: `x`, `y`
+- `attack_move`: `x`, `y`
 - `stop`
 - `run`/`tick`: `ticks`
 - `reset`
@@ -235,7 +237,7 @@ Allowed allocations outside hot paths:
 - 3-state fog overlay
 - units with team color, label, health bars, selection ring
 - path gizmo for selected units
-- HUD: status, minimap, Move/Patrol buttons, pause menu
+- HUD: status, minimap, `[M] Move` / `[A] Attack` / `[P] Patrol` / `[S] Stop` card, pause menu
 - minimap: 80×50 RGBA texture scaled to 200×125
 
 Screenshot endpoint captures the current window to

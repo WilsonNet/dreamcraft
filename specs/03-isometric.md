@@ -53,7 +53,8 @@ rectangles. Health bars use the same projection above the model head.
   three pines with flattened bough tiers and scalloped rim puffs, plus multi-blob
   oak canopies), mossy boulders, ferns, octagon stone waypoint medallions, and
   goal banners. Unexplored clusters are skipped; explored clusters dim smoothly.
-- Paths: `DrawLine3D` plus small spheres for selected units.
+- Paths & patrol endpoints (`render.odin`): color-coded 3D waypoints (`Move` emerald, `Attack`/`Attack_Move` crimson-orange, `Patrol` cyan) plus `A <-> B` patrol rings when patrolling units are selected.
+- Command confirmation FX (`command_fx.odin`): StarCraft 2 / Age of Empires style 3D inward-converging chevrons, expanding pulse ring, anchor diamond on right-click / command click, enemy target lock rings, and live command-mode ground hover reticle.
 - Units: procedurally generated, CPU-skinned Mamluk models (`WARRIOR_SCALE = 0.74`)
   with soft contact shadows, custom bevelled selection ring, and curved
   double-crescent `slash_vfx.odin` combat ribbons.
@@ -113,4 +114,4 @@ renderer. The native client is the full 3D target.
   32-phase foot grounding, 16-phase idle grounding, joint child isolation, attack windup/return,
   face clearance, and tree/prop mesh validity (12 tests).
 - `odin test client`: deterministic cell hashes, `angle_toward` (`0° +Z`, `90° +X`),
-  shortest-arc `turn_toward`, and isometric `camera_pan_axes` (4 tests).
+  shortest-arc `turn_toward`, isometric `camera_pan_axes`, and `command_fx` ring updates (5 tests).

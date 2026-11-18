@@ -49,12 +49,14 @@ capacity arrays.
 - [x] Browser build: Odin `js_wasm32` + HTML canvas + DOM HUD
 - [x] Headless runner: file polling, JSONL scripts, `--ticks`
 - [x] Replay files: `--record`, `--replay`, hash verification
+- [x] StarCraft-style `Attack_Move` (`A` / Attack button) and fixed 1-click `Patrol` (`P` / Patrol button) with enemy auto-acquisition along the route and automatic leg resumption after combat
+- [x] StarCraft 2 / Age of Empires 3D ground command FX (`command_fx.odin`): inward-converging chevrons, pulse rings, target lock rings, live cursor preview, and state-colored paths
 - [x] HTTP control API replacing Bevy BRP MCP
   - [x] `GET /state`, `/units`, `/fog`, `/screenshot`, `/health`
-  - [x] `POST /command`: move, patrol, attack, stop, run, reset, verify,
+  - [x] `POST /command`: move, patrol, patrol_to, attack, attack_move, stop, run, reset, verify,
         select, spawn, kill, set_hp, teleport
   - [x] Every response carries `valid` + `validation`
-- [x] 88 unit/integration tests (61 game, 11 control, 12 art, 4 client)
+- [x] 93 unit/integration tests (64 game, 12 control, 12 art, 5 client)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator

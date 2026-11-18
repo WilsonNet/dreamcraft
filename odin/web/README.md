@@ -57,8 +57,8 @@ const state = await page.evaluate(() => dreamcraft.state());
 - `units()`
 - `fog()` — 80×50 ASCII map
 - `command(obj)` — same command set as the HTTP control API:
-  `status`, `goto`, `patrol`, `attack`, `stop`, `run`, `reset`, `verify`,
-  `select`, `select_all`, `spawn`, `kill`, `set_hp`, `teleport`
+  `status`, `goto`, `patrol`, `patrol_to`, `attack`, `attack_move`, `stop`,
+  `run`, `reset`, `verify`, `select`, `select_all`, `spawn`, `kill`, `set_hp`, `teleport`
 - `reset()`
 
 `dreamcraft.command` returns a result object with `ok`, `msg`, and the current
@@ -67,12 +67,13 @@ state. The `hash` is a string because JavaScript numbers cannot represent all
 
 ## Input
 
-- Left click: select or execute Move/Patrol mode
+- Left click: select or execute Move / Attack-Move / 1-click Patrol mode
 - Right click: attack visible enemy, otherwise move
 - Shift+click: add selection
+- M / A / P / S: Move, Attack-Move, Patrol, Stop
 - Esc: cancel command mode
 - F: select all player units
-- HUD buttons: Move, Patrol, Stop, Select All, Reset
+- HUD buttons: Move, Attack, Patrol, Stop, Select All, Reset
 
 ## Known Limits
 

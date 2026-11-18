@@ -7,15 +7,18 @@
 | Left Click | Select single unit |
 | Left Drag | Box select |
 | Right Click | Move selected units / Attack enemy |
-| Left Click on `Mo` HUD button (bottom-right) | Enter Move command mode |
-| Left Click on terrain (while Move mode active) | Issue move command and exit Move mode |
-| Left Click on `Pt` HUD button (bottom-right stack) | Enter Patrol command mode |
-| First Left Click on terrain (Patrol mode) | Set patrol point A |
-| Second Left Click on terrain (Patrol mode) | Set patrol point B and start A↔B loop |
+| Left Click on `[M] Move` button (or press `M`) | Enter Move command mode |
+| Left Click on terrain (while Move mode active) | Issue move order with green ground confirmation FX |
+| Left Click on `[A] Attack` button (or press `A`) | Enter StarCraft Attack-Move targeting mode |
+| Left Click on enemy / terrain (while Attack mode active) | Attack targeted enemy or Attack-Move to terrain with red confirmation FX |
+| Left Click on `[P] Patrol` button (or press `P`) | Enter 1-click Patrol targeting mode |
+| Left Click on terrain (while Patrol mode active) | Start `current <-> clicked` patrol with cyan/amber loop FX |
+| Left Click on `[S] Stop` button (or press `S`) | Stop unit and clear Move/Attack/Patrol orders |
 | Left Click on Minimap | Center main camera to clicked map location |
-| Right Click on Enemy | Attack (move into melee range and deal damage) |
+| Right Click on Enemy | Attack (move into melee range and deal damage) with red target lock FX |
+| Right Click on Ground | Move directly to location with SC2/AoE converging chevron confirmation FX |
 | Shift + Click | Add to selection |
-| Escape | Clear selection |
+| Escape | Cancel active command mode first, or toggle pause menu when idle |
 
 ## Selection Box
 - Start drag from top-left
@@ -53,15 +56,14 @@
 - Stop at destination
 - Unit state becomes `Moving` while traversing an active path
 
-## Patrol
-- `Pt` command mode uses two clicks to define patrol points A and B
-- After both points are set, unit loops between A and B indefinitely
-- Patrol uses pathfinding for each leg (A->B then B->A)
-- Patrol is cancelled by explicit move orders (`Right Click` or `Mo` order)
+## Patrol & Attack-Move
+- `[P]` Patrol / `Patrol` button uses single-click StarCraft/AoE targeting: clicking destination `B` starts an immediate `current_pos <-> B` patrol loop (`x, y, x2, y2` explicit endpoints remain supported via the control API).
+- Patrolling and Attack-Moving units scan within `VISION_RADIUS` (`6` cells), engage enemies, and automatically resume their patrol leg or remaining attack-move destination once targets die or leave leash range (`8` cells).
+- Any explicit `Move` (Right-click or `[M] Move`) or `[S] Stop` cancels `Patrol` and `Attack_Move`.
 
-## Command Cursor
-- Clicking `Mo` changes cursor to a move-style cursor
-- After issuing a movement target with left-click, cursor returns to default
+## Ground Confirmation FX & Command Cursor
+- Pressing `M`, `A`, or `P` switches to a crosshair cursor and renders a pulsing 3D cell reticle under the cursor (`command_fx.odin`).
+- Right-clicking ground or confirming `Move`/`Attack-Move`/`Patrol` plays SC2/AoE inward-converging 3D chevrons + expanding pulse ring (`Move` green/gold, `Attack` red, `Patrol` cyan/amber); targeting an enemy plays a pulsing red target lock ring.
 
 ## HUD Layout Notes
 - Lower HUD is taller than minimap top edge by about 10px
@@ -82,8 +84,10 @@
 - The native window is resizable (minimum 800×600). HUD, minimap,
   buttons and camera offset relayout from the current framebuffer size.
 - The Odin client implements the same RTS controls with raylib:
-  left-click/drag selection, right-click move/attack, Move/Patrol command
-  modes, WASD/arrow pan, edge scroll, Escape menu, minimap click.
+  left-click/drag selection, right-click move/attack, 2×2 command card
+  (`[M] Move`, `[A] Attack`, `[P] Patrol`, `[S] Stop`) and hotkeys,
+  WASD/arrow pan, edge scroll, Escape (cancels active command mode before
+  toggling the Pause menu), minimap click.
 - Losing window focus while the cursor is outside the window no longer causes
   edge-scroll drift: edge scroll requires `IsWindowFocused()`, `IsCursorOnScreen()`,
   and `edge_armed` (arming only after cursor activity inside the inner viewport).
@@ -99,10 +103,14 @@
   unit never snaps back to the previous cell center. Clicks on blocked cells
   are rejected without changing the current order.
 - Mouse picking in the 3D client casts a ray from the camera and intersects
-  the ground plane; selection boxes project unit positions with
-  `GetWorldToScreen`.
+  the ground plane (`screen_to_world_ground` / `screen_to_grid`); selection
+  boxes project unit positions with `GetWorldToScreen`.
+- Ground clicks and confirmed commands spawn 3D inward chevrons, expanding
+  rings, and center diamonds (`command_fx.odin`), targeted enemies show a
+  pulsing red reticle, and active command modes draw a live cursor reticle.
 - Web client: left click select/command, right click move/attack, shift+click
-  add selection, Esc cancel mode, F select all. Buttons: Move, Patrol, Stop,
+  add selection, Esc cancel mode, F select all, `M`/`A`/`P`/`S` hotkeys.
+  Buttons: Move, Attack, Patrol (single-click from current position), Stop,
   Select All, Reset.
 - Commands are queued as fixed-size `Command` values; input never mutates
   simulation state directly.

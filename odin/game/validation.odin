@@ -21,6 +21,7 @@ Validation_Error :: enum u8 {
 	UnitPathDetached,
 	UnitStateInvalid,
 	UnitPatrolInvalid,
+	UnitAttackMoveInvalid,
 	AttackTargetInvalid,
 	AttackTargetFriendly,
 	AttackTargetSelf,
@@ -131,9 +132,16 @@ validate_unit :: proc(units: ^Units, grid: ^Grid, index: int) -> Validation_Erro
 		return .UnitStateInvalid
 	}
 	if units.patrol_active[index] {
-		if units.state[index] != .Patrol {
+		if units.state[index] != .Patrol || units.attack_move_active[index] {
 			return .UnitPatrolInvalid
 		}
+	}
+	if units.attack_move_active[index] {
+		if units.state[index] != .Attack_Move || units.patrol_active[index] || !grid_is_walkable(grid, units.attack_move_dest[index]) {
+			return .UnitAttackMoveInvalid
+		}
+	} else if units.state[index] == .Attack_Move {
+		return .UnitAttackMoveInvalid
 	}
 	if units.cooldown[index] > ATTACK_COOLDOWN_TICKS {
 		return .CooldownInvalid
@@ -341,6 +349,8 @@ validation_error_name_b :: proc(err: Validation_Error) -> string {
 		return "unit state inconsistent with path"
 	case .UnitPatrolInvalid:
 		return "unit patrol state invalid"
+	case .UnitAttackMoveInvalid:
+		return "unit attack-move state invalid"
 	case .AttackTargetInvalid:
 		return "attack target handle is stale"
 	case .AttackTargetFriendly:

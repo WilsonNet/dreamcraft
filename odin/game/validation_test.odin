@@ -122,3 +122,12 @@ validator_catches_path_start_mismatch :: proc(t: ^testing.T) {
 	game.units.path[index][0] = u16(wrong)
 	testing.expect_value(t, validate_game(&game), Validation_Error.UnitPathStartInvalid)
 }
+
+@(test)
+validator_catches_attack_move_corruption :: proc(t: ^testing.T) {
+	game: Game
+	game_init(&game)
+	index, _ := game_player_index(&game)
+	game.units.attack_move_active[index] = true
+	testing.expect_value(t, validate_game(&game), Validation_Error.UnitAttackMoveInvalid)
+}
