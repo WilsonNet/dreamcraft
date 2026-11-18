@@ -14,7 +14,8 @@
 | Left Click on `[P] Patrol` button (or press `P`) | Enter 1-click Patrol targeting mode |
 | Left Click on terrain (while Patrol mode active) | Start `current <-> clicked` patrol with cyan/amber loop FX |
 | Left Click on `[S] Stop` button (or press `S`) | Stop unit and clear Move/Attack/Patrol orders |
-| Left Click on Minimap | Center main camera to clicked map location |
+| Left Click / Drag on Minimap | Center and scrub main camera across map |
+| Middle Mouse Drag (or `Space` + Left Drag) | Dota 2 / SC2 Camera Grip: pull ground 1:1 under cursor |
 | Right Click on Enemy | Attack (move into melee range and deal damage) with red target lock FX |
 | Right Click on Ground | Move directly to location with SC2/AoE converging chevron confirmation FX |
 | Shift + Click | Add to selection |
@@ -28,23 +29,29 @@
 
 ## Camera
 
+### Middle-Mouse Camera Grip / Drag Scroll (Dota 2 & SC2 Standard)
+- Holding Middle Mouse Button (or `Space` + Left Drag on trackpads) in the world viewport grips the terrain under the cursor and pulls it 1:1 (`screen_delta_to_world_grip`)
+- Movement stops immediately on button release with zero float/inertia, and changes the cursor to `.RESIZE_ALL` while held
+- Dragging >= 0.5px switches from `CAM FOLLOW` to `CAM FREE`; edge pan and box selection pause while gripping
+
 ### WASD / Arrow Keys
-- WASD or arrow keys pan the camera at 400 px/sec
-- Camera is clamped to grid bounds (+200px margin)
+- WASD or arrow keys pan along screen-corrected isometric axes (`CAMERA_KEY_SCREEN_SPEED = 1.25 * fovy/s`), keeping vertical and horizontal screen speeds equal across all zoom levels
+- Uses responsive exponential acceleration/deceleration (`CAMERA_ACCEL_RATE = 28`, `CAMERA_DECEL_RATE = 34`) with zero ice-skating drift
+- Camera is clamped to grid bounds (+3 cells margin)
 
 ### Mouse Wheel Zoom
-- Wheel zooms the orthographic camera between `0.25x` and `2.0x` (`--zoom` clamp `0.08`..`2.0`)
+- Vertical wheel (`GetMouseWheelMoveV().y`) smoothly eases `zoom` between `0.25x` and `2.0x` (`--zoom` clamp `0.08`..`2.0`), ignoring horizontal trackpad swipes
 - Default zoom is `0.55`
 - `--zoom=<n>` sets the initial zoom for dev runs
 - Picking uses the live camera, so selection and commands stay accurate
 
-### Screen Edge Scrolling (RTS Standard)
-- When mouse cursor enters the 20px zone at any screen edge, camera scrolls
-- Scroll speed is progressive: faster the closer the cursor is to the edge
-- Speed ramps from 200 px/sec (at 20px from edge) to 600 px/sec (at 0px from edge)
-- X and Y axes scroll independently
-- Works alongside keyboard camera controls
-- Camera is clamped to grid bounds
+### Screen Edge Scrolling (Dota 2 & SC2 Standard)
+- When focused and armed inside the inner viewport, moving the cursor into the 16px border at any screen edge (including exact border pixels `0` and `width`/`height`) pans the camera smoothly
+- Screen-space speed is constant and zoom-scaled (`CAMERA_EDGE_SCREEN_SPEED = 1.35 * fovy/s`), pitch-compensated so up/down matches left/right, and normalized in corners for uniform 45° diagonal motion
+- Responsive Dota-style accel/decel prevents single-frame border jitter while stopping crisply when leaving the edge
+- Shows directional resize arrows (`.RESIZE_EW`, `.RESIZE_NS`, `.RESIZE_NWSE`, `.RESIZE_NESW`) when edge-panning outside command mode
+- Pauses cleanly over the minimap, during box select, during Camera Grip, or when the cursor leaves the window/focus
+- Camera is clamped to grid bounds (+3 cells margin)
 
 ## Movement
 - Right-click sets target position
@@ -72,8 +79,8 @@
 - Bottom-center command card region is reserved for future control groups
 
 ## Minimap Camera Navigation
-- Left-click inside minimap recenters the main camera
-- Click position is mapped from minimap normalized coordinates to grid coordinates
+- Left-click or drag inside minimap scrubs the main camera across the map
+- Click/drag position is mapped from minimap normalized coordinates to grid coordinates
 - Y-axis is inverted from UI space so minimap top maps to high grid Y
 - Camera position is clamped to world camera bounds after recentering
 
@@ -91,12 +98,13 @@
 - Losing window focus while the cursor is outside the window no longer causes
   edge-scroll drift: edge scroll requires `IsWindowFocused()`, `IsCursorOnScreen()`,
   and `edge_armed` (arming only after cursor activity inside the inner viewport).
-- Keyboard WASD/arrows and screen-edge scroll derive `forward` and `right` from
-  `camera_pan_axes()` (`cross(forward, up)`) so left/right match isometric screen axes.
+- Keyboard WASD/arrows, screen-edge scroll, and Camera Grip derive `forward` and `right` from
+  `camera_pan_axes()` (`cross(forward, up)`) and compensate vertical ground distance by
+  `1 / camera_pitch_sin()`, so up/down, left/right, and corners pan at identical screen speeds.
 - Camera follow is on by default. It tracks the unit's interpolated world
   position exactly (no smoothing) and runs after the simulation tick, so the
   unit stays screen-centered without catch-up drift or rollback.
-- WASD/arrow/edge-scroll/minimap click switches to FREE. `F` toggles FOLLOW.
+- Middle-mouse/Space+drag grip, WASD/arrow/edge-scroll, and minimap click/drag switch to FREE. `F` toggles FOLLOW.
   HUD shows `CAM FOLLOW`/`CAM FREE`.
 - Right-click re-orders use the current interpolation: a second click while the
   unit is between cells plans from `next` and keeps `progress`/`world`, so the

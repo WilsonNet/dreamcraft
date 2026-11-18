@@ -5,19 +5,28 @@ import rl "vendor:raylib"
 import g "../game"
 
 handle_input :: proc() {
-	mouse := rl.GetMousePosition()
+	mouse := input_mouse_pos()
 
-	if rl.IsMouseButtonPressed(.LEFT) {
+	if input_left_pressed() {
 		handle_left_press(mouse)
 	}
-	if rl.IsMouseButtonReleased(.LEFT) {
+	if input_left_released() {
 		handle_left_release(mouse)
+	}
+	if input_middle_pressed() && !app.menu_open {
+		handle_middle_press(mouse)
 	}
 	if rl.IsMouseButtonPressed(.RIGHT) && !app.menu_open {
 		handle_right_click(mouse)
 	}
+	if app.minimap_dragging {
+		if !app.menu_open && input_left_down() {
+			handle_minimap_click(mouse)
+		} else {
+			app.minimap_dragging = false
+		}
+	}
 	handle_keyboard()
-	update_cursor()
 }
 
 handle_keyboard :: proc() {
@@ -28,6 +37,8 @@ handle_keyboard :: proc() {
 		} else {
 			app.menu_open = !app.menu_open
 			app.dragging = false
+			app.minimap_dragging = false
+			end_camera_grip()
 		}
 	}
 	if app.menu_open {
@@ -35,6 +46,7 @@ handle_keyboard :: proc() {
 	}
 	if rl.IsKeyPressed(.F) {
 		app.camera_follow = !app.camera_follow
+		app.camera_vel = {}
 	}
 	if rl.IsKeyPressed(.M) {
 		app.command_mode = .Move
@@ -56,16 +68,38 @@ handle_keyboard :: proc() {
 }
 
 update_cursor :: proc() {
+	next := rl.MouseCursor.DEFAULT
 	if app.menu_open {
-		rl.SetMouseCursor(.DEFAULT)
+		next = .DEFAULT
+	} else if app.grip_active {
+		next = .RESIZE_ALL
+	} else if app.command_mode != .None {
+		next = .CROSSHAIR
 	} else {
-		switch app.command_mode {
-		case .None:
-			rl.SetMouseCursor(.DEFAULT)
-		case .Move, .Attack, .Patrol:
-			rl.SetMouseCursor(.CROSSHAIR)
-		}
+		next = edge_cursor(app.edge_dir)
 	}
+	if !app.cursor_initialized || next != app.last_cursor {
+		rl.SetMouseCursor(next)
+		app.last_cursor = next
+		app.cursor_initialized = true
+	}
+}
+
+@(private)
+edge_cursor :: proc(dir: rl.Vector2) -> rl.MouseCursor {
+	if dir.x == 0 && dir.y == 0 {
+		return .DEFAULT
+	}
+	if dir.x != 0 && dir.y == 0 {
+		return .RESIZE_EW
+	}
+	if dir.x == 0 && dir.y != 0 {
+		return .RESIZE_NS
+	}
+	if (dir.x < 0 && dir.y > 0) || (dir.x > 0 && dir.y < 0) {
+		return .RESIZE_NWSE
+	}
+	return .RESIZE_NESW
 }
 
 handle_left_press :: proc(mouse: rl.Vector2) {
@@ -99,9 +133,25 @@ handle_left_press :: proc(mouse: rl.Vector2) {
 		issue_patrol_at(mouse)
 		app.command_mode = .None
 	case .None:
+		if input_space_down() {
+			start_camera_grip(mouse, true)
+			return
+		}
 		app.dragging = true
 		app.drag_start = mouse
 	}
+}
+
+@(private)
+handle_middle_press :: proc(mouse: rl.Vector2) {
+	if mouse.y >= f32(rl.GetScreenHeight()) - HUD_HEIGHT {
+		return
+	}
+	if rl.CheckCollisionPointRec(mouse, app.minimap_rect) {
+		return
+	}
+	app.dragging = false
+	start_camera_grip(mouse, false)
 }
 
 @(private)
@@ -162,6 +212,10 @@ issue_patrol_at :: proc(mouse: rl.Vector2) {
 }
 
 handle_left_release :: proc(mouse: rl.Vector2) {
+	app.minimap_dragging = false
+	if app.grip_active && app.grip_via_space {
+		end_camera_grip()
+	}
 	if !app.dragging {
 		return
 	}
@@ -263,6 +317,8 @@ handle_minimap_click :: proc(mouse: rl.Vector2) {
 	cell := g.Grid_Pos{x = i32(u * f32(g.GRID_W)), y = i32((1 - v) * f32(g.GRID_H))}
 	app.camera_target = clamp_camera_target(cell_center(cell))
 	app.camera_follow = false
+	app.camera_vel = {}
+	app.minimap_dragging = true
 	apply_camera()
 }
 

@@ -27,7 +27,7 @@ draw_status_panel :: proc() {
 	buffer: [256]u8
 	rl.DrawText("DREAMCRAFT RTS", 24, 22, 20, rl.Color{235, 215, 120, 255})
 	rl.DrawText("Tutorial Level 1 - Through the Woods", 24, 46, 14, rl.Color{180, 200, 180, 255})
-	rl.DrawText("WASD/Edge pan | F follow | M Move | A Attack | P Patrol | S Stop | Esc", 24, 66, 11, rl.Color{140, 170, 140, 255})
+	rl.DrawText("MMB/Space+Drag grip | Edge/WASD pan | F follow | M/A/P/S | Esc", 24, 66, 11, rl.Color{140, 170, 140, 255})
 
 	position, ok := g.game_player_position(&app.game)
 	if ok {

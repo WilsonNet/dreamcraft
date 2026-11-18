@@ -44,7 +44,7 @@ capacity arrays.
 - [x] Age of Empires × Toriyama world proportions: towering procedural pines & oaks, mossy boulders, stone waypoints, double-crescent slash VFX
 - [x] Painterly terrain (`1280×800`), obstacle-aware Catmull-Rom trail, bilinear mist fog, and full-res watercolour post-process (no GLB assets)
 - [x] Web client keeps the lightweight 2:1 canvas view
-- [x] Camera follow mode with manual override (`F`)
+- [x] Camera follow mode with manual override (`F`), Dota/SC2 Camera Grip (`MMB` / `Space+Drag`), fixed pitch-compensated edge scroll, smooth wheel zoom, and minimap drag + viewport frame
 - [x] Move/attack re-orders keep mid-cell position (no teleport/rollback)
 - [x] Browser build: Odin `js_wasm32` + HTML canvas + DOM HUD
 - [x] Headless runner: file polling, JSONL scripts, `--ticks`
@@ -52,11 +52,12 @@ capacity arrays.
 - [x] StarCraft-style `Attack_Move` (`A` / Attack button) and fixed 1-click `Patrol` (`P` / Patrol button) with enemy auto-acquisition along the route and automatic leg resumption after combat
 - [x] StarCraft 2 / Age of Empires 3D ground command FX (`command_fx.odin`): inward-converging chevrons, pulse rings, target lock rings, live cursor preview, and state-colored paths
 - [x] HTTP control API replacing Bevy BRP MCP
-  - [x] `GET /state`, `/units`, `/fog`, `/screenshot`, `/health`
+  - [x] `GET /state`, `/units`, `/fog`, `/screenshot`, `/camera`, `/health`
   - [x] `POST /command`: move, patrol, patrol_to, attack, attack_move, stop, run, reset, verify,
         select, spawn, kill, set_hp, teleport
+  - [x] `POST /mouse` + `odin/tests/camera_mouse_check.py` live mouse & OS camera validation tool
   - [x] Every response carries `valid` + `validation`
-- [x] 93 unit/integration tests (64 game, 12 control, 12 art, 5 client)
+- [x] 98 unit/integration tests (64 game, 12 control, 12 art, 10 client)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator
@@ -146,11 +147,11 @@ capacity arrays.
 - [x] Attack cooldown (1 second between attacks)
 - [x] Death system (units despawn at 0 HP)
 
-#### Screen Edge Scrolling
-- [x] Progressive scroll speed (faster closer to edge)
-- [x] 20px activation zone from screen edges
-- [x] Speed ramps from 200 to 600 px/sec
-- [x] Works alongside WASD camera controls
+#### Screen Edge Scrolling & Camera Grip
+- [x] Dota 2 / StarCraft 2 Camera Grip (`Middle Mouse` or `Space + Left Drag`): 1:1 ground locking with zero float
+- [x] 16px edge pan activation zone (including exact `0` / `width` / `height` border pixels) with directional cursor feedback
+- [x] Pitch-compensated (`1 / sin(pitch)`), zoom-scaled screen speed with normalized corners and crisp exponential accel/decel
+- [x] Works alongside WASD camera controls and minimap click/drag scrubbing
 
 #### Escape Menu
 - [x] Press Esc to open/close pause overlay
@@ -172,9 +173,11 @@ capacity arrays.
 
 ### Controls
 - **Right-Click**: Move unit to location; right-click on enemy = attack
+- **Middle-Mouse / Space+Drag**: Dota 2 / SC2 Camera Grip (1:1 terrain drag)
 - **WASD/Arrows**: Pan camera
-- **Screen Edge Scroll**: Mouse at screen edge pans camera (progressive speed)
-- **Left-Click Minimap**: Center camera on clicked map position
+- **Screen Edge Scroll**: Mouse at screen edge pans camera (Dota/SC2 pitch-compensated)
+- **Mouse Wheel**: Smooth zoom
+- **Left-Click / Drag Minimap**: Center and scrub camera across map
 - **Backtick (`` ` ``)**: Toggle Agent Console
 - **Escape**: Toggle pause menu (Retry / Resume)
 

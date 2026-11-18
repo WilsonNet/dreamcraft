@@ -20,9 +20,10 @@ Interpolated unit positions use the same conversion from `units.world`
 - Offset: `normalize({1, 0.816, 1}) * 40` (45° yaw, ~30° pitch).
 - Ortho height: `fovy = 20 * zoom`; default `zoom = 0.55` (≈11 world units
   visible vertically, towering trees 1.8–2.3× infantry height).
-- Mouse wheel zooms between `0.08` and `2.0`; `--zoom=<n>` sets it for dev runs.
+- Mouse wheel (`GetMouseWheelMoveV().y`) smoothly eases `zoom` between `0.25` and `2.0` (`--zoom=<n>` sets `0.08`..`2.0` for dev runs).
 - Target: player ground position (Y=0); units stand above the screen center.
-- Follow is exact; WASD/edge scroll/minimap click switch to FREE.
+- Follow is exact; middle-mouse / Space+Left camera grip, edge pan, WASD/arrows, and minimap click/drag switch to FREE (`F` toggles FOLLOW).
+- Panning compensates for the ~30° isometric pitch (`1 / sin(pitch)`) and scales with `fovy` so vertical, horizontal, and diagonal movement cover identical screen pixel speeds at any zoom.
 - Clamp target to the grid footprint plus 3 cells of margin.
 
 ## Picking
@@ -114,4 +115,4 @@ renderer. The native client is the full 3D target.
   32-phase foot grounding, 16-phase idle grounding, joint child isolation, attack windup/return,
   face clearance, and tree/prop mesh validity (12 tests).
 - `odin test client`: deterministic cell hashes, `angle_toward` (`0° +Z`, `90° +X`),
-  shortest-arc `turn_toward`, isometric `camera_pan_axes`, and `command_fx` ring updates (5 tests).
+  shortest-arc `turn_toward`, isometric `camera_pan_axes`, isometric pan speed equalization, 1:1 ground grip delta, edge-scroll border/focus behavior, macOS `cursor_inside` recovery, and `command_fx` ring updates (10 tests).

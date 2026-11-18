@@ -155,7 +155,13 @@ Endpoints:
 | GET | `/units` | unit list with team, position, HP, state, path, target |
 | GET | `/fog` | 80×50 ASCII map |
 | GET | `/screenshot` | live PNG (client only) |
+| GET | `/camera` | live camera, zoom, focus, cursor, edge-pan & grip state (client only) |
 | POST | `/command` | execute a JSON command |
+| POST | `/mouse` | inject deterministic client mouse/wheel/focus probe frames (client only) |
+
+Mouse & camera validation tool (`odin/tests/camera_mouse_check.py`):
+- `--mode probe`: tests edge arming, exact `0`/`width`/`height` borders, pitch-compensated vertical/horizontal speed, MMB 1:1 grip, `Space`+Left grip, wheel zoom, minimap click/drag, unfocus disarm, and PNG screenshots via `POST /mouse` + `GET /camera`.
+- `--mode os`: drives real macOS CoreGraphics mouse events (`mouseMoved`, `leftMouseDown/Up`, `otherMouseDown/Dragged/Up`, scroll wheel) over a live `dreamcraft-dev` window and verifies camera movement via `GET /camera`.
 
 Commands: `status`, `goto`, `patrol`, `attack`, `stop`, `run`, `reset`,
 `verify`, `select`, `select_all`, `spawn`, `kill`, `set_hp`, `teleport`.

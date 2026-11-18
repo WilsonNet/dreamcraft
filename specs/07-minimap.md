@@ -146,7 +146,8 @@ The Odin client renders the minimap into a single 80×50 `rl.Texture2D`:
 - The texture is scaled to 200×125 with nearest-neighbor filtering.
 - The source rectangle has negative height to flip Y so grid `(0,0)` is at the
   bottom-left of the minimap.
-- Left-click maps minimap UV to grid coordinates and recenters the camera.
+- Left-click and drag map minimap UV to grid coordinates to scrub the camera continuously.
+- Draws a clipped isometric camera viewport frame showing the live visible ground footprint.
 - Updating costs 4000 pixel writes plus one 16 KiB texture upload per frame.
 
 No per-cell UI entities are created.

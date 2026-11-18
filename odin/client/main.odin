@@ -65,7 +65,21 @@ App :: struct {
 	last_fps: int,
 	camera_follow: bool,
 	edge_armed: bool,
+	cursor_inside: bool,
+	prev_raw_on_screen: bool,
+	prev_raw_mouse: rl.Vector2,
+	last_cursor: rl.MouseCursor,
+	cursor_initialized: bool,
 	zoom: f32,
+	target_zoom: f32,
+	camera_vel: rl.Vector3,
+	edge_dir: rl.Vector2,
+	grip_active: bool,
+	grip_via_space: bool,
+	grip_moved: bool,
+	grip_last_mouse: rl.Vector2,
+	minimap_dragging: bool,
+	probe: Mouse_Probe,
 	models: [g.MAX_UNITS]Unit_Model,
 	visuals: [g.MAX_UNITS]Unit_Visual,
 	last_tick: u64,
@@ -83,6 +97,10 @@ main :: proc() {
 	g.game_init(&app.game)
 	if port, ok := find_control_port(os.args); ok {
 		app.serving = control.server_start(&app.server, &app.game, port, capture_screenshot)
+		if app.serving {
+			app.server.camera_state = capture_camera_snapshot
+			app.server.mouse_input = handle_mouse_probe
+		}
 	}
 	defer if app.serving {
 		control.server_close(&app.server)
@@ -123,10 +141,13 @@ open_window :: proc(sheet: bool) {
 @(private)
 step_client_frame :: proc() {
 	dt := f64(rl.GetFrameTime())
+	probe_begin_frame()
 	update_layout()
 	handle_input()
 	update_simulation(dt)
 	update_camera(dt)
+	update_cursor()
+	probe_end_frame()
 	update_warrior_visuals(f32(dt))
 	update_command_fx(f32(dt))
 	update_minimap_pixels()
@@ -150,6 +171,7 @@ init_world_assets :: proc() {
 	if zoom, ok := find_zoom(os.args); ok {
 		app.zoom = zoom
 	}
+	app.target_zoom = app.zoom
 	reset_camera()
 	update_layout()
 }

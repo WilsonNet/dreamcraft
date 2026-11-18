@@ -81,6 +81,11 @@ my_test :: proc(t: ^testing.T) {
 - `Camera2D.offset` is screen center; `target` is world position.
 - Edge scrolling needs `IsWindowFocused()` **and** `IsCursorOnScreen()`,
   otherwise an unfocused window can scroll the camera to its clamp.
+- On macOS GLFW, `IsCursorOnScreen()` only updates on `NSTrackingArea` `mouseEntered:`/`mouseExited:` border crossings and stays `false` if the window spawns under the cursor; track `update_cursor_inside()` from live `GetMousePosition()` within `[0..width] × [0..height]` while focused, and cache `last_cursor` instead of calling `SetMouseCursor` every frame.
+- On macOS GLFW, `GetMousePosition()` reaches `0` and `width`/`height` at window borders; never reject `mouse.x <= 0 || mouse.x >= width` in edge-scroll checks.
+- Validate live mouse & camera movement against a dev window with `cd odin && python3 tests/camera_mouse_check.py --launch --mode both --port 7778` (`GET /camera` + `POST /mouse` + macOS `CGEvent` OS driver).
+- Use `GetMouseWheelMoveV().y` instead of `GetMouseWheelMove()` so horizontal two-finger trackpad swipes never trigger wheel zoom.
+- Orthographic isometric cameras at pitch θ (`abs(normalize(offset).y)`) foreshorten ground `forward` by `sin(θ)`; scale ground `forward` pan by `1 / sin(θ)` and multiply by `fovy` so vertical, horizontal, and diagonal panning share one visual screen speed across zoom levels.
 - Screenshot: `LoadImageFromScreen()` then `ExportImage` to `.png`; serve the
   file bytes from the control server.
 - Minimap: one 80×50 texture, scale to 200×125, negative source height flips Y.

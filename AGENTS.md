@@ -156,9 +156,10 @@ legacy/          # archived prototypes (not built or tested)
 - Bevy BRP MCP was removed. Do not re-add `bevy_remote`, `bevy_brp_extras`,
   or `bevy_brp` MCP config.
 - Use the Odin control API instead:
-  - `GET /state`, `GET /units`, `GET /fog`, `GET /screenshot`
+  - `GET /state`, `GET /units`, `GET /fog`, `GET /screenshot`, `GET /camera`
   - `POST /command` with `goto`, `patrol`, `patrol_to`, `attack`, `attack_move`,
   `run`, `reset`, `verify`, `select`, `spawn`, `kill`, `set_hp`, `teleport`
+  - `POST /mouse` (client probe) + `cd odin && python3 tests/camera_mouse_check.py --launch --mode both --port 7778` for live mouse & macOS OS camera validation (see **camera-mouse** skill)
 - HTTP server is single-threaded and polled from the main loop. Commands
   mutate the same `Game` as rendering.
 - `bin/headless --script` is the CI path; `--serve` is the interactive path.
@@ -201,7 +202,7 @@ responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 - Patrol (`P` / 1-click) loops A↔B cleanly and engages enemies within 6-cell vision before resuming the patrol leg
 - Attack-Move (`A`) marches to destination while auto-acquiring enemies within 6-cell vision, resuming to destination once clear
 - SC2/AoE-style 3D ground command confirmation chevrons & pulse rings on right-click / command orders
-- Camera follow by default; manual pan switches to FREE (`F` toggles)
+- Camera follow by default; manual pan switches to FREE (`F` toggles); Dota/SC2 Camera Grip (`MMB` / `Space`+Left drag), pitch-compensated edge scroll, smooth wheel zoom, and minimap drag + viewport frame (see **camera-mouse** skill)
 - Native full 3D orthographic isometric renderer + watercolour post shader
 - Procedural Mamluk unit (`client/art/`): 5.36-head heroic rig (26 joints),
   kinetic-chain idle/walk/attack clips, turn banking & stop-settle cushion
@@ -216,6 +217,7 @@ Skills live in `.agents/skills/` (symlinked from `.opencode/skills/` and
 | Skill | Purpose |
 |-------|---------|
 | **odin** | Odin patterns, allocators, testing, raylib, control server |
+| **camera-mouse** | Dota/SC2 camera grip & edge pan, macOS raylib cursor gotchas, live mouse probe |
 | **art-direction** | Toriyama/DQ character look, palette, watercolour shading |
 | **bevy** | Legacy Bevy reference only |
 | **herdr** | Herdr workspace, tab, pane, and background session management |

@@ -13,6 +13,8 @@ import "core:time"
 import g "../game"
 
 Screenshot_Proc :: proc(user: rawptr) -> (data: []byte, ok: bool)
+Camera_State_Proc :: proc(user: rawptr) -> (data: []byte, ok: bool)
+Mouse_Input_Proc :: proc(user: rawptr, body: string) -> (data: []byte, ok: bool)
 
 Server :: struct {
 	listener: net.TCP_Socket,
@@ -21,6 +23,8 @@ Server :: struct {
 	running: bool,
 	screenshot: Screenshot_Proc,
 	screenshot_user: rawptr,
+	camera_state: Camera_State_Proc,
+	mouse_input: Mouse_Input_Proc,
 }
 
 server_start :: proc(
@@ -218,6 +222,8 @@ route :: proc(server: ^Server, client: net.TCP_Socket, method, path, body: strin
 	case "POST":
 		if path == "/command" {
 			handle_command(server, client, body, keep_alive)
+		} else if path == "/mouse" {
+			handle_mouse_post(server, client, body, keep_alive)
 		} else {
 			send_response(client, 404, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"not found"}`))
 		}
@@ -241,6 +247,18 @@ handle_get :: proc(server: ^Server, client: net.TCP_Socket, path: string, keep_a
 		buffer: [g.GRID_CELLS + g.GRID_H]u8
 		length := fog_text(server.game, buffer[:])
 		send_response(client, 200, keep_alive, "text/plain; charset=utf-8", buffer[:length])
+	case "/camera":
+		if server.camera_state == nil {
+			send_response(client, 501, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"camera probe not available in this build"}`))
+			return
+		}
+		data, ok := server.camera_state(server.screenshot_user)
+		if !ok || data == nil {
+			send_response(client, 500, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"camera probe failed"}`))
+			return
+		}
+		defer delete(data)
+		send_response(client, 200, keep_alive, "application/json", data)
 	case "/screenshot":
 		if server.screenshot == nil {
 			send_response(client, 501, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"screenshot not available in this build"}`))
@@ -256,6 +274,21 @@ handle_get :: proc(server: ^Server, client: net.TCP_Socket, path: string, keep_a
 	case:
 		send_response(client, 404, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"not found"}`))
 	}
+}
+
+@(private)
+handle_mouse_post :: proc(server: ^Server, client: net.TCP_Socket, body: string, keep_alive: bool) {
+	if server.mouse_input == nil {
+		send_response(client, 501, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"mouse probe not available in this build"}`))
+		return
+	}
+	data, ok := server.mouse_input(server.screenshot_user, body)
+	if !ok || data == nil {
+		send_response(client, 400, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"invalid mouse command"}`))
+		return
+	}
+	defer delete(data)
+	send_response(client, 200, keep_alive, "application/json", data)
 }
 
 @(private)

@@ -69,6 +69,66 @@ draw_minimap_panel :: proc() {
 	rl.DrawRectangleRec(rl.Rectangle{rect.x - 5, rect.y - 5, rect.width + 10, rect.height + 10}, rl.Color{8, 14, 8, 230})
 	source := rl.Rectangle{0, 0, g.GRID_W, -g.GRID_H}
 	rl.DrawTexturePro(app.minimap, source, rect, rl.Vector2{0, 0}, 0, rl.WHITE)
+	draw_minimap_camera_box(rect)
 	rl.DrawRectangleLinesEx(rl.Rectangle{rect.x - 5, rect.y - 5, rect.width + 10, rect.height + 10}, 2, rl.Color{90, 150, 90, 255})
 	rl.DrawText("MINIMAP", i32(rect.x), i32(rect.y - 24), 12, rl.Color{170, 200, 170, 230})
+}
+
+@(private)
+world_to_minimap :: proc(point: rl.Vector3, rect: rl.Rectangle) -> rl.Vector2 {
+	u := (point.x + f32(g.GRID_W) * 0.5) / f32(g.GRID_W)
+	v := 1.0 - (point.z + f32(g.GRID_H) * 0.5) / f32(g.GRID_H)
+	return rl.Vector2{rect.x + u * rect.width, rect.y + v * rect.height}
+}
+
+@(private)
+draw_minimap_camera_box :: proc(rect: rl.Rectangle) {
+	w := f32(rl.GetScreenWidth())
+	h := max(f32(rl.GetScreenHeight()) - HUD_HEIGHT, f32(1))
+	corners := [4]rl.Vector2{{0, 0}, {w, 0}, {w, h}, {0, h}}
+	pts: [4]rl.Vector2
+	for sc, idx in corners {
+		p, ok := screen_to_world_ground(sc)
+		if !ok {
+			return
+		}
+		pts[idx] = world_to_minimap(p, rect)
+	}
+	col := rl.Color{235, 240, 225, 210}
+	for i in 0..<4 {
+		if a, b, ok := clip_segment_rect(pts[i], pts[(i + 1) % 4], rect); ok {
+			rl.DrawLineV(a, b, col)
+		}
+	}
+}
+
+@(private)
+clip_segment_rect :: proc(p0, p1: rl.Vector2, rect: rl.Rectangle) -> (a, b: rl.Vector2, ok: bool) {
+	t0, t1 := f32(0), f32(1)
+	d := p1 - p0
+	edges := [4][2]f32{
+		{-d.x, p0.x - rect.x},
+		{d.x, rect.x + rect.width - p0.x},
+		{-d.y, p0.y - rect.y},
+		{d.y, rect.y + rect.height - p0.y},
+	}
+	for edge in edges {
+		p, q := edge[0], edge[1]
+		if p == 0 {
+			if q < 0 {
+				return {}, {}, false
+			}
+			continue
+		}
+		r := q / p
+		if p < 0 {
+			t0 = max(t0, r)
+		} else {
+			t1 = min(t1, r)
+		}
+		if t0 > t1 {
+			return {}, {}, false
+		}
+	}
+	return p0 + d * t0, p0 + d * t1, true
 }

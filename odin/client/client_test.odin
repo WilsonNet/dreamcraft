@@ -76,3 +76,124 @@ command_fx_ring_buffer_updates_and_expires :: proc(t: ^testing.T) {
 		testing.expect(t, !fx.active)
 	}
 }
+
+@(test)
+screen_dir_to_world_equalizes_isometric_horizontal_and_vertical_speeds :: proc(t: ^testing.T) {
+	back := rl.Vector3Normalize(camera_offset())
+	cam_right := rl.Vector3Normalize(rl.Vector3CrossProduct(rl.Vector3{0, 1, 0}, back))
+	cam_up := rl.Vector3Normalize(rl.Vector3CrossProduct(back, cam_right))
+
+	fovy := f32(11.0)
+	vx := screen_dir_to_world(rl.Vector2{1, 0}, fovy, 1.0)
+	vy := screen_dir_to_world(rl.Vector2{0, 1}, fovy, 1.0)
+	vd := screen_dir_to_world(rl.Vector2Normalize(rl.Vector2{1, 1}), fovy, 1.0)
+
+	sx_x := rl.Vector3DotProduct(vx, cam_right)
+	sy_y := rl.Vector3DotProduct(vy, cam_up)
+	testing.expect(t, abs(sx_x - fovy) < 0.01)
+	testing.expect(t, abs(sy_y - fovy) < 0.01)
+	testing.expect(t, abs(rl.Vector3DotProduct(vx, cam_up)) < 0.001)
+	testing.expect(t, abs(rl.Vector3DotProduct(vy, cam_right)) < 0.001)
+
+	// Diagonal screen direction must project equally onto cam_right and cam_up (45 deg).
+	sd_x := rl.Vector3DotProduct(vd, cam_right)
+	sd_y := rl.Vector3DotProduct(vd, cam_up)
+	testing.expect(t, abs(sd_x - sd_y) < 0.01)
+}
+
+@(test)
+camera_grip_delta_locks_ground_point_one_to_one :: proc(t: ^testing.T) {
+	back := rl.Vector3Normalize(camera_offset())
+	cam_right := rl.Vector3Normalize(rl.Vector3CrossProduct(rl.Vector3{0, 1, 0}, back))
+	cam_up := rl.Vector3Normalize(rl.Vector3CrossProduct(back, cam_right))
+
+	fovy := f32(11.0)
+	screen_h := f32(720.0)
+	px_delta := rl.Vector2{72, -36}
+	cam_shift := screen_delta_to_world_grip(px_delta, fovy, screen_h)
+
+	// Pulling the map by cam_shift moves world features on screen by +px_delta.
+	screen_shift_x := -rl.Vector3DotProduct(cam_shift, cam_right) * (screen_h / fovy)
+	screen_shift_y := rl.Vector3DotProduct(cam_shift, cam_up) * (screen_h / fovy)
+	testing.expect(t, abs(screen_shift_x - px_delta.x) < 0.05)
+	testing.expect(t, abs(screen_shift_y - px_delta.y) < 0.05)
+}
+
+@(test)
+edge_pan_arms_inside_and_scrolls_on_exact_border_pixels :: proc(t: ^testing.T) {
+	minimap := rl.Rectangle{20, 570, 200, 125}
+	base := Edge_Input{
+		width     = 1280,
+		height    = 720,
+		minimap   = minimap,
+		focused   = true,
+		on_screen = true,
+		armed     = false,
+		busy      = false,
+	}
+
+	edge_start := base
+	edge_start.mouse = rl.Vector2{0, 360}
+	d0, armed0 := compute_edge_direction(edge_start)
+	testing.expect(t, !armed0 && d0.x == 0 && d0.y == 0)
+
+	inner := base
+	inner.mouse = rl.Vector2{640, 360}
+	d1, armed1 := compute_edge_direction(inner)
+	testing.expect(t, armed1 && d1.x == 0 && d1.y == 0)
+
+	top_left := base
+	top_left.armed = true
+	top_left.mouse = rl.Vector2{0, 0}
+	d2, armed2 := compute_edge_direction(top_left)
+	testing.expect(t, armed2 && abs(d2.x + 0.7071) < 0.01 && abs(d2.y - 0.7071) < 0.01)
+
+	bot_right := base
+	bot_right.armed = true
+	bot_right.mouse = rl.Vector2{1280, 720}
+	d3, armed3 := compute_edge_direction(bot_right)
+	testing.expect(t, armed3 && abs(d3.x - 0.7071) < 0.01 && abs(d3.y + 0.7071) < 0.01)
+}
+
+@(test)
+edge_pan_disarms_on_unfocus_and_pauses_when_busy :: proc(t: ^testing.T) {
+	top_left := Edge_Input{
+		mouse     = rl.Vector2{0, 0},
+		width     = 1280,
+		height    = 720,
+		minimap   = rl.Rectangle{20, 570, 200, 125},
+		focused   = true,
+		on_screen = true,
+		armed     = true,
+		busy      = false,
+	}
+
+	unfocused := top_left
+	unfocused.focused = false
+	d0, armed0 := compute_edge_direction(unfocused)
+	testing.expect(t, !armed0 && d0.x == 0 && d0.y == 0)
+
+	on_minimap := top_left
+	on_minimap.mouse = rl.Vector2{25, 650}
+	d1, armed1 := compute_edge_direction(on_minimap)
+	testing.expect(t, armed1 && d1.x == 0 && d1.y == 0)
+
+	busy := top_left
+	busy.busy = true
+	d2, armed2 := compute_edge_direction(busy)
+	testing.expect(t, armed2 && d2.x == 0 && d2.y == 0)
+}
+
+@(test)
+cursor_inside_recovers_from_false_macos_on_screen_on_mouse_move :: proc(t: ^testing.T) {
+	app = {}
+	app.prev_raw_mouse = rl.Vector2{640, 360}
+	// Stationary cursor when raw IsCursorOnScreen() starts false waits for an event inside.
+	testing.expect(t, !update_cursor_inside(rl.Vector2{640, 360}, 1280, 720, true, false))
+	// Any cursor movement inside [0..w] x [0..h] marks cursor_inside true.
+	testing.expect(t, update_cursor_inside(rl.Vector2{642, 360}, 1280, 720, true, false))
+	// Remains true when parked at exact border pixel (0, 360).
+	testing.expect(t, update_cursor_inside(rl.Vector2{0, 360}, 1280, 720, true, false))
+	// Leaving bounds clears cursor_inside immediately.
+	testing.expect(t, !update_cursor_inside(rl.Vector2{-1, 360}, 1280, 720, true, false))
+}
