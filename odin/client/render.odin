@@ -96,6 +96,7 @@ draw_units_3d :: proc() {
 			continue
 		}
 		ground := unit_ground(i)
+		draw_unit_campaign_rings(i, ground)
 		if units.selected[i] {
 			if app.env.ready {
 				rl.DrawModelEx(app.env.select_ring_model, ground, {0, 1, 0}, 0, {1, 1, 1}, rl.WHITE)
@@ -121,18 +122,29 @@ draw_unit_health_bars :: proc() {
 		if !units.alive[i] || !g.enemy_is_visible(&app.game, i) {
 			continue
 		}
-		head := unit_ground(i) + rl.Vector3{0, 1.85, 0}
+		head_height := f32(1.85)
+		if units.kind[i] == .Hero {
+			head_height = 2.08
+		}
+		head := unit_ground(i) + rl.Vector3{0, head_height, 0}
 		screen := rl.GetWorldToScreen(head, app.camera)
 		if screen.x < 0 || screen.x > f32(rl.GetScreenWidth()) ||
 		   screen.y < 0 || screen.y > f32(rl.GetScreenHeight()) - HUD_HEIGHT {
 			continue
 		}
-		draw_health_bar(rl.Vector2{screen.x, screen.y + 18}, units.hp[i], units.hp_max[i])
+		bar_pos := rl.Vector2{screen.x, screen.y + 18}
+		if units.kind[i] == .Hero {
+			draw_hero_health_bar(bar_pos, units.hp[i], units.hp_max[i])
+		} else {
+			draw_health_bar(bar_pos, units.hp[i], units.hp_max[i])
+		}
+		draw_unit_campaign_label(i, bar_pos)
 	}
 }
 
 draw_health_bar :: proc(position: rl.Vector2, hp, max_hp: u16) {
 	percent := f32(hp) / f32(max_hp)
+	rl.DrawRectangleRec(rl.Rectangle{position.x - 13, position.y - 26, 26, 6}, rl.Color{12, 12, 16, 225})
 	rl.DrawRectangleRec(rl.Rectangle{position.x - 12, position.y - 25, 24, 4}, rl.Color{25, 25, 25, 220})
 	color := rl.Color{50, 205, 50, 255}
 	if percent <= 0.25 {

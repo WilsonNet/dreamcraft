@@ -13,18 +13,46 @@ enemy_ai_update :: proc(game: ^Game) {
 			units.attack_target[index] = INVALID_HANDLE
 			continue
 		}
+		update_single_enemy_ai(game, index, player_index)
+	}
+}
 
-		distance := distance_squared(units.position[index], units.position[player_index])
-		if distance <= VISION_RADIUS * VISION_RADIUS {
-			units.attack_target[index] = unit_handle(units, player_index)
-			continue
+@(private)
+update_single_enemy_ai :: proc(game: ^Game, index, player_index: int) {
+	units := &game.units
+	in_sight := distance_squared(units.position[index], units.position[player_index]) <= VISION_RADIUS * VISION_RADIUS
+	if !units.discovered[index] {
+		if !in_sight {
+			return
 		}
-
-		units.attack_target[index] = INVALID_HANDLE
-		unit_clear_path(units, index)
-		if units.state[index] != .Patrol {
-			units.state[index] = .Idle
+		units.discovered[index] = true
+		units.aggro_timer[index] = ENEMY_AGGRO_DELAY_TICKS
+		if !game.discovery_announced {
+			game.discovery_announced = true
+			game.discovery_tick = game.tick
 		}
+		return
+	}
+	if units.aggro_timer[index] > 0 {
+		// Retaliate immediately if struck first; otherwise count down the grace delay.
+		if units.hp[index] < units.hp_max[index] {
+			units.aggro_timer[index] = 0
+		} else {
+			units.aggro_timer[index] -= 1
+			return
+		}
+	}
+	if in_sight {
+		units.attack_target[index] = unit_handle(units, player_index)
+		if game.aggro_triggered_tick == 0 {
+			game.aggro_triggered_tick = game.tick
+		}
+		return
+	}
+	units.attack_target[index] = INVALID_HANDLE
+	unit_clear_path(units, index)
+	if units.state[index] != .Patrol {
+		units.state[index] = .Idle
 	}
 }
 

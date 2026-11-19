@@ -131,3 +131,12 @@ validator_catches_attack_move_corruption :: proc(t: ^testing.T) {
 	game.units.attack_move_active[index] = true
 	testing.expect_value(t, validate_game(&game), Validation_Error.UnitAttackMoveInvalid)
 }
+
+@(test)
+validator_catches_aggro_corruption :: proc(t: ^testing.T) {
+	game: Game
+	game_init(&game)
+	enemy, _ := game_enemy_index(&game)
+	game.units.aggro_timer[enemy] = 10
+	testing.expect_value(t, validate_game(&game), Validation_Error.UnitAggroInvalid)
+}

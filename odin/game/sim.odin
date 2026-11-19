@@ -13,6 +13,7 @@ sim_tick :: proc(game: ^Game) {
 	unit_movement(game)
 	combat_tick(game)
 	death_check(game)
+	hero_regen_tick(game)
 	update_visibility(game)
 	check_waypoints(game)
 	check_goal(game)

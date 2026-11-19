@@ -84,6 +84,7 @@ world_to_grid :: proc(world: Fixed_Vec) -> Grid_Pos {
 
 // Distance a unit travels in one tick, in cells.
 MOVE_STEP_PER_TICK :: Fp((BASE_SPEED * FP_ONE) / (CELL_SIZE * TICK_RATE))
+HERO_STEP_PER_TICK :: Fp((HERO_SPEED * FP_ONE) / (CELL_SIZE * TICK_RATE))
 
 world_center_distance :: proc(a, b: Grid_Pos) -> Fp {
 	if a.x != b.x && a.y != b.y {

@@ -26,6 +26,7 @@ Validation_Error :: enum u8 {
 	AttackTargetFriendly,
 	AttackTargetSelf,
 	CooldownInvalid,
+	UnitAggroInvalid,
 	SelectedNotPlayer,
 	WaypointCountInvalid,
 	WaypointPositionInvalid,
@@ -106,8 +107,7 @@ validate_unit :: proc(units: ^Units, grid: ^Grid, index: int) -> Validation_Erro
 	if units.generation[index] == 0 {
 		return .UnitGenerationZero
 	}
-	position := units.position[index]
-	if !in_bounds(position) {
+	if !in_bounds(units.position[index]) {
 		return .UnitPositionInvalid
 	}
 	world := units.world[index]
@@ -128,6 +128,11 @@ validate_unit :: proc(units: ^Units, grid: ^Grid, index: int) -> Validation_Erro
 	if err := validate_unit_world(units, index); err != .None {
 		return err
 	}
+	return validate_unit_orders(units, grid, index)
+}
+
+@(private)
+validate_unit_orders :: proc(units: ^Units, grid: ^Grid, index: int) -> Validation_Error {
 	if units.state[index] == .Moving && !unit_has_path(units, index) {
 		return .UnitStateInvalid
 	}
@@ -143,8 +148,11 @@ validate_unit :: proc(units: ^Units, grid: ^Grid, index: int) -> Validation_Erro
 	} else if units.state[index] == .Attack_Move {
 		return .UnitAttackMoveInvalid
 	}
-	if units.cooldown[index] > ATTACK_COOLDOWN_TICKS {
+	if units.cooldown[index] > unit_attack_cooldown(units, index) {
 		return .CooldownInvalid
+	}
+	if units.aggro_timer[index] > ENEMY_AGGRO_DELAY_TICKS || (!units.discovered[index] && units.aggro_timer[index] != 0) {
+		return .UnitAggroInvalid
 	}
 	if units.selected[index] && units.team[index] != .Player {
 		return .SelectedNotPlayer
@@ -359,6 +367,8 @@ validation_error_name_b :: proc(err: Validation_Error) -> string {
 		return "unit targets itself"
 	case .CooldownInvalid:
 		return "attack cooldown out of range"
+	case .UnitAggroInvalid:
+		return "unit aggro timer state invalid"
 	case:
 		return validation_error_name_c(err)
 	}

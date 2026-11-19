@@ -26,15 +26,11 @@ odin build headless -out:bin/headless -o:speed
 
 ## Two-Lane Workflow
 
-- Stable lane: `bin/dreamcraft` in a dedicated Herdr `game` pane, control `:7777`.
-  The user plays this. Do not rebuild or restart it mid-task.
-- Dev lane: `./build.sh --dev` -> `bin/dreamcraft-dev`, `bin/headless-dev`.
-  Use `--control=7778` or `bin/headless-dev --serve=7778 --paused`.
-- Dev client title always starts with `DEV - `:
-  `-define:DREAMCRAFT_DEV=true` plus an executable-name check.
-- `./test.sh` builds dev binaries only; it must not overwrite the stable lane.
-- Close-out: `./test.sh` -> `./build.sh` -> `./restart-build.sh` -> docs.
-- `GET /units` exposes `world`, `progress` and `next` for jump diagnosis.
+- **Always develop on Dev:** Work and validate on `./build.sh --dev` -> `bin/dreamcraft-dev`, `bin/headless-dev` (`--control=7778` or `--serve=7778 --paused`).
+- **Mandatory `DEV - ` title prefix:** Dev client window title always starts with `DEV - ` (`-define:DREAMCRAFT_DEV=true` plus executable-name check).
+- **Stable lane untouched mid-task:** `bin/dreamcraft` runs in a dedicated Herdr `game` pane (`:7777`). `./test.sh` builds dev binaries only.
+- **Post-task Build trigger (close-out):** After finishing a task, always run `./test.sh` -> trigger `./build.sh` -> run `./restart-build.sh` -> update docs/specs so the playable `:7777` build is updated.
+- `GET /units` exposes `world`, `progress` and `next` for jump diagnosis; see **camera-mouse** skill for `GET /camera` and `POST /mouse`.
 
 ## Memory Rules
 

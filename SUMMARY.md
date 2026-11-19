@@ -11,11 +11,12 @@ Build a fantasy RTS called **DreamCraft** with:
 ## Instructions
 
 - Primary work goes in `odin/`
+- Always work on the `DEV` lane (`./build.sh --dev`, `./run-dev.sh --control=7778`, `DEV - ` window title prefix); after finishing a task, trigger `./test.sh`, `./build.sh`, and `./restart-build.sh` to update the playable `:7777` build
 - Use `./run.sh`, `./build.sh`, `./test.sh`
 - Use Odin control API instead of Bevy BRP MCP:
-  - `bin/dreamcraft --control=7777`
-  - `bin/headless --serve=7777`
-  - `GET /state`, `/units`, `/fog`, `/screenshot`; `POST /command`
+  - `bin/dreamcraft --control=7777` (stable) / `bin/dreamcraft-dev --control=7778` (dev)
+  - `bin/headless --serve=7777` / `bin/headless-dev --serve=7778`
+  - `GET /state`, `/units`, `/fog`, `/screenshot`, `/camera`; `POST /command`, `/mouse`
 - Use Herdr tabs/panes (`--no-focus`) for long-running processes
 - Max 3 attempts before searching online docs
 - Bevy docs at `bevy-docs/` are legacy reference only
@@ -28,8 +29,7 @@ Build a fantasy RTS called **DreamCraft** with:
    need for an ECS entity allocator.
 4. **Odin A*** - one entry per cell with `heap_pos`, stamp arrays, and a
    caller-provided path slice gives allocation-free deterministic paths.
-5. **Edge-scroll drift** - check `IsWindowFocused()` and `IsCursorOnScreen()`;
-   otherwise an unfocused window scrolls the camera to its clamp.
+5. **Edge-scroll drift & macOS `IsCursorOnScreen()`** - check `IsWindowFocused()` and track live `GetMousePosition()` bounds (`update_cursor_inside()`) because macOS GLFW `IsCursorOnScreen()` stays `false` when a window spawns under the cursor.
 6. **Odin JSON tests** - free both the dynamic array and string fields after
    `json.unmarshal` to satisfy leak tracking.
 
@@ -39,15 +39,16 @@ Build a fantasy RTS called **DreamCraft** with:
 - 80x50 grid, 30 tree clusters, 132 obstacle cells
 - 8-way A*, fog of war, waypoints, goal
 - 256-slot SoA unit pool with generation handles
-- Melee combat, enemy chase AI, patrol loops
+- Melee combat (`Luk Soldier` 100 HP / 15 dmg), campaign hero **`Liiroy, the Bold`** (500 HP / 5 armor / 35 dmg / 40-tick cooldown / 180 speed / +4 HP/s regen, royal cobalt & gold rig), event-based 4.0s enemy discovery aggro grace + flavored warning banner, enemy chase AI, patrol loops
 - Native raylib full 3D isometric client with Age of Empires × Toriyama world scale and watercolour post shader
 - Procedural 26-bone Mamluk warrior & forest props in `odin/client/art/`, kinetic-chain idle/walk/attack animations, and double-crescent slash VFX
-- Two-lane build: stable `bin/dreamcraft` on `:7777`, dev binaries on `:7778`
+- Two-lane build: always develop on `dev` binaries (`DEV - ` window prefix on `:7778`), then trigger `./build.sh` + `./restart-build.sh` after finishing a task for playable `bin/dreamcraft` on `:7777`
+- Dota 2 / SC2 camera movement (`MMB` / `Space`+Drag 1:1 Camera Grip, isometric pitch-compensated edge scroll, smooth vertical wheel zoom, minimap drag scrubbing + viewport frame) + `tests/camera_mouse_check.py` live probe & macOS OS mouse validator
 - Browser WASM/canvas client with DOM HUD and `window.dreamcraft` API
 - Headless JSONL scripts, HTTP control server, hash-verified replays
 - Curve/state validation after every tick
-- 93 native unit tests + web WASM/headless/replay/HTTP smoke: invariants,
-  allocations, determinism, HTTP round trip, browser API
+- 106 native unit tests (69 game, 13 control, 13 art, 11 client) + web WASM/headless/replay/HTTP/mouse smoke: invariants,
+  allocations, determinism, HTTP round trip, live OS mouse camera validation, browser API
 - Bevy BRP MCP removed; control API replaces it
 
 ## Relevant files / directories

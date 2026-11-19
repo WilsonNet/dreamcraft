@@ -13,6 +13,8 @@ Snapshot :: struct {
 	enemy_alive: bool `json:"enemy_alive"`,
 	level_complete: bool `json:"level_complete"`,
 	game_over: bool `json:"game_over"`,
+	discovery_announced: bool `json:"discovery_announced"`,
+	enemy_aggro_ticks: u16 `json:"enemy_aggro_ticks"`,
 	waypoint: int `json:"waypoint"`,
 	waypoints_total: int `json:"waypoints_total"`,
 	fog_percent: f32 `json:"fog_percent"`,
@@ -27,13 +29,17 @@ Snapshot :: struct {
 
 Unit_Info :: struct {
 	index: int `json:"index"`,
+	name: string `json:"name"`,
 	team: string `json:"team"`,
+	hero: bool `json:"hero"`,
 	position: [2]i32 `json:"position"`,
 	world: [2]f32 `json:"world"`,
 	progress: f32 `json:"progress"`,
 	next: [2]i32 `json:"next"`,
 	hp: u16 `json:"hp"`,
 	hp_max: u16 `json:"hp_max"`,
+	damage: u16 `json:"damage"`,
+	armor: u16 `json:"armor"`,
 	state: string `json:"state"`,
 	path_len: int `json:"path_len"`,
 	path_index: int `json:"path_index"`,
@@ -41,6 +47,8 @@ Unit_Info :: struct {
 	patrol: bool `json:"patrol"`,
 	attack_move: bool `json:"attack_move"`,
 	attack_target: int `json:"attack_target"`,
+	discovered: bool `json:"discovered"`,
+	aggro_ticks: u16 `json:"aggro_ticks"`,
 }
 
 make_result :: proc(game: ^g.Game, ok: bool, msg: string) -> Result {
@@ -59,6 +67,8 @@ make_result :: proc(game: ^g.Game, ok: bool, msg: string) -> Result {
 		enemy_alive = view.enemy_alive,
 		level_complete = view.level_complete,
 		game_over = view.game_over,
+		discovery_announced = view.discovery_announced,
+		enemy_aggro_ticks = view.enemy_aggro_ticks,
 		waypoint = view.waypoint_current,
 		waypoints_total = view.waypoint_total,
 		fog_percent = view.fog_percent,
@@ -85,6 +95,8 @@ make_snapshot :: proc(game: ^g.Game) -> Snapshot {
 		player_alive = view.player_alive,
 		level_complete = view.level_complete,
 		game_over = view.game_over,
+		discovery_announced = view.discovery_announced,
+		enemy_aggro_ticks = view.enemy_aggro_ticks,
 		waypoint = view.waypoint_current,
 		waypoints_total = view.waypoint_total,
 		fog_percent = view.fog_percent,
@@ -147,13 +159,17 @@ encode_units :: proc(game: ^g.Game) -> (data: []byte, err: json.Marshal_Error) {
 		}
 		infos[count] = Unit_Info{
 			index = i,
+			name = g.unit_kind_name(units.kind[i]),
 			team = team,
+			hero = units.kind[i] == .Hero,
 			position = [2]i32{units.position[i].x, units.position[i].y},
 			world = [2]f32{g.fp_to_f32(units.world[i].x), g.fp_to_f32(units.world[i].y)},
 			progress = f32(units.progress[i]) / f32(g.FP_ONE),
 			next = next,
 			hp = units.hp[i],
 			hp_max = units.hp_max[i],
+			damage = g.unit_attack_damage(units, i),
+			armor = g.unit_armor(units, i),
 			state = state,
 			path_len = int(units.path_len[i]),
 			path_index = int(units.path_index[i]),
@@ -161,6 +177,8 @@ encode_units :: proc(game: ^g.Game) -> (data: []byte, err: json.Marshal_Error) {
 			patrol = units.patrol_active[i],
 			attack_move = units.attack_move_active[i],
 			attack_target = target,
+			discovered = units.discovered[i],
+			aggro_ticks = units.aggro_timer[i],
 		}
 		count += 1
 	}

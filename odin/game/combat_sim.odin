@@ -100,13 +100,30 @@ combat_tick :: proc(game: ^Game) {
 			continue
 		}
 
-		damage := u16(ATTACK_DAMAGE)
+		raw_damage := unit_attack_damage(units, index)
+		armor := unit_armor(units, target_index)
+		damage := u16(1)
+		if raw_damage > armor {
+			damage = raw_damage - armor
+		}
 		if units.hp[target_index] <= damage {
 			units.hp[target_index] = 0
 		} else {
 			units.hp[target_index] -= damage
 		}
-		units.cooldown[index] = ATTACK_COOLDOWN_TICKS
+		units.cooldown[index] = unit_attack_cooldown(units, index)
+	}
+}
+
+hero_regen_tick :: proc(game: ^Game) {
+	if HERO_REGEN_INTERVAL_TICKS <= 0 || game.tick % HERO_REGEN_INTERVAL_TICKS != 0 {
+		return
+	}
+	units := &game.units
+	for i in 0..<MAX_UNITS {
+		if units.alive[i] && units.kind[i] == .Hero && units.hp[i] > 0 && units.hp[i] < units.hp_max[i] {
+			units.hp[i] = min(units.hp_max[i], units.hp[i] + HERO_REGEN_AMOUNT)
+		}
 	}
 }
 

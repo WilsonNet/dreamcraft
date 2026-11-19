@@ -55,6 +55,9 @@ game_hash :: proc(game: ^Game) -> State_Hash {
 	hash_u64(&h, game.tick)
 	hash_bool(&h, game.level_complete)
 	hash_bool(&h, game.game_over)
+	hash_bool(&h, game.discovery_announced)
+	hash_u64(&h, game.discovery_tick)
+	hash_u64(&h, game.aggro_triggered_tick)
 	hash_bits(&h, &game.grid.obstacles)
 	hash_u16(&h, game.grid.obstacle_count)
 	hash_bits(&h, &game.fog.explored)
@@ -136,6 +139,8 @@ hash_units :: proc(h: ^Hash_Builder, units: ^Units) {
 		hash_u16(h, units.attack_target[i].index)
 		hash_u32(h, units.attack_target[i].generation)
 		hash_u16(h, units.cooldown[i])
+		hash_bool(h, units.discovered[i])
+		hash_u16(h, units.aggro_timer[i])
 		hash_bool(h, units.selected[i])
 	}
 }

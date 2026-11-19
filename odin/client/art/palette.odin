@@ -87,14 +87,28 @@ Team_Palette :: struct {
 	cloth:      rl.Color,
 	cloth_dark: rl.Color,
 	cream:      rl.Color,
+	hero:       bool,
 }
 
 palette_for_team :: proc(enemy: bool) -> Team_Palette {
+	return palette_for_unit(enemy, false)
+}
+
+palette_for_unit :: proc(enemy: bool, hero: bool = false) -> Team_Palette {
 	if enemy {
 		return Team_Palette{
 			cloth = rl.Color{158, 58, 50, 255},
 			cloth_dark = rl.Color{96, 34, 34, 255},
 			cream = rl.Color{196, 184, 156, 255},
+		}
+	}
+	if hero {
+		// Royal cobalt and gilded ivory distinguish Liiroy, the Bold from regular Luk Soldiers.
+		return Team_Palette{
+			cloth = rl.Color{42, 98, 212, 255},
+			cloth_dark = rl.Color{22, 52, 134, 255},
+			cream = rl.Color{240, 206, 118, 255},
+			hero = true,
 		}
 	}
 	return Team_Palette{

@@ -50,6 +50,8 @@ capacity arrays.
 - [x] Headless runner: file polling, JSONL scripts, `--ticks`
 - [x] Replay files: `--record`, `--replay`, hash verification
 - [x] StarCraft-style `Attack_Move` (`A` / Attack button) and fixed 1-click `Patrol` (`P` / Patrol button) with enemy auto-acquisition along the route and automatic leg resumption after combat
+- [x] Campaign hero **`Liiroy, the Bold`** (`Unit_Kind.Hero`: `500 HP`, `5` armor, `35` dmg, `40`-tick cooldown, `180` speed, `+4 HP/s` regen, `HERO_SCALE = 0.84`, royal-cobalt & gilded trim, gold aura ring & health bar) replaces the regular player **Luk Soldier** (`Unit_Kind.Melee`) in campaign mode
+- [x] Event-based campaign discovery aggro delay (`ENEMY_AGGRO_DELAY_TICKS = 240` / `4.0 s`): newly spotted enemy Luk Soldiers pause and show a flavored warning banner & `! SPOTTED` countdown ring until the timer expires or they take damage
 - [x] StarCraft 2 / Age of Empires 3D ground command FX (`command_fx.odin`): inward-converging chevrons, pulse rings, target lock rings, live cursor preview, and state-colored paths
 - [x] HTTP control API replacing Bevy BRP MCP
   - [x] `GET /state`, `/units`, `/fog`, `/screenshot`, `/camera`, `/health`
@@ -57,7 +59,7 @@ capacity arrays.
         select, spawn, kill, set_hp, teleport
   - [x] `POST /mouse` + `odin/tests/camera_mouse_check.py` live mouse & OS camera validation tool
   - [x] Every response carries `valid` + `validation`
-- [x] 98 unit/integration tests (64 game, 12 control, 12 art, 10 client)
+- [x] 106 unit/integration tests (69 game, 13 control, 13 art, 11 client)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator

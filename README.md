@@ -28,21 +28,25 @@ cd odin
 ./build.sh               # stable build: client + headless + web
 ```
 
-Two-lane development (stable game stays playable):
+Two-lane development (always develop on `DEV`, then trigger a stable build after finishing a task):
 
 ```bash
 cd odin
-./build.sh --dev                            # dev binaries, stable untouched
+./build.sh --dev                            # dev binaries (window title prefixed "DEV - ")
+./run-dev.sh --control=7778                 # interactive dev client on :7778
 ./bin/headless-dev --serve=7778 --paused    # deterministic agent lane
-./restart-build.sh                          # close-out: restart game on :7777
+./build.sh && ./restart-build.sh            # post-task: build & restart playable game on :7777
 ```
 
 ## Controls
 
 - **Right-click**: move, or attack an enemy (with 3D ground confirmation FX)
 - **Left-click / drag**: select units (Shift+click adds)
+- **Middle-mouse / `Space` + Left drag**: Dota 2 / SC2 Camera Grip (1:1 ground drag)
+- **WASD / Arrows / Screen edges**: isometric pan (switches to FREE)
+- **Mouse wheel**: smooth orthographic zoom
+- **Minimap click / drag**: recenter and scrub camera across map
 - **M / A / P / S (or HUD card)**: Move, Attack-Move (StarCraft-style), 1-click Patrol, Stop
-- **WASD / Arrows / Screen edges**: pan camera (switches to FREE)
 - **F**: toggle camera FOLLOW / FREE
 - **Esc**: cancel command mode, or open pause menu (Retry / Resume)
 
@@ -105,7 +109,9 @@ localhost JSON API available in both binaries.
 | `GET /units` | all units (position, hp, state, path, target) |
 | `GET /fog` | 80×50 ASCII map (`P`, `E`, `#`, `w`, `W`, `G`, `.`) |
 | `GET /screenshot` | PNG of the live client window |
+| `GET /camera` | live camera, zoom, focus, cursor & grip state (client) |
 | `POST /command` | execute a JSON command |
+| `POST /mouse` | inject client mouse/wheel/focus probe frames (client) |
 
 ```bash
 curl -s localhost:7777/state

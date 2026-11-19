@@ -12,6 +12,7 @@ draw_hud :: proc() {
 	draw_minimap_panel()
 	draw_command_buttons()
 	draw_hint()
+	draw_campaign_announcement()
 }
 
 draw_bottom_bar :: proc() {
@@ -22,26 +23,30 @@ draw_bottom_bar :: proc() {
 }
 
 draw_status_panel :: proc() {
-	rl.DrawRectangleRec(rl.Rectangle{12, 12, 468, 116}, rl.Color{8, 14, 8, 210})
-	rl.DrawRectangleLinesEx(rl.Rectangle{12, 12, 468, 116}, 1, rl.Color{60, 110, 60, 200})
+	rl.DrawRectangleRec(rl.Rectangle{12, 12, 548, 116}, rl.Color{8, 14, 8, 210})
+	rl.DrawRectangleLinesEx(rl.Rectangle{12, 12, 548, 116}, 1, rl.Color{60, 110, 60, 200})
 	buffer: [256]u8
 	rl.DrawText("DREAMCRAFT RTS", 24, 22, 20, rl.Color{235, 215, 120, 255})
-	rl.DrawText("Tutorial Level 1 - Through the Woods", 24, 46, 14, rl.Color{180, 200, 180, 255})
+	rl.DrawText("Campaign: Tutorial 1 - Through the Woods", 24, 46, 14, rl.Color{180, 200, 180, 255})
 	rl.DrawText("MMB/Space+Drag grip | Edge/WASD pan | F follow | M/A/P/S | Esc", 24, 66, 11, rl.Color{140, 170, 140, 255})
 
-	position, ok := g.game_player_position(&app.game)
-	if ok {
-		text := format_text(buffer[:], "Player (%d, %d)  |  Waypoint %d/%d  |  Selected %d", position.x, position.y, app.game.waypoints.current, app.game.waypoints.count, app.game.units.selected_count)
-		rl.DrawText(text, 24, 88, 14, rl.WHITE)
+	if player_index, ok := g.game_player_index(&app.game); ok {
+		pos := app.game.units.position[player_index]
+		hp := app.game.units.hp[player_index]
+		hp_max := app.game.units.hp_max[player_index]
+		dmg := g.unit_attack_damage(&app.game.units, player_index)
+		arm := g.unit_armor(&app.game.units, player_index)
+		text := format_text(buffer[:], "Liiroy, the Bold (%d,%d) | HP %d/%d | ATK %d ARM %d | WP %d/%d", pos.x, pos.y, hp, hp_max, dmg, arm, app.game.waypoints.current, app.game.waypoints.count)
+		rl.DrawText(text, 24, 88, 14, rl.Color{250, 226, 130, 255})
 	} else {
-		rl.DrawText("Player is dead", 24, 88, 14, rl.Color{230, 80, 80, 255})
+		rl.DrawText("Liiroy, the Bold has fallen", 24, 88, 14, rl.Color{230, 80, 80, 255})
 	}
 
 	camera_mode := cstring("FOLLOW")
 	if !app.camera_follow {
 		camera_mode = cstring("FREE")
 	}
-	text := format_text(buffer[:], "FPS %d  |  Units %d  |  Fog %.1f%%  |  Tick %d  |  CAM %s", rl.GetFPS(), app.game.units.alive_count, g.fog_coverage_percent(&app.game.fog), app.game.tick, camera_mode)
+	text := format_text(buffer[:], "FPS %d  |  Sel %d  |  Units %d  |  Fog %.1f%%  |  CAM %s", rl.GetFPS(), app.game.units.selected_count, app.game.units.alive_count, g.fog_coverage_percent(&app.game.fog), camera_mode)
 	rl.DrawText(text, 24, 108, 12, rl.Color{150, 180, 150, 255})
 }
 

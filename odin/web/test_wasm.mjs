@@ -104,4 +104,24 @@ exports_.web_run(80);
 assert.equal(units()[0].patrol, true);
 assert.equal(state().valid, true);
 
+// Campaign hero & discovery aggro grace window.
+exports_.web_reset();
+let initialUnits = units();
+let hero = initialUnits.find((u) => u.team === "player");
+let foe = initialUnits.find((u) => u.team === "enemy");
+assert.equal(hero.name, "Liiroy, the Bold");
+assert.equal(hero.hero, true);
+assert.equal(hero.hp_max, 500);
+assert.equal(hero.damage, 35);
+assert.equal(hero.armor, 5);
+assert.equal(foe.name, "Luk Soldier");
+assert.equal(foe.hero, false);
+assert.equal(foe.damage, 15);
+assert.equal(foe.armor, 0);
+assert.equal(exports_.web_spawn(1, 7, 25, 100), 1);
+exports_.web_run(1);
+s = state();
+assert.equal(s.discovery_announced, true);
+assert.equal(s.enemy_aggro_ticks > 0, true);
+
 console.log("web wasm smoke passed");

@@ -21,7 +21,7 @@ web_refresh_state :: proc() -> i32 {
 	}
 	text := fmt.bprintf(
 		State_Buffer[:len(State_Buffer) - 1],
-		`{{"ok":true,"tick":%d,"player_grid":[%d,%d],"player_alive":%t,"enemy_grid":[%d,%d],"enemy_alive":%t,"level_complete":%t,"game_over":%t,"waypoint":%d,"waypoints_total":%d,"fog_percent":%.1f,"alive_units":%d,"selected":%d,"command_count":%d,"command_rejected":%d,"hash":"%d","valid":%t,"validation":"%s"}}`,
+		`{{"ok":true,"tick":%d,"player_grid":[%d,%d],"player_alive":%t,"enemy_grid":[%d,%d],"enemy_alive":%t,"level_complete":%t,"game_over":%t,"waypoint":%d,"waypoints_total":%d,"fog_percent":%.1f,"alive_units":%d,"selected":%d,"command_count":%d,"command_rejected":%d,"discovery_announced":%t,"enemy_aggro_ticks":%d,"hash":"%d","valid":%t,"validation":"%s"}}`,
 		view.tick,
 		view.player_pos.x,
 		view.player_pos.y,
@@ -38,6 +38,8 @@ web_refresh_state :: proc() -> i32 {
 		view.selected,
 		view.command_count,
 		view.command_rejected,
+		view.discovery_announced,
+		view.enemy_aggro_ticks,
 		view.state_hash,
 		err == .None,
 		validation,
@@ -57,6 +59,69 @@ web_state_len :: proc() -> i32 {
 	return i32(State_Length)
 }
 
+@(private)
+web_unit_state_name :: proc(state: g.Unit_State) -> string {
+	switch state {
+	case .Idle:
+		return "idle"
+	case .Moving:
+		return "moving"
+	case .Patrol:
+		return "patrol"
+	case .Attack_Move:
+		return "attack_move"
+	}
+	return "idle"
+}
+
+@(private)
+encode_web_unit :: proc(i: int, buf: []u8) -> int {
+	units := &Game_State.units
+	team := "enemy"
+	if units.team[i] == .Player {
+		team = "player"
+	}
+	target := -1
+	if g.handle_is_valid(units.attack_target[i]) {
+		target = int(units.attack_target[i].index)
+	}
+	next := [2]i32{-1, -1}
+	if units.path_index[i] < units.path_len[i] {
+		cell := g.cell_position(int(units.path[i][units.path_index[i]]))
+		next = [2]i32{cell.x, cell.y}
+	}
+	text := fmt.bprintf(
+		buf,
+		`{{"index":%d,"team":"%s","name":"%s","hero":%t,"position":[%d,%d],"world":[%.2f,%.2f],"progress":%.3f,"next":[%d,%d],"hp":%d,"hp_max":%d,"damage":%d,"armor":%d,"state":"%s","path_len":%d,"path_index":%d,"selected":%t,"patrol":%t,"attack_move":%t,"attack_target":%d,"discovered":%t,"aggro_ticks":%d,"visible":%t}}`,
+		i,
+		team,
+		g.unit_kind_name(units.kind[i]),
+		units.kind[i] == .Hero,
+		units.position[i].x,
+		units.position[i].y,
+		g.fp_to_f32(units.world[i].x),
+		g.fp_to_f32(units.world[i].y),
+		f32(units.progress[i]) / f32(g.FP_ONE),
+		next[0],
+		next[1],
+		units.hp[i],
+		units.hp_max[i],
+		g.unit_attack_damage(units, i),
+		g.unit_armor(units, i),
+		web_unit_state_name(units.state[i]),
+		units.path_len[i],
+		units.path_index[i],
+		units.selected[i],
+		units.patrol_active[i],
+		units.attack_move_active[i],
+		target,
+		units.discovered[i],
+		units.aggro_timer[i],
+		g.enemy_is_visible(&Game_State, i),
+	)
+	return len(text)
+}
+
 @(export)
 web_refresh_units :: proc() -> i32 {
 	offset := 0
@@ -64,8 +129,7 @@ web_refresh_units :: proc() -> i32 {
 	offset += 1
 	first := true
 	for i in 0..<g.MAX_UNITS {
-		units := &Game_State.units
-		if !units.alive[i] {
+		if !Game_State.units.alive[i] {
 			continue
 		}
 		if !first {
@@ -73,54 +137,7 @@ web_refresh_units :: proc() -> i32 {
 			offset += 1
 		}
 		first = false
-		team := "enemy"
-		if units.team[i] == .Player {
-			team = "player"
-		}
-		state := "idle"
-		switch units.state[i] {
-		case .Idle:
-			state = "idle"
-		case .Moving:
-			state = "moving"
-		case .Patrol:
-			state = "patrol"
-		case .Attack_Move:
-			state = "attack_move"
-		}
-		target := -1
-		if g.handle_is_valid(units.attack_target[i]) {
-			target = int(units.attack_target[i].index)
-		}
-		next := [2]i32{-1, -1}
-		if units.path_index[i] < units.path_len[i] {
-			cell := g.cell_position(int(units.path[i][units.path_index[i]]))
-			next = [2]i32{cell.x, cell.y}
-		}
-		text := fmt.bprintf(
-			Units_Buffer[offset:len(Units_Buffer) - 8],
-			`{{"index":%d,"team":"%s","position":[%d,%d],"world":[%.2f,%.2f],"progress":%.3f,"next":[%d,%d],"hp":%d,"hp_max":%d,"state":"%s","path_len":%d,"path_index":%d,"selected":%t,"patrol":%t,"attack_move":%t,"attack_target":%d,"visible":%t}}`,
-			i,
-			team,
-			units.position[i].x,
-			units.position[i].y,
-			g.fp_to_f32(units.world[i].x),
-			g.fp_to_f32(units.world[i].y),
-			f32(units.progress[i]) / f32(g.FP_ONE),
-			next[0],
-			next[1],
-			units.hp[i],
-			units.hp_max[i],
-			state,
-			units.path_len[i],
-			units.path_index[i],
-			units.selected[i],
-			units.patrol_active[i],
-			units.attack_move_active[i],
-			target,
-			g.enemy_is_visible(&Game_State, i),
-		)
-		offset += len(text)
+		offset += encode_web_unit(i, Units_Buffer[offset:len(Units_Buffer) - 8])
 	}
 	Units_Buffer[offset] = ']'
 	offset += 1

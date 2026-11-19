@@ -68,26 +68,27 @@ echo '{"cmd":"status"}' > headless_command.json    # write, then read result
 
 ## Build / Dev Workflow (two lanes)
 
-Keep the user's play session and the agent's edit loop separate:
+Always work on the **Dev** version (`DEV - ` window prefix) while developing and validating, and always trigger a **Build** (`./build.sh` + `./restart-build.sh`) once a task is done so the playable build version stays current:
 
 | Lane | Binary | Port | Owner |
 |------|--------|------|-------|
 | Build | `bin/dreamcraft` | `:7777` | user plays |
 | Dev | `bin/dreamcraft-dev`, `bin/headless-dev` | `:7778` | agent |
 
-- The stable build runs in a dedicated Herdr `game` pane (`HERDR_WORKSPACE_ID`).
-- The dev client window title always starts with `DEV - `. The build sets
-  `-define:DREAMCRAFT_DEV=true`, and the executable name (`dreamcraft-dev`)
-  is also checked at runtime, so the prefix survives a manual dev build.
-- Never overwrite or restart the stable build while a task is in progress.
-  `./test.sh` builds dev binaries only.
-- Agent loop: edit source, `./build.sh --dev`, then either
-  `./bin/headless-dev --serve=7778 --paused` (deterministic stepping) or
-  `./bin/dreamcraft-dev --control=7778` (visual checks).
-- Close-out for every task, in order:
-  1. `./test.sh`
-  2. `./build.sh` (stable + web)
-  3. `./restart-build.sh`
+- **Always develop on Dev:** Edit, test, and run checks using `./build.sh --dev`,
+  `./run-dev.sh --control=7778`, `./bin/dreamcraft-dev --control=7778`, or
+  `./bin/headless-dev --serve=7778 --paused`.
+- **Mandatory `DEV - ` title prefix:** The dev client window title always starts
+  with `DEV - `. `./build.sh --dev` and `./run-dev.sh` pass `-define:DREAMCRAFT_DEV=true`,
+  and the executable name (`dreamcraft-dev`) is also checked at runtime so manual
+  dev builds keep the `DEV - ` prefix.
+- **Never overwrite or restart the Build lane mid-task:** The stable build runs
+  in a dedicated Herdr `game` pane (`HERDR_WORKSPACE_ID`). `./test.sh` builds dev
+  binaries only.
+- **Post-task Build trigger (close-out in order):**
+  1. `./test.sh` (plus `python3 tests/camera_mouse_check.py --launch --mode both --port 7778` when touching camera/input)
+  2. `./build.sh` (builds stable `bin/dreamcraft`, `bin/headless`, and `web`)
+  3. `./restart-build.sh` (restarts the playable `:7777` build in Herdr)
   4. update `specs/` and the relevant markdown docs.
 - `GET /units` exposes `world`, `progress` and `next`; use them to measure
   position jumps through the control API instead of guessing from screenshots.
@@ -191,14 +192,14 @@ responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 ## Core Gameplay (Tutorial Level 1)
 
 - 80×50 grid, 32 world units per cell
-- Player melee unit at (2,25), enemy at (50,25)
+- Campaign hero **Liiroy, the Bold** (`Unit_Kind.Hero`) at (2,25), enemy **Luk Soldier** (`Unit_Kind.Melee`) at (50,25)
 - 132 tree obstacle cells across 30 clusters
 - A* 8-direction movement, no corner cutting through two blocked sides
 - 3-state fog: unexplored / explored / visible
 - 8 waypoints; waypoint 3 moved to (40,23) because (40,20) is a tree
 - Goal at grid x ≥ 77
-- Melee: 15 damage, range 3 cells, 1.0 s cooldown, 100 HP
-- Enemy chases within 6-cell vision and attacks on cooldown
+- Stats: `Luk Soldier` 100 HP / 15 dmg / 0 armor / 60-tick cooldown / 150 speed; `Liiroy, the Bold` 500 HP / 35 dmg / 5 armor / 40-tick cooldown / 180 speed / +4 HP/s regen / range 3 cells
+- Campaign event aggro: newly discovered enemies wait `ENEMY_AGGRO_DELAY_TICKS` (240 ticks / 4.0 s) with a flavored discovery announcement before charging, unless attacked first (`hp < hp_max`), then chase within 6-cell vision and attack on cooldown
 - Patrol (`P` / 1-click) loops A↔B cleanly and engages enemies within 6-cell vision before resuming the patrol leg
 - Attack-Move (`A`) marches to destination while auto-acquiring enemies within 6-cell vision, resuming to destination once clear
 - SC2/AoE-style 3D ground command confirmation chevrons & pulse rings on right-click / command orders

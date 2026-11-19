@@ -151,8 +151,8 @@ Endpoints:
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/health` | liveness |
-| GET | `/state` | tick, player/enemy, fog %, hash, valid, validation |
-| GET | `/units` | unit list with team, position, HP, state, path, target |
+| GET | `/state` | tick, player/enemy, discovery_announced, enemy_aggro_ticks, fog %, hash, valid, validation |
+| GET | `/units` | unit list with name, hero, team, position, HP, damage, armor, state, path, target, discovered, aggro_ticks |
 | GET | `/fog` | 80×50 ASCII map |
 | GET | `/screenshot` | live PNG (client only) |
 | GET | `/camera` | live camera, zoom, focus, cursor, edge-pan & grip state (client only) |

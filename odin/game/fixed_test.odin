@@ -39,7 +39,9 @@ grid_world_center_round_trip :: proc(t: ^testing.T) {
 
 @(test)
 move_step_is_exact :: proc(t: ^testing.T) {
-	// 150 world units/sec, 32 units per cell, 60 ticks/sec.
+	// 150 world units/sec (Luk Soldier) & 180 (Hero), 32 units per cell, 60 ticks/sec.
 	testing.expect_value(t, MOVE_STEP_PER_TICK, Fp(5120))
 	testing.expect_value(t, MOVE_STEP_PER_TICK * 60, Fp(307200))
+	testing.expect_value(t, HERO_STEP_PER_TICK, Fp(6144))
+	testing.expect_value(t, HERO_STEP_PER_TICK * 60, Fp(368640))
 }

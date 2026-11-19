@@ -4,9 +4,10 @@
 
 ### Implemented Units
 
-| Type | Symbol | Color | Speed | HP | Attack Range | Damage | Role |
-|------|--------|-------|-------|-----|--------------|--------|------|
-| Melee | M | Blue (player) / Red (enemy) | 5.0 | 150 | 3.0 | 15 | Frontline combat |
+| Type | Name | Team | Speed | HP | Attack Range | Damage | Cooldown | Role |
+|------|------|------|-------|-----|--------------|--------|----------|------|
+| Hero (`Unit_Kind.Hero`) | **Liiroy, the Bold** | Player (Campaign) | 180 (+20%) | 500 (5 arm, +4 HP/s) | 3.0 cells | 35 | 40 ticks (0.67 s) | Campaign hero champion (royal cobalt & gold) |
+| Melee (`Unit_Kind.Melee`) | **Luk Soldier** | Enemy / Skirmish Spawn | 150 | 100 | 3.0 cells | 15 | 60 ticks (1.0 s) | Standard frontline foot soldier |
 
 ### Planned Units
 
@@ -234,18 +235,27 @@ This creates a true Fog of War experience where enemies can hide in unexplored o
 
 ## Odin Implementation Values
 
-The Odin port uses these current values (tutorial level):
+The Odin port uses these current values (Campaign Tutorial Level 1):
 
-| Stat | Value |
-|------|-------|
-| Move speed | 150 world units/s (4.6875 cells/s) |
-| Max HP | 100 |
-| Attack damage | 15 |
-| Attack range | 3 cells (Euclidean) |
-| Attack cooldown | 60 ticks (1.0 s) |
-| Vision radius | 6 cells |
-| Unit capacity | 256 slots (SoA pool) |
-| Path capacity | 512 cells per unit |
+| Stat | **Liiroy, the Bold** (`.Hero`) | **Luk Soldier** (`.Melee`) |
+|------|--------------------------------|----------------------------|
+| Move speed | `180` world units/s (`HERO_SPEED`, `5.625` cells/s) | `150` world units/s (`BASE_SPEED`, `4.6875` cells/s) |
+| Max HP | `500` (`HERO_MAX_HP`) | `100` (`MAX_HP`) |
+| Armor | `5` (`HERO_ARMOR`, min 1 dmg taken) | `0` (`BASE_ARMOR`) |
+| Passive regen | `+2 HP` / `30` ticks (`+4 HP/s`) | `0` |
+| Attack damage | `35` (`HERO_ATTACK_DAMAGE`) | `15` (`ATTACK_DAMAGE`) |
+| Attack range | 3 cells (Euclidean) | 3 cells (Euclidean) |
+| Attack cooldown | `40` ticks (`0.67 s`) | `60` ticks (`1.0 s`) |
+| Vision radius | 6 cells | 6 cells |
+| Render scale & ring | `HERO_SCALE = 0.84` + gold hero aura | `WARRIOR_SCALE = 0.74` |
+| Unit capacity | 256 slots (SoA pool) | 256 slots (SoA pool) |
+| Path capacity | 512 cells per unit | 512 cells per unit |
 
-Player and enemy share the same melee stat block; team/color is the only
-difference. Unit references are generation handles, not ECS entities.
+In Campaign Mode (`game_reset`), the player controls **Liiroy, the Bold** (`Unit_Kind.Hero`) rather than a regular **Luk Soldier**.
+
+### Event-Based Discovery Aggro (Campaign Mode)
+- Undiscovered enemy Luk Soldiers start unalerted (`discovered = false`, `aggro_timer = 0`).
+- When Liiroy enters an undiscovered enemy's 6-cell `VISION_RADIUS`, the enemy becomes `discovered = true`, receives a `240`-tick (`4.0 s`) `ENEMY_AGGRO_DELAY_TICKS` grace window, and sets `game.discovery_announced = true`.
+- During the grace window the enemy waits instead of chasing, displays a pulsing amber warning ring + `! SPOTTED Xs` countdown tag, and shows a flavored HUD announcement banner (*"HARK! AN ENEMY LUK SOLDIER SPOTTED! Strike first while they hesitate..."*).
+- Taking damage (`hp < hp_max`) clears `aggro_timer` immediately so the enemy retaliates at once; otherwise the enemy charges when `aggro_timer` reaches `0` (setting `aggro_triggered_tick` for the brief `"TO ARMS!"` banner).
+- Unit references are generation handles (`{index, generation}`), not ECS entities.

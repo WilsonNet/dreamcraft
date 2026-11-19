@@ -33,11 +33,22 @@ MAX_PATH :: 512
 MAX_COMMANDS :: 128
 
 BASE_SPEED :: 150 // world units per second
+BASE_ARMOR :: 0
 ATTACK_DAMAGE :: 15
 ATTACK_RANGE :: 3 // cells, Euclidean
 ATTACK_COOLDOWN_TICKS :: 60
 
 MAX_HP :: 100
+
+HERO_SPEED :: 180 // +20% heroic stride
+HERO_MAX_HP :: 500
+HERO_ARMOR :: 5
+HERO_ATTACK_DAMAGE :: 35
+HERO_ATTACK_COOLDOWN_TICKS :: 40
+HERO_REGEN_INTERVAL_TICKS :: 30 // +2 HP every 0.5s (+4 HP/s)
+HERO_REGEN_AMOUNT :: 2
+
+ENEMY_AGGRO_DELAY_TICKS :: 240 // 4.0s discovery grace before enemy charges
 
 // Set to false for release builds with -define:VALIDATE_EACH_TICK=false.
 VALIDATE_EACH_TICK :: #config(VALIDATE_EACH_TICK, true)
@@ -63,6 +74,17 @@ Race :: enum u8 {
 
 Unit_Kind :: enum u8 {
 	Melee,
+	Hero,
+}
+
+unit_kind_name :: proc(kind: Unit_Kind) -> string {
+	switch kind {
+	case .Melee:
+		return "Luk Soldier"
+	case .Hero:
+		return "Liiroy, the Bold"
+	}
+	return "Luk Soldier"
 }
 
 Unit_State :: enum u8 {

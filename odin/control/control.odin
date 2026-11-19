@@ -35,6 +35,8 @@ Result :: struct {
 	enemy_alive: bool `json:"enemy_alive"`,
 	level_complete: bool `json:"level_complete"`,
 	game_over: bool `json:"game_over"`,
+	discovery_announced: bool `json:"discovery_announced"`,
+	enemy_aggro_ticks: u16 `json:"enemy_aggro_ticks"`,
 	waypoint: int `json:"waypoint"`,
 	waypoints_total: int `json:"waypoints_total"`,
 	fog_percent: f32 `json:"fog_percent"`,
@@ -148,7 +150,7 @@ spawn_unit :: proc(game: ^g.Game, command: Command) -> Result {
 		return make_result(game, false, "Spawn rejected (blocked, occupied, or capacity)")
 	}
 	index, _ := g.unit_index(&game.units, handle)
-	if command.value > 0 && command.value <= int(g.MAX_HP) {
+	if command.value > 0 && command.value <= int(game.units.hp_max[index]) {
 		game.units.hp[index] = u16(command.value)
 	}
 	return make_result(game, true, fmt.tprintf("Spawned %s at (%d,%d)", command.team, command.x, command.y))

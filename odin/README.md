@@ -13,21 +13,23 @@ pools, Q16.16 fixed point.
 ./run.sh --control=7780    # custom port
 ```
 
-Two lanes while developing:
+Two lanes while developing (always work on `DEV`, then build & restart `Build` when done):
 
 ```bash
 ./build.sh --dev           # bin/dreamcraft-dev + bin/headless-dev, stable untouched
 ./run-dev.sh --control=7778
 ./bin/headless-dev --serve=7778 --paused   # deterministic agent lane
-./restart-build.sh         # close-out: restart stable game in herdr on :7777
+./build.sh && ./restart-build.sh           # post-task: build & restart stable game on :7777
 ```
 
-The stable build runs in a dedicated Herdr `game` pane. Tests build dev binaries only;
-the agent restarts the stable build when a task is finished.
+Always work and test on the `dev` version (`bin/dreamcraft-dev`, `bin/headless-dev`), keeping the
+user's stable build in the Herdr `game` pane (`:7777`) untouched mid-task. After finishing any
+task, run `./test.sh`, trigger `./build.sh`, and run `./restart-build.sh` so the playable
+build version is up to date.
 
-The dev client window title always starts with `DEV - `. The build passes
-`-define:DREAMCRAFT_DEV=true`, and `bin/dreamcraft-dev` is also detected by
-executable name, so the prefix stays even for a manual dev build.
+The dev client window title always starts with `DEV - `. `./build.sh --dev` and `./run-dev.sh`
+pass `-define:DREAMCRAFT_DEV=true`, and `bin/dreamcraft-dev` is also detected by executable
+name, so the `DEV - ` prefix stays even for a manual dev build.
 
 Retired Blender warrior assets & script are archived in `../legacy/warrior-glb/`
 and are not part of the build; units are built procedurally in `client/art/`.
@@ -57,11 +59,12 @@ Runs (against dev binaries; the stable build is not touched):
 1. `odin test game` — simulation unit tests
 2. `odin test control` — command/HTTP tests
 3. `odin test client/art` — Mamluk mesh, gait weight-wave, & tree/prop geometry tests
-4. `odin test client` — unit facing/turn & hash tests
+4. `odin test client` — isometric camera, mouse/cursor recovery, command FX, facing/turn & hash tests
 5. headless JSONL smoke script
 6. replay hash verification
 7. web wasm smoke test (Node)
 8. HTTP control smoke test
+9. `python3 tests/camera_mouse_check.py --launch --mode both --port 7778` — live probe + real macOS OS mouse/camera validation
 
 Individual:
 
@@ -111,7 +114,9 @@ Endpoints:
 | GET | `/units` | unit list |
 | GET | `/fog` | 80×50 ASCII map |
 | GET | `/screenshot` | PNG (client only) |
+| GET | `/camera` | live camera, zoom, focus, cursor & grip state (client only) |
 | POST | `/command` | execute JSON command |
+| POST | `/mouse` | inject deterministic mouse/wheel/focus probe frames (client only) |
 
 ```bash
 curl -s localhost:7777/state
@@ -203,8 +208,10 @@ Unit references use `{index, generation}` handles:
 | Commands queued | 128 |
 | Sim rate | 60 Hz |
 | Fog vision | 6 cells |
-| Unit HP | 100 |
-| Attack | 15 damage, 3 cells, 60 ticks |
+| Unit HP | 100 (`Luk Soldier`), 500 + 5 armor + 4 HP/s regen (`Liiroy, the Bold`) |
+| Attack | 15 dmg / 60 ticks (`Luk Soldier`), 35 dmg / 40 ticks (`Liiroy`), 3 cells |
+| Move speed | 150 (`Luk Soldier`), 180 (`Liiroy, the Bold`) |
+| Campaign aggro delay | 240 ticks (4.0 s grace + discovery banner, instant on hit) |
 
 ## Determinism
 
@@ -238,10 +245,9 @@ Allowed allocations outside hot paths:
 - units with team color, label, health bars, selection ring
 - path gizmo for selected units
 - HUD: status, minimap, `[M] Move` / `[A] Attack` / `[P] Patrol` / `[S] Stop` card, pause menu
-- minimap: 80×50 RGBA texture scaled to 200×125
+- minimap: 80×50 RGBA texture scaled to 200×125 with click/drag scrub and clipped isometric camera frame
 
-Screenshot endpoint captures the current window to
-`control_screenshot.png` and serves it as PNG.
+Screenshot endpoint returns PNG bytes directly from memory via `ExportImageToMemory` (no temp file).
 
 ## Architecture Rules
 

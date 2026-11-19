@@ -96,11 +96,26 @@
 		document.getElementById("stats").textContent =
 			`FPS ${fps}  |  Tick ${state.tick}  |  Fog ${state.fog_percent.toFixed(1)}%  |  ${state.alive_units} units`;
 		document.getElementById("player").textContent = player
-			? `Player (${player.position[0]}, ${player.position[1]})  HP ${player.hp}/${player.hp_max}  |  Waypoint ${state.waypoint}/${state.waypoints_total}`
-			: "Player is dead";
+			? `${player.name} (${player.position[0]}, ${player.position[1]})  HP ${player.hp}/${player.hp_max}  ATK ${player.damage}  ARM ${player.armor}  |  WP ${state.waypoint}/${state.waypoints_total}`
+			: "Liiroy, the Bold has fallen";
 		document.getElementById("selection").textContent = selected.length
-			? `Selected ${selected.length}: ` + selected.map((u) => `(${u.position[0]},${u.position[1]})`).join(" ")
+			? `Selected ${selected.length}: ` + selected.map((u) => `${u.name} (${u.position[0]},${u.position[1]})`).join(" ")
 			: "No selection";
+		const banner = document.getElementById("announcement");
+		if (banner) {
+			if (player && !state.game_over && !state.level_complete && state.enemy_aggro_ticks > 0) {
+				const secs = (state.enemy_aggro_ticks / 60).toFixed(1);
+				banner.hidden = false;
+				const title = document.createElement("strong");
+				title.textContent = "HARK! AN ENEMY LUK SOLDIER SPOTTED!";
+				const body = document.createTextNode("Strike first while they hesitate — attack before they charge! ");
+				const timer = document.createElement("span");
+				timer.textContent = `Enemy charges in ${secs}s`;
+				banner.replaceChildren(title, body, timer);
+			} else {
+				banner.hidden = true;
+			}
+		}
 		const valid = document.getElementById("valid");
 		valid.textContent = state.valid ? "INVARIANTS OK" : `INVALID: ${state.validation}`;
 		valid.className = state.valid ? "ok" : "bad";

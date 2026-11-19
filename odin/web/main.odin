@@ -137,7 +137,7 @@ web_spawn :: proc(team: i32, x, y, hp: i32) -> i32 {
 		return 0
 	}
 	index, _ := g.unit_index(&Game_State.units, handle)
-	if hp > 0 && hp <= i32(g.MAX_HP) {
+	if hp > 0 && hp <= i32(Game_State.units.hp_max[index]) {
 		Game_State.units.hp[index] = u16(hp)
 	}
 	return 1

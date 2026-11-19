@@ -13,7 +13,7 @@ unit_movement :: proc(game: ^Game) {
 			}
 			continue
 		}
-		advance_unit(game, index, MOVE_STEP_PER_TICK)
+		advance_unit(game, index, unit_move_step(units, index))
 	}
 }
 

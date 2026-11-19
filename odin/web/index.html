@@ -89,6 +89,14 @@
     padding: 0 4px;
     color: var(--text);
   }
+  .announcement {
+    padding: 10px 14px;
+    border: 2px solid var(--gold);
+    background: rgba(20, 16, 10, 0.92);
+    color: #f6eed8;
+  }
+  .announcement strong { color: var(--gold); display: block; margin-bottom: 2px; }
+  .announcement span { color: #ffbe55; font-size: 12px; }
   details { border-top: 1px solid var(--line); padding-top: 8px; }
   details summary { cursor: pointer; color: var(--muted); }
   pre#fog {
@@ -108,10 +116,11 @@
 <body>
 <header>
   <h1>DREAMCRAFT RTS</h1>
-  <span>Tutorial Level 1 - Through the Woods / Odin + WebAssembly</span>
+  <span>Campaign: Tutorial Level 1 - Through the Woods / Odin + WebAssembly</span>
 </header>
 <main>
   <section class="stage">
+    <div id="announcement" class="announcement" hidden></div>
     <canvas id="game" width="640" height="400" aria-label="DreamCraft game view"></canvas>
     <div class="bar">
       <button id="moveBtn">Move</button>

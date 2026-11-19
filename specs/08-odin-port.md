@@ -12,7 +12,7 @@ Measured on this machine (Apple Silicon):
 |-------|------|
 | Odin client + headless, `-o:speed` | ~2.8 s total |
 | Bevy client, incremental | tens of seconds to minutes |
-| Odin unit tests (93 tests) | < 40 ms runtime |
+| Odin unit tests (106 tests) | < 40 ms runtime |
 
 ## Why Odin for an RTS
 
@@ -52,14 +52,14 @@ Two binaries stay separate so manual play never interrupts development:
 | Dev | `bin/dreamcraft-dev` | `:7778` | agent reproduction and visual checks |
 | Dev headless | `bin/headless-dev` | `:7778` | deterministic `run`/`tick` stepping |
 
-- The dev client window title is always `DEV - DreamCraft RTS ...`.
-  `build.sh --dev` defines `DREAMCRAFT_DEV=true`; the client also checks its
-  executable name, so `bin/dreamcraft-dev` keeps the prefix when built by hand.
+- Always work on the `DEV` lane (`bin/dreamcraft-dev` / `bin/headless-dev` on `:7778`),
+  where the dev client window title is always `DEV - DreamCraft RTS ...`.
+  `build.sh --dev` and `run-dev.sh` define `DREAMCRAFT_DEV=true`; the client also checks its
+  executable name, so `bin/dreamcraft-dev` keeps the `DEV - ` prefix when built by hand.
 - `./build.sh --dev` builds only the dev lane.
 - `./test.sh` builds dev binaries and never overwrites the stable lane.
-- `./build.sh` builds the stable lane plus the web build.
-- `./restart-build.sh` restarts the stable Herdr `game` pane.
-- Close-out order: tests → stable build → restart → update docs/specs.
+- After finishing any task, always trigger the stable build (`./build.sh`) and restart (`./restart-build.sh`).
+- Close-out order: tests → `./build.sh` (stable + web) → `./restart-build.sh` → update docs/specs.
 - `GET /units` returns `world` (float world position), `progress` (cells
   between `position` and `next`) and `next` (current path cell). These make
   position jumps measurable through the control API.
@@ -78,10 +78,18 @@ Two binaries stay separate so manual play never interrupts development:
 | `MAX_COMMANDS` | 128 queued commands |
 | `TICK_RATE` | 60 Hz |
 | `VISION_RADIUS` | 6 cells |
-| `MAX_HP` | 100 |
-| `ATTACK_DAMAGE` | 15 |
+| `BASE_ARMOR` | 0 (Luk Soldier) |
+| `MAX_HP` | 100 (Luk Soldier) |
+| `ATTACK_DAMAGE` | 15 (Luk Soldier) |
 | `ATTACK_RANGE` | 3 cells |
-| `ATTACK_COOLDOWN_TICKS` | 60 |
+| `ATTACK_COOLDOWN_TICKS` | 60 (Luk Soldier) |
+| `HERO_SPEED` | 180 (`Liiroy, the Bold`) |
+| `HERO_MAX_HP` | 500 (`Liiroy, the Bold`) |
+| `HERO_ARMOR` | 5 (`Liiroy, the Bold`, min 1 dmg taken) |
+| `HERO_ATTACK_DAMAGE` | 35 (`Liiroy, the Bold`) |
+| `HERO_ATTACK_COOLDOWN_TICKS` | 40 (`Liiroy, the Bold`) |
+| `HERO_REGEN_INTERVAL_TICKS` / `HERO_REGEN_AMOUNT` | 30 ticks / +2 HP (`+4 HP/s`) |
+| `ENEMY_AGGRO_DELAY_TICKS` | 240 (4.0 s campaign discovery grace) |
 
 ### `Game`
 
@@ -97,6 +105,10 @@ Game {
     commands: Command_Queue,
     waypoints: Waypoints,
     level_complete: bool,
+    game_over: bool,
+    discovery_announced: bool,
+    discovery_tick: u64,
+    aggro_triggered_tick: u64,
 }
 ```
 
@@ -120,6 +132,8 @@ Units {
     patrol_*: [MAX_UNITS]...,
     attack_target: [MAX_UNITS]Unit_Handle,
     cooldown: [MAX_UNITS]u16,
+    discovered: [MAX_UNITS]bool,
+    aggro_timer: [MAX_UNITS]u16,
     selected: [MAX_UNITS]bool,
     free_slots: [MAX_UNITS]u16,
     counters,
@@ -192,7 +206,7 @@ Command {
 ### Combat
 
 - Attack range is Euclidean squared (`dx² + dy² <= 9`).
-- Damage 15, cooldown 60 ticks.
+- `Luk Soldier`: 15 damage, 0 armor, 60-tick cooldown; `Liiroy, the Bold` (Hero): 35 damage, 5 armor (`max(raw - armor, 1)`), 40-tick cooldown, `+2 HP` every `30` ticks when damaged (`+4 HP/s`).
 - `attack_movement` repaths only when the destination cell changed.
 - `death_check` collects dead indices first, then destroys them.
 - Destroying a unit clears all attack targets that reference its handle.
@@ -209,10 +223,11 @@ Command {
 6. unit movement
 7. combat tick
 8. death check
-9. fog update
-10. waypoint progress
-11. goal check
-12. invariant validation
+9. hero passive HP regen
+10. fog update
+11. waypoint progress
+12. goal check
+13. invariant validation
 
 Rules:
 
@@ -253,7 +268,7 @@ A move order must never teleport the unit.
 | Counters | alive/selected/free counts match slots |
 | Free list | no duplicates, no live slots |
 | Handles | generation nonzero, attack targets resolve |
-| Units | bounds, world bounds, health, cooldown |
+| Units | bounds, world bounds, health, kind cooldown, aggro timer/discovered |
 | Paths | length, index, bounds, obstacles, adjacency, detached path |
 | State | `Moving` implies a path; `Patrol` implies active patrol |
 | Target | no stale handle, no friendly fire, no self-target |
@@ -298,7 +313,9 @@ Replacement endpoints (`control/http.odin`):
 | GET | `/units` | array of units with team/pos/hp/state/path/target |
 | GET | `/fog` | ASCII 80×50 map (`P E # w W G .`) |
 | GET | `/screenshot` | PNG of the live client (501 in headless) |
+| GET | `/camera` | live camera, zoom, focus, cursor & grip state (501 in headless) |
 | POST | `/command` | execute a command, return result |
+| POST | `/mouse` | inject mouse/wheel/focus probe frames (501 in headless) |
 
 Commands:
 
@@ -348,6 +365,7 @@ Layers:
 4. **HTTP smoke** (`tests/control_smoke.sh`): start `--serve`, curl all
    endpoints, run a move command, verify position, verify invariants.
 5. **Visual smoke**: `--control`, `GET /screenshot`, inspect PNG.
+6. **Live mouse & OS camera validation**: `python3 tests/camera_mouse_check.py --launch --mode both --port 7778`.
 
 `./test.sh` runs all of the above.
 
@@ -376,8 +394,8 @@ Layers:
   with bilinear FBM mist and world-edge fade.
 - Forest & props (`client/art/`): AoE-proportioned procedural pine & oak trees
   (`2.65–3.45` world units), mossy boulders, ferns, stone waypoints, banners.
-- Units: procedural CPU-skinned 26-bone Mamluk models (`WARRIOR_SCALE = 0.74`)
-  with kinetic-chain animations, turn/stop dynamics, and double-crescent
+- Units: procedural CPU-skinned 26-bone Mamluk models (`HERO_SCALE = 0.84` for campaign hero `Liiroy, the Bold` in royal cobalt & gold; `WARRIOR_SCALE = 0.74` for `Luk Soldier`)
+  with kinetic-chain animations, turn/stop dynamics, gold hero aura / amber discovery countdown rings, campaign discovery HUD banner (`render_campaign.odin`), and double-crescent
   `slash_vfx.odin` attack ribbons; shaded by `assets/shaders/unit.{vs,fs}`.
 - Scene renders to a full-resolution `RenderTexture2D` (bilinear) and finishes
   with `assets/shaders/watercolor.fs` wash post-processing (`--no-shader` bypasses).
@@ -430,7 +448,7 @@ Native client:
 - Camera update runs after `sim_tick`, so rendering has no one-frame lag.
 - No smoothing: the unit remains screen-centered while moving; no catch-up
   drift or rollback when it stops.
-- Manual WASD/arrow/edge-scroll or minimap click switches to FREE.
+- Manual MMB/`Space`+drag Camera Grip, WASD/arrow/edge-scroll, or minimap click/drag switches to FREE.
 - `F` toggles FOLLOW.
 - HUD shows `CAM FOLLOW` or `CAM FREE`.
 

@@ -95,6 +95,7 @@ control_snapshot_and_units_encode :: proc(t: ^testing.T) {
 	unmarshal_err := json.unmarshal(data, &infos)
 	defer if infos != nil {
 		for info in infos {
+			delete(info.name)
 			delete(info.team)
 			delete(info.state)
 		}
@@ -103,6 +104,15 @@ control_snapshot_and_units_encode :: proc(t: ^testing.T) {
 	testing.expect(t, unmarshal_err == nil)
 	testing.expect_value(t, len(infos), 2)
 	testing.expect_value(t, infos[0].team, "player")
+	testing.expect_value(t, infos[0].name, "Liiroy, the Bold")
+	testing.expect(t, infos[0].hero)
+	testing.expect_value(t, infos[0].hp_max, u16(g.HERO_MAX_HP))
+	testing.expect_value(t, infos[0].damage, u16(g.HERO_ATTACK_DAMAGE))
+	testing.expect_value(t, infos[0].armor, u16(g.HERO_ARMOR))
+	testing.expect_value(t, infos[1].name, "Luk Soldier")
+	testing.expect(t, !infos[1].hero)
+	testing.expect_value(t, infos[1].damage, u16(g.ATTACK_DAMAGE))
+	testing.expect_value(t, infos[1].armor, u16(g.BASE_ARMOR))
 }
 
 @(test)
@@ -207,5 +217,19 @@ control_attack_move_and_patrol_to :: proc(t: ^testing.T) {
 	_ = execute(&game, Command{cmd = "run", ticks = 220})
 	player, _ := g.game_player_index(&game)
 	testing.expect(t, game.units.patrol_active[player])
+	testing.expect(t, res.valid)
+}
+
+@(test)
+control_reports_campaign_discovery_and_aggro_delay :: proc(t: ^testing.T) {
+	game: g.Game
+	g.game_init(&game)
+	enemy_index, _ := g.game_enemy_index(&game)
+	g.unit_destroy(&game.units, enemy_index)
+	testing.expect(t, execute(&game, Command{cmd = "spawn", team = "enemy", x = 7, y = 25}).ok)
+
+	res := execute(&game, Command{cmd = "run", ticks = 1})
+	testing.expect(t, res.discovery_announced)
+	testing.expect_value(t, res.enemy_aggro_ticks, u16(g.ENEMY_AGGRO_DELAY_TICKS))
 	testing.expect(t, res.valid)
 }

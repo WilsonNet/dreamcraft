@@ -33,6 +33,8 @@ Units :: struct {
 
 	attack_target: [MAX_UNITS]Unit_Handle,
 	cooldown: [MAX_UNITS]u16,
+	discovered: [MAX_UNITS]bool,
+	aggro_timer: [MAX_UNITS]u16,
 	selected: [MAX_UNITS]bool,
 
 	free_slots: [MAX_UNITS]u16,
@@ -65,19 +67,76 @@ unit_handle :: proc(units: ^Units, index: int) -> Unit_Handle {
 	return Unit_Handle{index = u16(index), generation = units.generation[index]}
 }
 
+unit_default_hp_max :: proc(kind: Unit_Kind) -> u16 {
+	switch kind {
+	case .Melee:
+		return MAX_HP
+	case .Hero:
+		return HERO_MAX_HP
+	}
+	return MAX_HP
+}
+
+unit_attack_damage :: proc(units: ^Units, index: int) -> u16 {
+	switch units.kind[index] {
+	case .Melee:
+		return ATTACK_DAMAGE
+	case .Hero:
+		return HERO_ATTACK_DAMAGE
+	}
+	return ATTACK_DAMAGE
+}
+
+unit_attack_cooldown :: proc(units: ^Units, index: int) -> u16 {
+	switch units.kind[index] {
+	case .Melee:
+		return ATTACK_COOLDOWN_TICKS
+	case .Hero:
+		return HERO_ATTACK_COOLDOWN_TICKS
+	}
+	return ATTACK_COOLDOWN_TICKS
+}
+
+unit_default_speed :: proc(kind: Unit_Kind) -> i32 {
+	switch kind {
+	case .Melee:
+		return BASE_SPEED
+	case .Hero:
+		return HERO_SPEED
+	}
+	return BASE_SPEED
+}
+
+unit_armor :: proc(units: ^Units, index: int) -> u16 {
+	switch units.kind[index] {
+	case .Melee:
+		return BASE_ARMOR
+	case .Hero:
+		return HERO_ARMOR
+	}
+	return BASE_ARMOR
+}
+
+unit_move_step :: proc(units: ^Units, index: int) -> Fp {
+	switch units.kind[index] {
+	case .Melee:
+		return MOVE_STEP_PER_TICK
+	case .Hero:
+		return HERO_STEP_PER_TICK
+	}
+	return MOVE_STEP_PER_TICK
+}
+
 unit_spawn :: proc(
 	units: ^Units,
 	grid: ^Grid,
 	team: Team,
 	position: Grid_Pos,
+	kind: Unit_Kind = .Melee,
 ) -> (handle: Unit_Handle, ok: bool) {
-	if units.free_count <= 0 {
+	if units.free_count <= 0 || !in_bounds(position) || grid_is_blocked(grid, position) {
 		return INVALID_HANDLE, false
 	}
-	if !in_bounds(position) || grid_is_blocked(grid, position) {
-		return INVALID_HANDLE, false
-	}
-
 	index := int(units.free_slots[units.free_count - 1])
 	units.free_count -= 1
 	assert(!units.alive[index], "free slot is alive")
@@ -86,15 +145,23 @@ unit_spawn :: proc(
 	if units.generation[index] == 0 {
 		units.generation[index] = 1
 	}
+	unit_init_slot(units, index, team, position, kind)
+	units.alive_count += 1
+	return Unit_Handle{index = u16(index), generation = units.generation[index]}, true
+}
+
+@(private)
+unit_init_slot :: proc(units: ^Units, index: int, team: Team, position: Grid_Pos, kind: Unit_Kind) {
+	hp_max := unit_default_hp_max(kind)
 	units.alive[index] = true
 	units.team[index] = team
 	units.race[index] = .Basic
-	units.kind[index] = .Melee
+	units.kind[index] = kind
 	units.position[index] = position
 	units.world[index] = grid_to_world(position)
-	units.speed[index] = fp_from_int(BASE_SPEED)
-	units.hp[index] = MAX_HP
-	units.hp_max[index] = MAX_HP
+	units.speed[index] = fp_from_int(unit_default_speed(kind))
+	units.hp[index] = hp_max
+	units.hp_max[index] = hp_max
 	units.state[index] = .Idle
 	units.path_len[index] = 0
 	units.path_index[index] = 0
@@ -107,10 +174,9 @@ unit_spawn :: proc(
 	units.attack_move_dest[index] = position
 	units.attack_target[index] = INVALID_HANDLE
 	units.cooldown[index] = 0
+	units.discovered[index] = false
+	units.aggro_timer[index] = 0
 	units.selected[index] = false
-	units.alive_count += 1
-
-	return Unit_Handle{index = u16(index), generation = units.generation[index]}, true
 }
 
 unit_destroy :: proc(units: ^Units, index: int) {
@@ -133,6 +199,8 @@ unit_destroy :: proc(units: ^Units, index: int) {
 	units.patrol_active[index] = false
 	units.attack_move_active[index] = false
 	units.cooldown[index] = 0
+	units.discovered[index] = false
+	units.aggro_timer[index] = 0
 	units.alive_count -= 1
 
 	for i in 0..<MAX_UNITS {

@@ -10,6 +10,7 @@ import g "../game"
 import art "./art"
 
 WARRIOR_SCALE :: f32(0.74)
+HERO_SCALE :: f32(0.84)
 STRIDE_DISTANCE :: f32(1.85)
 
 Unit_Visual :: struct {
@@ -33,6 +34,7 @@ Unit_Visual :: struct {
 Unit_Model :: struct {
 	loaded:    bool,
 	enemy:     bool,
+	hero:      bool,
 	mesh:      rl.Mesh,
 	material:  rl.Material,
 	rest_pos:  []rl.Vector3,
@@ -95,22 +97,24 @@ unload_unit_model :: proc(m: ^Unit_Model) {
 ensure_unit_model :: proc(index: int) {
 	m := &app.models[index]
 	enemy := app.game.units.team[index] == .Enemy
-	if m.loaded && m.enemy == enemy {
+	hero := app.game.units.kind[index] == .Hero
+	if m.loaded && m.enemy == enemy && m.hero == hero {
 		return
 	}
 	unload_unit_model(m)
-	m^ = build_unit_model(enemy)
+	m^ = build_unit_model(enemy, hero)
 }
 
 // Builds and uploads one model. The caller owns the GPU buffers.
-build_unit_model :: proc(enemy: bool) -> Unit_Model {
+build_unit_model :: proc(enemy: bool, hero: bool = false) -> Unit_Model {
 	m: Unit_Model
-	b := art.build_mamluk(enemy)
+	b := art.build_mamluk(enemy, hero)
 	defer art.mb_delete(&b)
 	if b.overflow || len(b.pos) == 0 || len(b.idx) == 0 {
 		return m
 	}
 	upload_builder(&b, &m, enemy)
+	m.hero = hero
 	return m
 }
 
@@ -367,9 +371,13 @@ draw_warrior_model :: proc(index: int, ground: rl.Vector3) -> bool {
 	visual := &app.visuals[index]
 	pose := unit_pose(index)
 	radians := visual.angle * math.PI / 180
+	scale := WARRIOR_SCALE
+	if app.game.units.kind[index] == .Hero {
+		scale = HERO_SCALE
+	}
 	unit := art.xf_mul(
 		art.xf_mul(rl.MatrixTranslate(ground.x, ground.y, ground.z), rl.MatrixRotateY(radians)),
-		rl.MatrixScale(WARRIOR_SCALE, WARRIOR_SCALE, WARRIOR_SCALE),
+		rl.MatrixScale(scale, scale, scale),
 	)
 	draw_unit_mesh(m, &pose, unit)
 	return true

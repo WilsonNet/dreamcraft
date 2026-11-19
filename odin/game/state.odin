@@ -118,6 +118,9 @@ Game :: struct {
 	waypoints: Waypoints,
 	level_complete: bool,
 	game_over: bool,
+	discovery_announced: bool,
+	discovery_tick: u64,
+	aggro_triggered_tick: u64,
 }
 
 game_init :: proc(game: ^Game) {
@@ -133,10 +136,10 @@ game_reset :: proc(game: ^Game) {
 	command_queue_reset(&game.commands)
 	waypoints_reset(&game.waypoints)
 
-	player, ok := unit_spawn(&game.units, &game.grid, .Player, START_POS)
-	assert(ok, "failed to spawn player")
+	player, ok := unit_spawn(&game.units, &game.grid, .Player, START_POS, .Hero)
+	assert(ok, "failed to spawn player hero")
 	_ = player
-	enemy, ok_enemy := unit_spawn(&game.units, &game.grid, .Enemy, ENEMY_START_POS)
+	enemy, ok_enemy := unit_spawn(&game.units, &game.grid, .Enemy, ENEMY_START_POS, .Melee)
 	assert(ok_enemy, "failed to spawn enemy")
 	_ = enemy
 

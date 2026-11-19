@@ -6,8 +6,8 @@ package art
 import "core:math"
 import rl "vendor:raylib"
 
-build_mamluk :: proc(enemy: bool) -> Mesh_Builder {
-	b := mb_init(palette_for_team(enemy))
+build_mamluk :: proc(enemy: bool, hero: bool = false) -> Mesh_Builder {
+	b := mb_init(palette_for_unit(enemy, hero))
 	mamluk_legs(&b)
 	mamluk_skirt(&b)
 	mamluk_torso(&b)

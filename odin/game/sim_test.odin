@@ -73,7 +73,7 @@ attack_command_kills_adjacent_enemy :: proc(t: ^testing.T) {
 	unit_destroy(&game.units, enemy_index)
 	enemy, ok := unit_spawn(&game.units, &game.grid, .Enemy, Grid_Pos{5, 25})
 	testing.expect(t, ok)
-	game.units.hp[enemy_index] = 30
+	game.units.hp[enemy_index] = 60
 
 	player, _ := game_player_handle(&game)
 	command_push(
@@ -88,7 +88,7 @@ attack_command_kills_adjacent_enemy :: proc(t: ^testing.T) {
 	testing.expect(t, !alive, "enemy should be dead")
 	player_index, _ := game_player_index(&game)
 	testing.expect_value(t, game.units.attack_target[player_index], INVALID_HANDLE)
-	testing.expect(t, game.units.hp[player_index] < MAX_HP, "enemy should have hit back")
+	testing.expect(t, game.units.hp[player_index] < game.units.hp_max[player_index], "enemy should have hit back")
 	testing.expect_value(t, validate_game(&game), Validation_Error.None)
 }
 
@@ -221,7 +221,7 @@ reorder_move_preserves_mid_segment_position :: proc(t: ^testing.T) {
 	after := game.units.world[player]
 
 	// Exactly one tick of forward travel, not a reset to the cell center.
-	testing.expect_value(t, after.x - before.x, MOVE_STEP_PER_TICK * CELL_SIZE)
+	testing.expect_value(t, after.x - before.x, unit_move_step(&game.units, player) * CELL_SIZE)
 	testing.expect_value(t, after.y, before.y)
 	testing.expect_value(t, validate_game(game), Validation_Error.None)
 }
@@ -245,7 +245,7 @@ blocked_move_click_does_not_stop_or_snap_unit :: proc(t: ^testing.T) {
 	testing.expect_value(t, game.commands.rejected, u32(1))
 	sim_tick(game)
 	after := game.units.world[player]
-	testing.expect_value(t, after.x - before.x, MOVE_STEP_PER_TICK * CELL_SIZE)
+	testing.expect_value(t, after.x - before.x, unit_move_step(&game.units, player) * CELL_SIZE)
 	testing.expect(t, game.units.patrol_active[player])
 	testing.expect_value(t, validate_game(game), Validation_Error.None)
 }
@@ -277,7 +277,7 @@ reordering_past_obstacles_never_jumps :: proc(t: ^testing.T) {
 	}
 	testing.expect_value(t, reorders, 3)
 	// A diagonal tick moves at most one step on each axis.
-	testing.expect(t, max_step <= MOVE_STEP_PER_TICK * CELL_SIZE * 2)
+	testing.expect(t, max_step <= unit_move_step(&game.units, player) * CELL_SIZE * 2)
 }
 
 @(test)
@@ -297,7 +297,7 @@ attack_order_keeps_move_interpolation :: proc(t: ^testing.T) {
 	testing.expect(t, game_issue_attack(game, enemy))
 	sim_tick(game)
 	after := game.units.world[player]
-	testing.expect_value(t, after.x - before.x, MOVE_STEP_PER_TICK * CELL_SIZE)
+	testing.expect_value(t, after.x - before.x, unit_move_step(&game.units, player) * CELL_SIZE)
 	testing.expect_value(t, validate_game(game), Validation_Error.None)
 }
 
@@ -360,4 +360,46 @@ patrol_to_engages_enemy_and_resumes_loop :: proc(t: ^testing.T) {
 	testing.expect(t, seen_back_a, "patrol never looped back to A")
 	testing.expect(t, game.units.patrol_active[player])
 	testing.expect_value(t, game.units.state[player], Unit_State.Patrol)
+}
+
+@(test)
+campaign_spawns_hero_liiroy_and_luk_soldier :: proc(t: ^testing.T) {
+	game: Game
+	game_init(&game)
+	player, ok_p := game_player_index(&game)
+	enemy, ok_e := game_enemy_index(&game)
+	testing.expect(t, ok_p && ok_e)
+	testing.expect_value(t, game.units.kind[player], Unit_Kind.Hero)
+	testing.expect_value(t, game.units.hp[player], u16(HERO_MAX_HP))
+	testing.expect_value(t, unit_attack_damage(&game.units, player), u16(HERO_ATTACK_DAMAGE))
+	testing.expect_value(t, unit_kind_name(game.units.kind[player]), "Liiroy, the Bold")
+	testing.expect_value(t, game.units.kind[enemy], Unit_Kind.Melee)
+	testing.expect_value(t, game.units.hp[enemy], u16(MAX_HP))
+	testing.expect_value(t, unit_kind_name(game.units.kind[enemy]), "Luk Soldier")
+}
+
+@(test)
+discovered_enemy_waits_before_aggro_and_announces :: proc(t: ^testing.T) {
+	game := new(Game)
+	defer free(game)
+	game_init(game)
+	enemy_idx, _ := game_enemy_index(game)
+	unit_destroy(&game.units, enemy_idx)
+	eh, spawned := unit_spawn(&game.units, &game.grid, .Enemy, Grid_Pos{7, 25})
+	testing.expect(t, spawned)
+	ei, _ := unit_index(&game.units, eh)
+
+	sim_tick(game)
+	testing.expect(t, game.discovery_announced)
+	testing.expect(t, game.units.discovered[ei])
+	testing.expect_value(t, game.units.aggro_timer[ei], u16(ENEMY_AGGRO_DELAY_TICKS))
+	testing.expect_value(t, game.units.attack_target[ei], INVALID_HANDLE)
+
+	// Enemy waits during the grace period and only aggros after delay expires.
+	sim_run(game, ENEMY_AGGRO_DELAY_TICKS - 1)
+	testing.expect_value(t, game.units.attack_target[ei], INVALID_HANDLE)
+	sim_run(game, 2)
+	testing.expect(t, handle_is_valid(game.units.attack_target[ei]))
+	testing.expect(t, game.aggro_triggered_tick > 0)
+	testing.expect_value(t, validate_game(game), Validation_Error.None)
 }
