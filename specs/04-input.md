@@ -19,7 +19,8 @@
 | Right Click on Enemy | Attack (move into melee range and deal damage) with red target lock FX |
 | Right Click on Ground | Move directly to location with SC2/AoE converging chevron confirmation FX |
 | Shift + Click | Add to selection |
-| Escape | Cancel active command mode first, or toggle pause menu when idle |
+| F1 (or `? F1` UI badge) | Toggle view-conditional Shortcut Window (Battlefield, Pause Menu, Model Picker, Model Editor, or Active Modal tool) |
+| Escape | Close open Shortcut Window first, cancel active command mode, or toggle pause menu when idle |
 
 ## Selection Box
 - Start drag from top-left
@@ -139,4 +140,5 @@ Entered via `Esc -> Model Editor` (or `--editor[=<model>]`):
 | `F` / `M` (`Alt+M`) / `X` (`Del`) -> `V/E/F/D` | Fill quad/tri / Merge center / Delete or Dissolve popup |
 | `Alt+Z` / `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+S` | X-Ray toggle / Undo / Redo / Save `.odin` & hot-reload game |
 | `MMB` / `Alt+LMB` / `RMB` drag, `Shift+MMB`, Wheel | Orbit camera / Pan / Zoom |
+| `F1` (or `? F1` topbar button) | Toggle conditional Model Editor or active Modal (`Grab`/`Rotate`/`Scale`/`Loop Cut`/`Knife`) Shortcut Window |
 | `Numpad 1/3/7`, `Numpad 5` (`O`), `.` (`Numpad .`), `Esc` | Front/Right/Top view, Ortho/Persp, Frame selection, Back/Confirm Exit |

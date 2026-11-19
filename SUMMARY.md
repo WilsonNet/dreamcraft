@@ -48,8 +48,8 @@ Build a fantasy RTS called **DreamCraft** with:
 - Headless JSONL scripts, HTTP control server, hash-verified replays
 - Curve/state validation after every tick
 - Pure-Odin Vector SVG Renderer (`odin/client/svg/`), 37 vector UI/HUD/editor `.svg` icons (`odin/assets/icons/`), and HiDPI raylib texture atlas (`client/icons.odin`)
-- In-game 3D Model Picker & Blender-shortcut Model Editor (`Esc -> Model Editor` or `--editor[=<model>]`), two-way chunked `.odin` asset persistence (`client/art/{spec,edit,models}/`), `Ctrl+S` live hot-reload, and Playwright-style Cooperative Mesh CLI (`odin/tools/mesh_cli/` -> `bin/dreamcraft-mesh`) for zero-script Human <-> AI art authoring
-- 130 native unit tests (69 game, 13 control, 17 art, 9 art/edit, 5 svg, 6 mesh_cli, 11 client) + web WASM/headless/replay/HTTP/mouse smoke: invariants,
+- In-game 3D Model Picker & Blender-shortcut Model Editor (`Esc -> Model Editor` or `--editor[=<model>]`), view-conditional `F1` Shortcut Window (`client/shortcuts.odin` + `? F1` UI badges), two-way chunked `.odin` asset persistence (`client/art/{spec,edit,models}/`), `Ctrl+S` live hot-reload, and Playwright-style Cooperative Mesh CLI (`odin/tools/mesh_cli/` -> `bin/dreamcraft-mesh`) for zero-script Human <-> AI art authoring
+- 131 native unit tests (69 game, 13 control, 17 art, 9 art/edit, 5 svg, 6 mesh_cli, 12 client) + web WASM/headless/replay/HTTP/mouse smoke: invariants,
   allocations, determinism, HTTP round trip, `.odin` round trip, live OS mouse camera validation, browser API
 - Bevy BRP MCP removed; control API replaces it
 

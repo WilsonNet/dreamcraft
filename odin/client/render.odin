@@ -31,6 +31,7 @@ draw_frame :: proc() {
 	if app.menu_open {
 		draw_pause_menu()
 	}
+	draw_help_window()
 	rl.EndDrawing()
 }
 

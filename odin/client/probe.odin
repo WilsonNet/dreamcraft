@@ -62,6 +62,7 @@ Camera_Snapshot :: struct {
 	probe_active:     bool    `json:"probe_active"`,
 	app_mode:         string  `json:"app_mode"`,
 	editor_model:     string  `json:"editor_model"`,
+	help_open:        bool    `json:"help_open"`,
 }
 
 input_mouse_pos :: proc() -> rl.Vector2 {
@@ -212,6 +213,7 @@ capture_camera_snapshot :: proc(_: rawptr) -> ([]byte, bool) {
 		probe_active     = app.probe.active,
 		app_mode         = app_mode_name(app.mode),
 		editor_model     = app.editor.mesh_loaded ? app.editor.mesh.id : "",
+		help_open        = app.help_open,
 	}
 	data, err := json.marshal(snap)
 	if err != nil {
@@ -296,6 +298,15 @@ handle_client_command :: proc(_: rawptr, cmd: control.Command) -> (msg: string, 
 		editor_close_to_game()
 		app.menu_open = true
 		return "Opened Pause Menu", true, true
+	case "toggle_help":
+		app.help_open = !app.help_open
+		return app.help_open ? "Opened shortcut window" : "Closed shortcut window", true, true
+	case "open_help":
+		app.help_open = true
+		return "Opened shortcut window", true, true
+	case "close_help":
+		app.help_open = false
+		return "Closed shortcut window", true, true
 	}
 	return "", false, false
 }

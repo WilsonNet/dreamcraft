@@ -62,6 +62,7 @@ App :: struct {
 	minimap_rect: rl.Rectangle,
 	icons: Icon_Atlas,
 	mode: App_Mode,
+	help_open: bool,
 	editor_button: rl.Rectangle,
 	retry_button: rl.Rectangle,
 	resume_button: rl.Rectangle,

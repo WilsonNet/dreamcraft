@@ -21,6 +21,7 @@ draw_picker_frame :: proc() {
 	}
 	rl.DrawRectangle(0, 0, w, h, rl.Color{8, 12, 9, 215})
 	draw_model_picker_ui()
+	draw_help_window()
 	rl.EndDrawing()
 }
 
@@ -123,6 +124,7 @@ draw_editor_frame :: proc() {
 	}
 	editor_draw_overlays_2d()
 	draw_editor_ui()
+	draw_help_window()
 	rl.EndDrawing()
 }
 

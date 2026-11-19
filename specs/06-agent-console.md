@@ -155,8 +155,8 @@ Endpoints:
 | GET | `/units` | unit list with name, hero, team, position, HP, damage, armor, state, path, target, discovered, aggro_ticks |
 | GET | `/fog` | 80×50 ASCII map |
 | GET | `/screenshot` | live PNG (client only) |
-| GET | `/camera` | live camera, zoom, focus, cursor, `app_mode`, `editor_model`, edge-pan & grip state (client only) |
-| POST | `/command` | execute a JSON command (plus client `reload_models`, `open_picker`, `open_editor`, `close_editor`, `pause_menu`) |
+| GET | `/camera` | live camera, zoom, focus, cursor, `app_mode`, `editor_model`, `help_open`, edge-pan & grip state (client only) |
+| POST | `/command` | execute a JSON command (plus client `reload_models`, `open_picker`, `open_editor`, `close_editor`, `pause_menu`, `toggle_help`, `open_help`, `close_help`) |
 | POST | `/mouse` | inject deterministic client mouse/wheel/focus probe frames (client only) |
 
 Mouse & camera validation tool (`odin/tests/camera_mouse_check.py`):
@@ -165,7 +165,7 @@ Mouse & camera validation tool (`odin/tests/camera_mouse_check.py`):
 
 Commands: `status`, `goto`, `patrol`, `patrol_to`, `attack`, `attack_move`, `stop`, `run`, `reset`,
 `verify`, `select`, `select_all`, `spawn`, `kill`, `set_hp`, `teleport`, and client-only
-`reload_models`, `open_picker`, `open_editor`, `close_editor`, `pause_menu` (`model` specifies asset ID).
+`reload_models`, `open_picker`, `open_editor`, `close_editor`, `pause_menu`, `toggle_help`, `open_help`, `close_help` (`model` specifies asset ID).
 
 Playwright-style Cooperative Mesh CLI (`odin/tools/mesh_cli/` -> `odin/bin/dreamcraft-mesh` / `odin/bin/dreamcraft-mesh-dev`):
 - Zero saved scripts: inline CLI args or stdin (`-`) operate on any of the 12 catalog models in chunked `.odin` format (`client/art/models/<id>/`), with `--root=`, `--json`, `--dry-run`, `--expect-fail`, and `--notify=<port>` (`POST /command {"cmd":"reload_models"}`).

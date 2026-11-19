@@ -65,6 +65,7 @@ draw_model_picker_ui :: proc() {
 	rl.DrawRectangleRec(pl.panel, COL_CHROME_BG)
 	rl.DrawRectangleLinesEx(pl.panel, 2, COL_CHROME_LINE)
 	rl.DrawText("MODEL EDITOR - PICK ASSET", i32(pl.panel.x + 20), i32(pl.panel.y + 18), 20, COL_TEXT_GOLD)
+	draw_ui_button(help_badge_rect(), "? F1", app.help_open)
 
 	tab_labels := [4]cstring{"All", "Units", "Trees", "Props"}
 	tab_icons := [4]Icon_Id{.Models, .Cat_Units, .Cat_Trees, .Cat_Props}

@@ -197,3 +197,35 @@ cursor_inside_recovers_from_false_macos_on_screen_on_mouse_move :: proc(t: ^test
 	// Leaving bounds clears cursor_inside immediately.
 	testing.expect(t, !update_cursor_inside(rl.Vector2{-1, 360}, 1280, 720, true, false))
 }
+
+@(test)
+shortcut_help_is_conditional_per_view :: proc(t: ^testing.T) {
+	app = {}
+	app.mode = .Game
+	testing.expect_value(t, active_help_view(), Help_View.Battlefield)
+	s0 := help_sheet_for_view(active_help_view())
+	testing.expect_value(t, len(s0.groups), 2)
+
+	app.menu_open = true
+	testing.expect_value(t, active_help_view(), Help_View.Pause_Menu)
+	s1 := help_sheet_for_view(active_help_view())
+	testing.expect_value(t, len(s1.groups), 1)
+	app.menu_open = false
+
+	app.mode = .Model_Picker
+	testing.expect_value(t, active_help_view(), Help_View.Model_Picker)
+	s2 := help_sheet_for_view(active_help_view())
+	testing.expect_value(t, len(s2.groups), 1)
+
+	app.mode = .Model_Editor
+	app.editor.modal_active = false
+	testing.expect_value(t, active_help_view(), Help_View.Editor_Mesh)
+	s3 := help_sheet_for_view(active_help_view())
+	testing.expect_value(t, len(s3.groups), 4)
+
+	app.editor.modal_active = true
+	app.editor.modal_op = .Loop_Cut
+	testing.expect_value(t, active_help_view(), Help_View.Editor_Modal)
+	s4 := help_sheet_for_view(active_help_view())
+	testing.expect_value(t, s4.icon, Icon_Id.Tool_Loop_Cut)
+}

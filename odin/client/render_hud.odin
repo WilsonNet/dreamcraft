@@ -28,8 +28,9 @@ draw_status_panel :: proc() {
 	buffer: [256]u8
 	draw_icon_centered(.Hero_Crest, 35, 31, 24)
 	rl.DrawText("DREAMCRAFT RTS", 52, 22, 20, rl.Color{235, 215, 120, 255})
+	draw_help_badge(help_badge_rect(), cstring("? F1"))
 	rl.DrawText("Campaign: Tutorial 1 - Through the Woods", 24, 46, 14, rl.Color{180, 200, 180, 255})
-	rl.DrawText("MMB/Space+Drag grip | Edge/WASD pan | F follow | M/A/P/S | Esc", 24, 66, 11, rl.Color{140, 170, 140, 255})
+	rl.DrawText("MMB/Space+Drag grip | Edge/WASD pan | F follow | M/A/P/S | F1 Help | Esc", 24, 66, 11, rl.Color{140, 170, 140, 255})
 
 	if player_index, ok := g.game_player_index(&app.game); ok {
 		pos := app.game.units.position[player_index]
@@ -140,6 +141,20 @@ draw_pause_menu :: proc() {
 	draw_menu_button(app.resume_button, cstring("Resume"), .Game)
 	draw_menu_button(app.editor_button, cstring("Model Editor"), .Models)
 	draw_menu_button(app.retry_button, cstring("Retry Level"), .Reset)
+	hint := cstring("Press F1 for context shortcuts")
+	hw := rl.MeasureText(hint, 12)
+	rl.DrawText(hint, i32(width * 0.5) - hw / 2 - 20, i32(panel.y + 270), 12, rl.Color{150, 180, 150, 255})
+	draw_help_badge(help_badge_rect(), cstring("? F1"))
+}
+
+@(private)
+draw_help_badge :: proc(rect: rl.Rectangle, label: cstring) {
+	hover := rl.CheckCollisionPointRec(input_mouse_pos(), rect)
+	bg := app.help_open ? rl.Color{136, 102, 28, 255} : (hover ? rl.Color{55, 85, 55, 255} : rl.Color{28, 44, 30, 240})
+	rl.DrawRectangleRec(rect, bg)
+	rl.DrawRectangleLinesEx(rect, 1, rl.Color{130, 180, 130, 255})
+	tw := rl.MeasureText(label, 12)
+	rl.DrawText(label, i32(rect.x + rect.width * 0.5) - tw / 2, i32(rect.y + (rect.height - 12) * 0.5), 12, rl.Color{240, 212, 118, 255})
 }
 
 draw_menu_button :: proc(rect: rl.Rectangle, label: cstring, icon := Icon_Id.None) {

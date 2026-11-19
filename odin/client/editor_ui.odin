@@ -36,6 +36,7 @@ Topbar_Rects :: struct {
 	pose:    rl.Rectangle,
 	team:    rl.Rectangle,
 	shader:  rl.Rectangle,
+	help:    rl.Rectangle,
 	models:  rl.Rectangle,
 	reset:   rl.Rectangle,
 	save:    rl.Rectangle,
@@ -77,7 +78,8 @@ editor_topbar_rects :: proc() -> Topbar_Rects {
 	r.game = {rx - 70, 8, 70, 28}; rx -= 76
 	r.save = {rx - 72, 8, 72, 28}; rx -= 78
 	r.reset = {rx - 68, 8, 68, 28}; rx -= 74
-	r.models = {rx - 76, 8, 76, 28}
+	r.models = {rx - 76, 8, 76, 28}; rx -= 82
+	r.help = {rx - 44, 8, 44, 28}
 	return r
 }
 
@@ -171,6 +173,7 @@ draw_editor_topbar :: proc() {
 	draw_ui_button(tb.pose, editor_pose_label(ed.pose_kind), ed.pose_kind != .Rest, false, .Pose)
 	draw_ui_button(tb.team, editor_team_label(ed.preview_team), false, false, .Team_Palette)
 	draw_ui_button(tb.shader, ed.use_watercolor ? "WC" : "Lit", ed.use_watercolor, false, .Shader_WC)
+	draw_ui_button(tb.help, "? F1", app.help_open)
 	draw_ui_button(tb.models, "Models", false, false, .Models)
 	draw_ui_button(tb.reset, "Reset", false, false, .Reset)
 	draw_ui_button(tb.save, ed.mesh.dirty ? "Save*" : "Save", false, true, .Save)
@@ -266,7 +269,7 @@ draw_editor_statusbar :: proc() {
 	if len(msg) > 0 {
 		rl.DrawText(msg, 12, i32(y + 7), 12, col)
 	}
-	hints := cstring("G/R/S+X/Y/Z | E Extrude | I Inset | ^R Loop | K Knife | M Merge | X Del | Alt+Click Loop | MMB/RMB Orbit | . Frame")
+	hints := cstring("F1 Help | G/R/S+X/Y/Z | E Extrude | I Inset | ^R Loop | K Knife | M Merge | X Del | Alt+Click Loop | MMB/RMB Orbit | . Frame")
 	hw := rl.MeasureText(hints, 11)
 	if w > 900 {
 		rl.DrawText(hints, i32(w) - hw - 12, i32(y + 8), 11, COL_TEXT_DIM)

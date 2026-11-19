@@ -5,6 +5,9 @@ import rl "vendor:raylib"
 import g "../game"
 
 handle_input :: proc() {
+	if handle_help_input() {
+		return
+	}
 	if app.mode == .Model_Picker {
 		handle_picker_input()
 		return
@@ -76,7 +79,7 @@ handle_keyboard :: proc() {
 }
 
 update_cursor :: proc() {
-	if app.mode == .Model_Picker {
+	if app.help_open || app.mode == .Model_Picker {
 		if !app.cursor_initialized || app.last_cursor != .DEFAULT {
 			rl.SetMouseCursor(.DEFAULT)
 			app.last_cursor = .DEFAULT

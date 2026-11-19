@@ -56,7 +56,7 @@ capacity arrays.
 - [x] HTTP control API replacing Bevy BRP MCP
   - [x] `GET /state`, `/units`, `/fog`, `/screenshot`, `/camera`, `/health`
   - [x] `POST /command`: move, patrol, patrol_to, attack, attack_move, stop, run, reset, verify,
-        select, spawn, kill, set_hp, teleport, reload_models, open_picker, open_editor, close_editor, pause_menu
+        select, spawn, kill, set_hp, teleport, reload_models, open_picker, open_editor, close_editor, pause_menu, toggle_help, open_help, close_help
   - [x] `POST /mouse` + `odin/tests/camera_mouse_check.py` live mouse & OS camera validation tool
   - [x] Every response carries `valid` + `validation`
 - [x] In-game 3D Model Picker & Model Editor (`Esc -> Model Editor` or `--editor[=<model>]`):
@@ -66,7 +66,8 @@ capacity arrays.
   - [x] Two-way Git-friendly `.odin` chunk persistence (`client/art/models/<id>/{v_NNN,f_NNN,asset}.odin` + `manifest.odin`) & `Ctrl+S` live hot-reload back into game
 - [x] Playwright-style Cooperative Mesh CLI (`odin/tools/mesh_cli/` -> `bin/dreamcraft-mesh`): `list`, `extract`, `info`, positive/negative `assert` (`!`, `--expect-fail`), `do`/`edit` inline ops & `--notify=<port>` hot-reload without saved script files
 - [x] Pure-Odin Vector SVG Renderer & Icon Atlas (`client/svg/`, `assets/icons/*.svg`, `client/icons.odin`): `<path>`/`<rect>`/`<circle>`/`<ellipse>`/`<line>`/`<poly*>` + `<g>`/transform + 4x4 SSAA fills & smooth strokes for HUD command card, Pause Menu, hero crests, & Model Editor toolbars
-- [x] 130 unit/integration tests (69 game, 13 control, 17 art, 9 art/edit, 5 svg, 6 mesh_cli, 11 client)
+- [x] View-conditional **F1 Shortcut Window** (`client/shortcuts.odin`) with clickable `? F1` badges across Battlefield, Pause Menu, Model Picker, and Model Editor (plus focused Grab/Rotate/Scale/Loop Cut/Knife active modal sheet)
+- [x] 131 unit/integration tests (69 game, 13 control, 17 art, 9 art/edit, 5 svg, 6 mesh_cli, 12 client)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator
