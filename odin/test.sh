@@ -18,6 +18,9 @@ odin test client/art/edit -vet -strict-style
 echo "== unit tests: svg =="
 odin test client/svg -vet -strict-style
 
+echo "== unit tests: ui =="
+odin test ui -vet -strict-style
+
 echo "== unit tests: mesh_cli =="
 odin test tools/mesh_cli -vet -strict-style
 

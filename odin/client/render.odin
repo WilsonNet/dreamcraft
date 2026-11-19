@@ -3,6 +3,7 @@ package main
 
 import rl "vendor:raylib"
 import g "../game"
+import ui "../ui"
 
 draw_frame :: proc() {
 	if app.mode == .Model_Picker {
@@ -22,16 +23,14 @@ draw_frame :: proc() {
 	rl.EndMode3D()
 	rl.EndTextureMode()
 
+	ui_build_active(rl.GetFrameTime())
+
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.BLACK)
 	draw_pixel_output()
 	draw_unit_health_bars()
-	draw_hud()
 	draw_selection_box()
-	if app.menu_open {
-		draw_pause_menu()
-	}
-	draw_help_window()
+	ui.render(&app.ui_ctx)
 	rl.EndDrawing()
 }
 
@@ -152,14 +151,13 @@ draw_unit_health_bars :: proc() {
 }
 
 draw_health_bar :: proc(position: rl.Vector2, hp, max_hp: u16) {
-	percent := f32(hp) / f32(max_hp)
-	rl.DrawRectangleRec(rl.Rectangle{position.x - 13, position.y - 26, 26, 6}, rl.Color{12, 12, 16, 225})
-	rl.DrawRectangleRec(rl.Rectangle{position.x - 12, position.y - 25, 24, 4}, rl.Color{25, 25, 25, 220})
-	color := rl.Color{50, 205, 50, 255}
+	percent := clamp(f32(hp) / f32(max_hp), 0, 1)
+	color := rl.Color{66, 214, 88, 255}
 	if percent <= 0.25 {
-		color = rl.Color{230, 50, 50, 255}
+		color = rl.Color{235, 64, 58, 255}
 	} else if percent <= 0.5 {
-		color = rl.Color{230, 180, 25, 255}
+		color = rl.Color{238, 190, 48, 255}
 	}
-	rl.DrawRectangleRec(rl.Rectangle{position.x - 12, position.y - 25, 24 * percent, 4}, color)
+	bar := rl.Rectangle{position.x - 14, position.y - 26, 28, 6}
+	ui.draw_raw_bar(&app.ui_ctx.renderer, bar, percent, color, rl.Color{74, 96, 78, 215})
 }

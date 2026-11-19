@@ -252,12 +252,15 @@ handle_mouse_probe :: proc(_: rawptr, body: string) -> ([]byte, bool) {
 		for _ in 0..<steps {
 			probe_begin_frame()
 			update_layout()
+			ui_step_and_dispatch(1.0 / 60.0)
 			handle_input()
 			if app.mode == .Game || app.mode == .Pause_Menu {
 				update_camera(1.0 / 60.0)
 			}
 			update_cursor()
 			probe_end_frame()
+			ui_build_active(1.0 / 60.0)
+			free_all(context.temp_allocator)
 		}
 		return capture_camera_snapshot(nil)
 	}

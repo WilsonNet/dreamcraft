@@ -1,9 +1,11 @@
+// Campaign hero health bar, nameplates, spotted countdown, and Quickshell alert banner.
 package main
 
 import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 import g "../game"
+import ui "../ui"
 
 campaign_cstr :: proc(buf: []u8, format: string, args: ..any) -> cstring {
 	if len(buf) == 0 {
@@ -15,10 +17,10 @@ campaign_cstr :: proc(buf: []u8, format: string, args: ..any) -> cstring {
 }
 
 draw_centered_shadow_text :: proc(text: cstring, cx, y, size: i32, color: rl.Color) {
-	width := rl.MeasureText(text, size)
-	x := cx - width / 2
-	rl.DrawText(text, x + 1, y + 1, size, rl.Color{8, 8, 10, 220})
-	rl.DrawText(text, x, y, size, color)
+	m := ui.measure_ctx_text(&app.ui_ctx, text, .Medium, f32(size))
+	x := f32(cx) - m[0] * 0.5
+	ui.draw_text(&app.ui_ctx, text, {x + 1, f32(y + 1)}, .Medium, f32(size), rl.Color{6, 8, 8, 220})
+	ui.draw_text(&app.ui_ctx, text, {x, f32(y)}, .Medium, f32(size), color)
 }
 
 draw_unit_campaign_rings :: proc(index: int, ground: rl.Vector3) {
@@ -37,17 +39,14 @@ draw_unit_campaign_rings :: proc(index: int, ground: rl.Vector3) {
 
 draw_hero_health_bar :: proc(position: rl.Vector2, hp, max_hp: u16) {
 	percent := clamp(f32(hp) / f32(max_hp), 0, 1)
-	x := position.x - 18
-	y := position.y - 26
-	rl.DrawRectangleRec(rl.Rectangle{x - 1, y - 1, 38, 7}, rl.Color{242, 200, 84, 235})
-	rl.DrawRectangleRec(rl.Rectangle{x, y, 36, 5}, rl.Color{22, 24, 30, 235})
 	color := rl.Color{64, 165, 245, 255}
 	if percent <= 0.25 {
 		color = rl.Color{230, 60, 60, 255}
 	} else if percent <= 0.5 {
 		color = rl.Color{235, 190, 50, 255}
 	}
-	rl.DrawRectangleRec(rl.Rectangle{x, y, 36 * percent, 5}, color)
+	bar := rl.Rectangle{position.x - 21, position.y - 26, 42, 7}
+	ui.draw_raw_bar(&app.ui_ctx.renderer, bar, percent, color, ui.COL_BORDER_GOLD)
 }
 
 draw_unit_campaign_label :: proc(index: int, screen: rl.Vector2) {
@@ -63,7 +62,7 @@ draw_unit_campaign_label :: proc(index: int, screen: rl.Vector2) {
 		buf: [48]u8
 		secs := f32(units.aggro_timer[index]) / f32(g.TICKS_PER_SECOND)
 		tag := campaign_cstr(buf[:], "! SPOTTED %.1fs", secs)
-		draw_centered_shadow_text(tag, cx, base_y - 24, 12, rl.Color{255, 196, 64, 255})
+		draw_centered_shadow_text(tag, cx, base_y - 22, 12, rl.Color{255, 196, 64, 255})
 	}
 }
 
@@ -76,7 +75,7 @@ active_campaign_alert_for :: proc(game: ^g.Game) -> (aggro_ticks: u16, grace_act
 		return
 	}
 	units := &game.units
-	for i in 0 ..< g.MAX_UNITS {
+	for i in 0..<g.MAX_UNITS {
 		if units.alive[i] && units.team[i] == .Enemy && units.discovered[i] && units.aggro_timer[i] > 0 {
 			return units.aggro_timer[i], true, false
 		}
@@ -91,7 +90,7 @@ active_campaign_alert_for :: proc(game: ^g.Game) -> (aggro_ticks: u16, grace_act
 	return
 }
 
-draw_campaign_announcement :: proc() {
+compose_campaign_banner :: proc(ctx: ^ui.Context, w: f32) {
 	if app.menu_open || app.game.game_over || app.game.level_complete {
 		return
 	}
@@ -99,39 +98,38 @@ draw_campaign_announcement :: proc() {
 	if !grace_active && !charge_active {
 		return
 	}
-	draw_announcement_banner(aggro_ticks, grace_active)
+	bw := min(w - 40, f32(580))
+	border := grace_active ? ui.COL_BORDER_GOLD : ui.COL_BORDER_DANGER
+	bm := ui.m_blocks(ui.m_pad_xy(ui.m_gap(ui.m_surface(ui.m_w(ui.m_at(ui.mod(), (w - bw) * 0.5, 142), bw), ui.style_modal(ui.RAD_LG, border)), 6), 16, 12))
+	bm.layer = 1
+	ui.open_col(ctx, ui.id("campaign_banner"), bm)
+	compose_campaign_header(ctx, grace_active, aggro_ticks)
+	compose_campaign_body(ctx, grace_active, aggro_ticks)
+	ui.close(ctx)
 }
 
-draw_announcement_banner :: proc(aggro_ticks: u16, grace_active: bool) {
-	screen_w := i32(rl.GetScreenWidth())
-	banner_w := i32(min(screen_w - 40, 680))
-	banner_h := i32(82)
-	bx := (screen_w - banner_w) / 2
-	by := i32(138)
-	border := rl.Color{235, 190, 75, 240}
-	if !grace_active {
-		border = rl.Color{225, 85, 70, 240}
-	}
-	rl.DrawRectangleRec(rl.Rectangle{f32(bx), f32(by), f32(banner_w), f32(banner_h)}, rl.Color{14, 14, 18, 224})
-	rl.DrawRectangleLinesEx(rl.Rectangle{f32(bx), f32(by), f32(banner_w), f32(banner_h)}, 2, border)
-	draw_icon_centered(.Enemy_Alert, f32(bx + 26), f32(by + 36), 24)
-	draw_icon_centered(.Enemy_Alert, f32(bx + banner_w - 26), f32(by + 36), 24)
-	draw_announcement_copy(bx + banner_w / 2, bx + 20, by, banner_w - 40, aggro_ticks, grace_active)
-}
-
-draw_announcement_copy :: proc(cx, bar_x, by, bar_w: i32, aggro_ticks: u16, grace_active: bool) {
-	buf: [160]u8
+@(private)
+compose_campaign_header :: proc(ctx: ^ui.Context, grace_active: bool, aggro_ticks: u16) {
+	title: cstring = grace_active ? "HARK! AN ENEMY LUK SOLDIER SPOTTED!" : "TO ARMS! THE LUK SOLDIER CHARGES!"
+	title_col := grace_active ? ui.COL_TEXT_GOLD : ui.COL_TEXT_DANGER
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_align(ui.m_fill(ui.mod(), true, false), .Center), 10))
+	ui.icon(ctx, icon_texture(.Enemy_Alert), 22)
+	ui.label(ctx, title, .Bold, 16, title_col)
+	ui.spacer(ctx, 1)
 	if grace_active {
-		draw_centered_shadow_text("HARK! AN ENEMY LUK SOLDIER SPOTTED!", cx, by + 10, 18, rl.Color{250, 214, 96, 255})
-		draw_centered_shadow_text("Strike first while they hesitate - press [A] or right-click them to attack!", cx, by + 34, 13, rl.Color{235, 230, 210, 255})
 		secs := f32(aggro_ticks) / f32(g.TICKS_PER_SECOND)
-		sub := campaign_cstr(buf[:], "Enemy charges in %.1fs", secs)
-		draw_centered_shadow_text(sub, cx, by + 54, 12, rl.Color{255, 182, 72, 255})
+		ui.badge(ctx, ui.INVALID_ID, ui_cstr(fmt.tprintf("%.1fs", secs)), .Amber)
+	}
+	ui.close(ctx)
+}
+
+@(private)
+compose_campaign_body :: proc(ctx: ^ui.Context, grace_active: bool, aggro_ticks: u16) {
+	if grace_active {
+		ui.label(ctx, "Strike first while they hesitate - press [A] or right-click to attack!", .Body, 13, ui.COL_TEXT_PRIMARY)
 		ratio := clamp(f32(aggro_ticks) / f32(g.ENEMY_AGGRO_DELAY_TICKS), 0, 1)
-		rl.DrawRectangle(bar_x, by + 71, bar_w, 4, rl.Color{45, 36, 20, 220})
-		rl.DrawRectangle(bar_x, by + 71, i32(f32(bar_w) * ratio), 4, rl.Color{245, 185, 65, 255})
+		ui.progress_bar(ctx, ui.id("campaign_timer"), ratio, rl.Color{245, 185, 65, 255}, ui.m_h(ui.m_fill(ui.mod(), true, false), 6))
 		return
 	}
-	draw_centered_shadow_text("TO ARMS! THE LUK SOLDIER CHARGES!", cx, by + 14, 18, rl.Color{245, 110, 95, 255})
-	draw_centered_shadow_text("Stand fast - Liiroy, the Bold meets the foe in battle!", cx, by + 42, 14, rl.Color{240, 232, 218, 255})
+	ui.label(ctx, "Stand fast - Liiroy, the Bold meets the foe in battle!", .Body, 13, ui.COL_TEXT_PRIMARY)
 }

@@ -3,14 +3,17 @@ package main
 
 import "core:math"
 import rl "vendor:raylib"
+import ui "../ui"
 
 PICKER_TEX_W :: 520
 PICKER_TEX_H :: 440
 
 draw_picker_frame :: proc() {
 	ed := &app.editor
-	ed.picker_yaw += rl.GetFrameTime() * 0.55
+	dt := rl.GetFrameTime()
+	ed.picker_yaw += dt * 0.55
 	render_picker_turntable()
+	ui_build_active(dt)
 
 	w := i32(rl.GetScreenWidth())
 	h := i32(rl.GetScreenHeight())
@@ -20,8 +23,7 @@ draw_picker_frame :: proc() {
 		draw_pixel_output()
 	}
 	rl.DrawRectangle(0, 0, w, h, rl.Color{8, 12, 9, 215})
-	draw_model_picker_ui()
-	draw_help_window()
+	ui.render(&app.ui_ctx)
 	rl.EndDrawing()
 }
 
@@ -108,6 +110,7 @@ draw_editor_frame :: proc() {
 		rl.EndTextureMode()
 	}
 
+	ui_build_active(dt)
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.Color{22, 28, 24, 255})
 	if ed.use_watercolor && app.pixel.id > 0 {
@@ -123,8 +126,7 @@ draw_editor_frame :: proc() {
 		rl.EndMode3D()
 	}
 	editor_draw_overlays_2d()
-	draw_editor_ui()
-	draw_help_window()
+	ui.render(&app.ui_ctx)
 	rl.EndDrawing()
 }
 

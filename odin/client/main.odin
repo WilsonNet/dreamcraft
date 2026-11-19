@@ -9,6 +9,7 @@ import "core:strings"
 import rl "vendor:raylib"
 import control "../control"
 import g "../game"
+import ui "../ui"
 
 Command_Mode :: enum {
 	None,
@@ -61,6 +62,8 @@ App :: struct {
 	cmd_fx_next: int,
 	minimap_rect: rl.Rectangle,
 	icons: Icon_Atlas,
+	ui_ctx: ui.Context,
+	ui_last_sig: u64,
 	mode: App_Mode,
 	help_open: bool,
 	editor_button: rl.Rectangle,
@@ -134,7 +137,7 @@ main :: proc() {
 
 @(private)
 open_window :: proc(sheet: bool) {
-	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
+	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI})
 	dev := DEV_BUILD || is_dev_executable()
 	window_title: cstring = WINDOW_TITLE
 	if dev {
@@ -156,6 +159,7 @@ step_client_frame :: proc() {
 	dt := f64(rl.GetFrameTime())
 	probe_begin_frame()
 	update_layout()
+	ui_step_and_dispatch(f32(dt))
 	handle_input()
 	if app.mode == .Game || app.mode == .Pause_Menu {
 		update_simulation(dt)
@@ -178,6 +182,7 @@ step_client_frame :: proc() {
 @(private)
 init_world_assets :: proc() {
 	init_icons()
+	ui.init(&app.ui_ctx, !has_arg(os.args, "--no-shader"))
 	init_ground()
 	init_shadow_assets()
 	init_env_assets()
@@ -197,6 +202,7 @@ init_world_assets :: proc() {
 @(private)
 unload_world_assets :: proc() {
 	editor_cleanup()
+	ui.unload(&app.ui_ctx)
 	unload_icons()
 	unload_warrior_assets()
 	unload_slash_vfx()
@@ -220,13 +226,9 @@ update_layout :: proc() {
 	height := f32(rl.GetScreenHeight())
 	ensure_pixel_target(int(width), int(height))
 	app.minimap_rect = rl.Rectangle{20, height - 150, 200, 125}
-	app.move_button = rl.Rectangle{width - 236, height - 100, 108, 34}
-	app.attack_button = rl.Rectangle{width - 120, height - 100, 108, 34}
-	app.patrol_button = rl.Rectangle{width - 236, height - 58, 108, 34}
-	app.stop_button = rl.Rectangle{width - 120, height - 58, 108, 34}
-	app.resume_button = rl.Rectangle{width * 0.5 - 130, height * 0.5 - 46, 260, 38}
-	app.editor_button = rl.Rectangle{width * 0.5 - 130, height * 0.5 + 4, 260, 38}
-	app.retry_button = rl.Rectangle{width * 0.5 - 130, height * 0.5 + 54, 260, 38}
+	if app.ui_ctx.prev_hit_count == 0 || ui_state_signature() != app.ui_last_sig {
+		ui_build_active(0)
+	}
 }
 
 update_simulation :: proc(dt: f64) {

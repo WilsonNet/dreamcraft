@@ -1,12 +1,13 @@
 // Runtime SVG icon loader and HiDPI GPU texture atlas using package svg.
 package main
 
+import "core:math"
 import "core:os"
 import "core:strings"
 import rl "vendor:raylib"
 import svg "./svg"
 
-ICON_TEX_PX :: 48
+ICON_TEX_PX :: 96
 
 Icon_Id :: enum u8 {
 	None,
@@ -127,16 +128,20 @@ unload_icons :: proc() {
 	app.icons.ready = false
 }
 
-draw_icon_centered :: proc(id: Icon_Id, cx, cy, size: f32, tint := rl.WHITE) {
+icon_texture :: proc(id: Icon_Id) -> rl.Texture2D {
 	if id == .None || id == .COUNT {
-		return
+		return {}
 	}
-	tex := app.icons.textures[id]
+	return app.icons.textures[id]
+}
+
+draw_icon_centered :: proc(id: Icon_Id, cx, cy, size: f32, tint := rl.WHITE) {
+	tex := icon_texture(id)
 	if tex.id == 0 {
 		return
 	}
 	src := rl.Rectangle{0, 0, f32(tex.width), f32(tex.height)}
-	dst := rl.Rectangle{cx - size * 0.5, cy - size * 0.5, size, size}
+	dst := rl.Rectangle{math.round(cx - size * 0.5), math.round(cy - size * 0.5), size, size}
 	rl.DrawTexturePro(tex, src, dst, {0, 0}, 0, tint)
 }
 
@@ -152,11 +157,12 @@ upload_svg_icon :: proc(spec: Icon_Spec) -> rl.Texture2D {
 	if !ok {
 		return {}
 	}
-	rgba := svg.render_svg_rgba(&doc, ICON_TEX_PX, ICON_TEX_PX, {236, 240, 232, 255})
+	rgba := svg.render_svg_rgba(&doc, ICON_TEX_PX, ICON_TEX_PX, {255, 255, 255, 255})
 	defer delete(rgba)
 	if len(rgba) != ICON_TEX_PX * ICON_TEX_PX * 4 {
 		return {}
 	}
+	dilate_transparent_rgb(rgba, ICON_TEX_PX, ICON_TEX_PX)
 	img := rl.Image{
 		data    = raw_data(rgba),
 		width   = ICON_TEX_PX,
@@ -165,8 +171,43 @@ upload_svg_icon :: proc(spec: Icon_Spec) -> rl.Texture2D {
 		format  = .UNCOMPRESSED_R8G8B8A8,
 	}
 	tex := rl.LoadTextureFromImage(img)
-	rl.SetTextureFilter(tex, .BILINEAR)
+	rl.GenTextureMipmaps(&tex)
+	rl.SetTextureFilter(tex, .TRILINEAR)
+	rl.SetTextureWrap(tex, .CLAMP)
 	return tex
+}
+
+@(private)
+dilate_transparent_rgb :: proc(rgba: []u8, w, h: int) {
+	tmp := make([]u8, len(rgba), context.temp_allocator)
+	copy(tmp, rgba)
+	for y in 0..<h {
+		for x in 0..<w {
+			p := (y * w + x) * 4
+			if tmp[p + 3] > 0 { continue }
+			sr, sg, sb, sa: int
+			for dy := -1; dy <= 1; dy += 1 {
+				yy := y + dy
+				if yy < 0 || yy >= h { continue }
+				for dx := -1; dx <= 1; dx += 1 {
+					xx := x + dx
+					if xx < 0 || xx >= w { continue }
+					np := (yy * w + xx) * 4
+					a := int(tmp[np + 3])
+					if a == 0 { continue }
+					sr += int(tmp[np + 0]) * a
+					sg += int(tmp[np + 1]) * a
+					sb += int(tmp[np + 2]) * a
+					sa += a
+				}
+			}
+			if sa > 0 {
+				rgba[p + 0] = u8(sr / sa)
+				rgba[p + 1] = u8(sg / sa)
+				rgba[p + 2] = u8(sb / sa)
+			}
+		}
+	}
 }
 
 @(private)

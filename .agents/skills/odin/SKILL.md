@@ -14,6 +14,7 @@ cd odin
 odin test game -vet -strict-style
 odin test control -vet -strict-style
 odin test client/art -vet -strict-style
+odin test ui -vet -strict-style
 odin test client -vet -strict-style
 odin build client -out:bin/dreamcraft -o:speed
 odin build headless -out:bin/headless -o:speed
@@ -106,6 +107,16 @@ my_test :: proc(t: ^testing.T) {
 - `wasm-ld` on Arch Linux lives under `/usr/lib/llvm20/bin` (handled in `build.sh`/`web/build.sh`).
 - HUD and health bars draw after the post pass at full resolution.
 - Minimap and ASCII fog stay top-down.
+
+## Standalone Native UI Framework (`odin/ui/`)
+
+- `odin/ui/` (`package ui`) is a self-contained top-level UI library with zero imports of `game`, `control`, or `client` (see `specs/09-ui-framework.md`).
+- `ui_sdf.{vs,fs}` batches up to 512 `.SDF_Box` quads per draw call via a `512×8` RGBA8 `POINT`-filtered parameter texture (`texelFetch`), passing slot index in `vertexPosition.z`. Inside `emit_sdf_quad`, if `rlgl.CheckRenderBatchLimit(4) != 0` flushes early, immediately call `rlgl.SetTexture(tex_id)` to rebind `data_tex.id`.
+- **Raylib `GenImageFontAtlas` Unpadding & 2x Supersampled Smooth Typography (`odin/ui/font.odin`)**:
+  - Raylib's `GenImageFontAtlas` returns `recs[i]` with `2 * glyphPadding` **included** in `recs[i].width` and `recs[i].height`, whereas `DrawTextCodepoint` adds `2 * glyphPadding` back when rendering. Always subtract `glyphPadding` (`recs[i].x += pad; recs[i].y += pad; recs[i].width -= 2*pad; recs[i].height -= 2*pad`) after calling `GenImageFontAtlas` directly, or glyphs will stretch and overlap.
+  - Bake each discrete size step (`{11, 12, 13, 14, 16, 18, 24}`) at exact `2×` physical resolution (`step * 2 * dpi_scale`), normalize all atlas pixels to pure-white `RGB = (255,255,255)` (eliminating dark `(0,0,0,0)` bilinear fringes), and apply perceptual sRGB coverage gamma `pow(val, 0.62..0.72)` so `DrawTextEx` at `step` executes an exact `2:1` (`0.5×`) 4× SSAA hardware bilinear resolve with `0.5px` subpixel metric precision.
+- **Flex Spacer & Keycap Gotcha**: Never emit an unconstrained `spacer(ctx, 1)` inside an auto-width row container (`!bm.fill_w && bm.width <= 0 && bm.weight <= 0`), or `measure_flex` will consume the full parent `max_w`; emit `gap_box` for compact inline keycaps instead.
+- **Control Probe Temp Allocator**: `probe.odin` probe steps (`handle_mouse_probe`) must call `free_all(context.temp_allocator)` after stepping `ui_build_active(...)` so temp UI node allocations never accumulate across multi-step probes.
 
 ## Legacy Warrior GLB Pipeline (Unused)
 

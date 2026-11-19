@@ -6,6 +6,7 @@ import "core:math"
 import rl "vendor:raylib"
 import rlgl "vendor:raylib/rlgl"
 import g "../game"
+import ui "../ui"
 
 MAX_CMD_FX :: 16
 
@@ -125,8 +126,8 @@ draw_cursor_preview_3d :: proc() {
 	if app.menu_open || app.command_mode == .None {
 		return
 	}
-	mouse := rl.GetMousePosition()
-	if mouse.y >= f32(rl.GetScreenHeight()) - HUD_HEIGHT || rl.CheckCollisionPointRec(mouse, app.minimap_rect) {
+	mouse := input_mouse_pos()
+	if ui.blocks_pointer(&app.ui_ctx) || rl.CheckCollisionPointRec(mouse, app.minimap_rect) {
 		return
 	}
 	hit, ok := screen_to_world_ground(mouse)

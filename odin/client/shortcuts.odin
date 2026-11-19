@@ -1,8 +1,9 @@
-// View-conditional F1 Shortcut Window data, input handling, and keycap renderer.
+// View-conditional F1 Shortcut Window data, keyboard handling, and Quickshell modal layout.
 package main
 
 import "core:fmt"
 import rl "vendor:raylib"
+import ui "../ui"
 
 Help_View :: enum u8 {
 	Battlefield,
@@ -32,13 +33,13 @@ Shortcut_Sheet :: struct {
 
 @(private)
 BATTLEFIELD_ORDERS := [?]Shortcut_Item{
-	{"LMB / Shift+LMB", "Select unit / toggle add to selection"},
+	{"LMB / Shift+LMB", "Select unit / toggle selection"},
 	{"Left Drag", "Box select friendly units"},
-	{"Right Click", "Move to ground or attack spotted enemy"},
-	{"M + Click", "Move order with ground confirmation FX"},
-	{"A + Click", "StarCraft Attack-Move (auto-engages foes)"},
-	{"P + Click", "1-click Patrol loop (current <-> target)"},
-	{"S", "Stop unit and clear current orders"},
+	{"Right Click", "Move to ground or attack enemy"},
+	{"M + Click", "Move order with ground FX"},
+	{"A + Click", "Attack-Move (auto-engages foes)"},
+	{"P + Click", "1-click Patrol loop"},
+	{"S", "Stop unit & clear current orders"},
 }
 
 @(private)
@@ -48,8 +49,8 @@ BATTLEFIELD_CAMERA := [?]Shortcut_Item{
 	{"Screen Edge", "Edge pan along viewport borders"},
 	{"Mouse Wheel", "Smooth camera zoom"},
 	{"F", "Toggle Camera Follow / Free"},
-	{"Minimap Click/Drag", "Jump or scrub main camera across map"},
-	{"Esc / F1", "Cancel command or Pause / Toggle this help"},
+	{"Minimap Drag", "Jump or scrub main camera"},
+	{"Esc / F1", "Pause menu / Toggle help"},
 }
 
 @(private)
@@ -88,41 +89,41 @@ PICKER_GROUPS := [1]Shortcut_Group{
 @(private)
 EDITOR_SELECT_ITEMS := [?]Shortcut_Item{
 	{"1 / 2 / 3", "Vertex / Edge / Face select mode"},
-	{"LMB / Shift+LMB", "Pick element or toggle additive selection"},
-	{"Drag / B", "Box marquee select inside viewport"},
+	{"LMB / Shift+LMB", "Pick element or toggle additive"},
+	{"Drag / B", "Box marquee select in viewport"},
 	{"Alt + LMB", "Select full edge loop (Edge mode)"},
-	{"L / A / Alt+A / +I", "Linked / All / None / Shift+I Invert"},
+	{"L / A / Alt+A", "Linked / All / None / Shift+I Invert"},
 }
 
 @(private)
 EDITOR_TRANSFORM_ITEMS := [?]Shortcut_Item{
 	{"G / R / S", "Grab / Rotate / Scale selection"},
-	{"Drag Gizmo X/Y/Z", "Lock translation along RGB world axis"},
-	{"X / Y / Z (in modal)", "Constrain single axis during G/R/S"},
+	{"Drag Gizmo X/Y/Z", "Lock translation along RGB axis"},
+	{"X / Y / Z", "Constrain axis during modal op"},
 	{"Shift + X/Y/Z", "Lock plane (YZ / XZ / XY)"},
-	{"0-9 / - / .", "Type exact distance, degrees, or scale"},
-	{"Ctrl (hold in modal)", "Snap distance, 5 deg angle, or 0.1 scale"},
+	{"0-9 / - / .", "Type exact distance, deg, or scale"},
+	{"Ctrl (modal)", "Snap 0.05m / 5 deg / 0.1x scale"},
 }
 
 @(private)
 EDITOR_MODEL_ITEMS := [?]Shortcut_Item{
-	{"E / I", "Extrude selection / Inset faces (22%)"},
-	{"Ctrl+R (+ Wheel)", "Loop cut (scroll 1..6 cuts, LMB apply)"},
-	{"K (+ Enter/Space)", "Knife click points across vert/edge/face"},
-	{"F / M (Alt+M)", "Fill 3-4 verts into face / Merge at center"},
-	{"X / Del -> V/E/F/D", "Delete verts/edges/faces or dissolve edges"},
-	{"Inspector Right", "Paint Mat_Kind swatches & assign Bone_Id"},
+	{"E / I", "Extrude selection / Inset faces"},
+	{"Ctrl+R (+ Wheel)", "Loop cut (scroll 1..6, LMB apply)"},
+	{"K (+ Enter)", "Knife cut points across mesh"},
+	{"F / M (Alt+M)", "Fill 3-4 verts / Merge at center"},
+	{"X -> V/E/F/D", "Delete or dissolve selected elems"},
+	{"Inspector Right", "Paint Mat_Kind & assign Bone_Id"},
 }
 
 @(private)
 EDITOR_VIEW_ITEMS := [?]Shortcut_Item{
-	{"MMB / Alt+LMB / RMB", "Orbit 3D studio camera"},
+	{"MMB / Alt+LMB", "Orbit 3D studio camera (or RMB)"},
 	{"Shift + MMB", "Pan camera target"},
-	{"Wheel / . (Num .)", "Zoom / Frame selected geometry"},
+	{"Wheel / Num .", "Zoom / Frame selected geometry"},
 	{"Numpad 1 / 3 / 7", "Front / Right / Top aligned views"},
-	{"Numpad 5 / O / Alt+Z", "Ortho-Persp toggle / X-Ray overlay"},
-	{"Ctrl+Z / Ctrl+Shift+Z", "Undo / Redo edit step"},
-	{"Ctrl+S / Esc", "Save .odin chunks & hot-reload / Exit"},
+	{"Numpad 5 / Alt+Z", "Ortho-Persp / X-Ray overlay"},
+	{"Ctrl+Z / +Shift+Z", "Undo / Redo edit step"},
+	{"Ctrl+S / Esc", "Save .odin & hot-reload / Exit"},
 }
 
 @(private)
@@ -165,13 +166,13 @@ MODAL_OTHER_ITEMS := [?]Shortcut_Item{
 }
 
 @(private)
-MODAL_TRANS_GROUPS := [1]Shortcut_Group{{title = "ACTIVE TRANSFORM SHORTCUTS", items = MODAL_TRANSFORM_ITEMS[:]} }
+MODAL_TRANS_GROUPS := [1]Shortcut_Group{{title = "ACTIVE TRANSFORM SHORTCUTS", items = MODAL_TRANSFORM_ITEMS[:]}}
 @(private)
-MODAL_LOOP_GROUPS := [1]Shortcut_Group{{title = "ACTIVE LOOP CUT SHORTCUTS", items = MODAL_LOOP_ITEMS[:]} }
+MODAL_LOOP_GROUPS := [1]Shortcut_Group{{title = "ACTIVE LOOP CUT SHORTCUTS", items = MODAL_LOOP_ITEMS[:]}}
 @(private)
-MODAL_KNIFE_GROUPS := [1]Shortcut_Group{{title = "ACTIVE KNIFE TOOL SHORTCUTS", items = MODAL_KNIFE_ITEMS[:]} }
+MODAL_KNIFE_GROUPS := [1]Shortcut_Group{{title = "ACTIVE KNIFE TOOL SHORTCUTS", items = MODAL_KNIFE_ITEMS[:]}}
 @(private)
-MODAL_OTHER_GROUPS := [1]Shortcut_Group{{title = "ACTIVE TOOL", items = MODAL_OTHER_ITEMS[:]} }
+MODAL_OTHER_GROUPS := [1]Shortcut_Group{{title = "ACTIVE TOOL", items = MODAL_OTHER_ITEMS[:]}}
 
 active_help_view :: proc() -> Help_View {
 	if app.mode == .Model_Picker { return .Model_Picker }
@@ -223,40 +224,10 @@ editor_modal_sheet :: proc() -> Shortcut_Sheet {
 }
 
 help_badge_rect :: proc() -> rl.Rectangle {
-	w := f32(rl.GetScreenWidth())
-	h := f32(rl.GetScreenHeight())
-	switch active_help_view() {
-	case .Battlefield:
-		return {496, 18, 56, 22}
-	case .Pause_Menu:
-		return {w * 0.5 + 150, h * 0.5 + 116, 58, 22}
-	case .Model_Picker:
-		pl := picker_layout()
-		return {pl.panel.x + pl.panel.width - 96, pl.panel.y + 16, 76, 26}
-	case .Editor_Mesh, .Editor_Modal:
-		return editor_topbar_rects().help
+	if r, ok := ui.get_rect(&app.ui_ctx, ui.id("help_badge")); ok && r.width > 0 {
+		return r
 	}
-	return {0, 0, 0, 0}
-}
-
-@(private)
-help_window_layout :: proc(sheet: Shortcut_Sheet) -> (panel, close_btn: rl.Rectangle, cols: int) {
-	w := f32(rl.GetScreenWidth())
-	h := f32(rl.GetScreenHeight())
-	cols = len(sheet.groups) >= 2 ? 2 : 1
-	rows_max := 0
-	for i := 0; i < len(sheet.groups); i += cols {
-		r := len(sheet.groups[i].items)
-		if cols == 2 && i + 1 < len(sheet.groups) {
-			r = max(r, len(sheet.groups[i + 1].items))
-		}
-		rows_max += r + 2
-	}
-	pw := min(cols == 2 ? f32(900) : f32(640), w - 36)
-	ph := clamp(f32(106 + rows_max * 24), 240, h - 44)
-	panel = {(w - pw) * 0.5, (h - ph) * 0.5, pw, ph}
-	close_btn = {panel.x + pw - 118, panel.y + 14, 100, 26}
-	return
+	return {496, 18, 56, 22}
 }
 
 handle_help_input :: proc() -> bool {
@@ -264,84 +235,68 @@ handle_help_input :: proc() -> bool {
 		app.help_open = !app.help_open
 		return true
 	}
-	mouse := input_mouse_pos()
 	if app.help_open {
 		if rl.IsKeyPressed(.ESCAPE) {
 			app.help_open = false
-			return true
 		}
-		if input_left_pressed() {
-			sheet := help_sheet_for_view(active_help_view())
-			panel, close_btn, _ := help_window_layout(sheet)
-			if rl.CheckCollisionPointRec(mouse, close_btn) || !rl.CheckCollisionPointRec(mouse, panel) {
-				app.help_open = false
-			}
-		}
-		return true
-	}
-	if input_left_pressed() && rl.CheckCollisionPointRec(mouse, help_badge_rect()) {
-		app.help_open = true
 		return true
 	}
 	return false
 }
 
-draw_help_window :: proc() {
-	if !app.help_open { return }
+compose_help_window :: proc(ctx: ^ui.Context, w, h: f32) {
 	sheet := help_sheet_for_view(active_help_view())
-	panel, close_btn, cols := help_window_layout(sheet)
-	w, h := f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())
-	rl.DrawRectangleRec({0, 0, w, h}, rl.Color{0, 0, 0, 155})
-	rl.DrawRectangleRec(panel, COL_CHROME_BG)
-	rl.DrawRectangleLinesEx(panel, 2, COL_TEXT_GOLD)
+	cols := len(sheet.groups) >= 2 ? 2 : 1
+	pw := min(cols == 2 ? f32(920) : f32(620), w - 28)
+	pm := ui.m_pad(ui.m_gap(ui.m_w(ui.mod(), pw), 12), 20)
+	pm.max_h = h - 32
+	ui.open_scrim_modal(ctx, ui.id("help_modal"), 3, u32(UI_Msg.Help_Close), pm)
 
-	draw_icon_centered(sheet.icon, panel.x + 28, panel.y + 27, 22)
-	rl.DrawText(sheet.heading, i32(panel.x + 48), i32(panel.y + 18), 18, COL_TEXT_GOLD)
-	bw := rl.MeasureText(sheet.badge, 11)
-	bx := i32(panel.x + panel.width - 134) - bw
-	rl.DrawRectangle(bx - 8, i32(panel.y + 17), bw + 16, 20, rl.Color{32, 48, 35, 255})
-	rl.DrawRectangleLines(bx - 8, i32(panel.y + 17), bw + 16, 20, COL_CHROME_LINE)
-	rl.DrawText(sheet.badge, bx, i32(panel.y + 22), 11, rl.Color{165, 215, 170, 255})
-	draw_ui_button(close_btn, "Esc / F1", false)
-	rl.DrawLineV({panel.x + 16, panel.y + 52}, {panel.x + panel.width - 16, panel.y + 52}, COL_CHROME_LINE)
-
-	draw_help_groups(panel, sheet.groups, cols)
-	footer := cstring_t(fmt.tprintf("Conditional shortcuts for %s | Press F1 anytime", sheet.badge))
-	rl.DrawText(footer, i32(panel.x + 18), i32(panel.y + panel.height - 24), 11, COL_TEXT_DIM)
+	compose_help_header(ctx, sheet)
+	ui.ornament_divider(ctx)
+	compose_help_groups(ctx, sheet.groups, cols)
+	ui.label(ctx, ui_cstr(fmt.tprintf("Conditional shortcuts for %s  |  Press F1 anytime", sheet.badge)), .Body, 12, ui.COL_TEXT_MUTED)
+	ui.close_scrim_modal(ctx)
 }
 
 @(private)
-draw_help_groups :: proc(panel: rl.Rectangle, groups: []Shortcut_Group, cols: int) {
-	col_w := (panel.width - 36 - f32(cols - 1) * 18) / f32(cols)
-	y := panel.y + 64
+compose_help_header :: proc(ctx: ^ui.Context, sheet: Shortcut_Sheet) {
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_align(ui.m_fill(ui.mod(), true, false), .Center), 10))
+	ui.icon(ctx, icon_texture(sheet.icon), 24)
+	ui.label(ctx, sheet.heading, .Heading, 18, ui.COL_TEXT_GOLD)
+	ui.spacer(ctx, 1)
+	ui.badge(ctx, ui.INVALID_ID, sheet.badge, .Emerald)
+	ui.button(ctx, ui.id("help_close_btn"), ui.Button_Opts{label = "Close", keycap = "Esc", variant = .Compact, msg_tag = u32(UI_Msg.Help_Close)}, ui.m_h(ui.m_pad_xy(ui.mod(), 10, 4), 28))
+	ui.close(ctx)
+}
+
+@(private)
+compose_help_groups :: proc(ctx: ^ui.Context, groups: []Shortcut_Group, cols: int) {
 	for i := 0; i < len(groups); i += cols {
-		max_rows := 0
+		ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_fill(ui.mod(), true, false), 14))
 		for c in 0..<cols {
 			gi := i + c
-			if gi >= len(groups) { break }
-			gx := panel.x + 18 + f32(c) * (col_w + 18)
-			draw_single_help_group(gx, y, col_w, groups[gi])
-			max_rows = max(max_rows, len(groups[gi].items))
+			if gi >= len(groups) {
+				ui.spacer(ctx, 1)
+				break
+			}
+			compose_single_help_group(ctx, groups[gi], gi)
 		}
-		y += f32(max_rows * 24 + 34)
+		ui.close(ctx)
 	}
 }
 
 @(private)
-draw_single_help_group :: proc(x, y, w: f32, grp: Shortcut_Group) {
-	rl.DrawText(grp.title, i32(x), i32(y), 12, COL_TEXT_GOLD)
-	key_w := min(f32(158), w * 0.40)
+compose_single_help_group :: proc(ctx: ^ui.Context, grp: Shortcut_Group, idx: int) {
+	cm := ui.m_pad(ui.m_gap(ui.m_surface(ui.m_weight(ui.mod(), 1), ui.style_card(ui.RAD_MD)), 5), 12)
+	ui.open_col(ctx, ui.id_idx("help_grp", idx), cm)
+	ui.label(ctx, grp.title, .Mono_Bold, 11.5, ui.COL_TEXT_GOLD)
+	ui.gap_box(ctx, 1, 2)
 	for it in grp.items {
-		key_w = max(key_w, f32(rl.MeasureText(it.keys, 11) + 16))
+		ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_align(ui.m_fill(ui.mod(), true, false), .Center), 9))
+		ui.keycap(ctx, it.keys, .Gold, ui.mod(), 11)
+		ui.label(ctx, it.desc, .Body, 12, ui.COL_TEXT_PRIMARY)
+		ui.close(ctx)
 	}
-	key_w = min(key_w, w * 0.42)
-	ry := y + 22
-	for it in grp.items {
-		box := rl.Rectangle{x, ry, key_w, 20}
-		rl.DrawRectangleRec(box, rl.Color{28, 42, 31, 255})
-		rl.DrawRectangleLinesEx(box, 1, rl.Color{66, 102, 70, 220})
-		rl.DrawText(it.keys, i32(box.x + 6), i32(box.y + 4), 11, COL_TEXT_GOLD)
-		rl.DrawText(it.desc, i32(x + key_w + 10), i32(ry + 4), 12, rl.Color{224, 232, 224, 255})
-		ry += 24
-	}
+	ui.close(ctx)
 }

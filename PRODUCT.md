@@ -4,7 +4,7 @@
 
 ## Platform
 
-desktop (native Odin + raylib, with secondary js_wasm32 canvas web build)
+web
 
 ## Users
 
@@ -20,6 +20,7 @@ Code-first two-way procedural asset pipeline (`Odin <-> Edit Mesh <-> Live GPU`)
 
 ## Operating Context
 
+- Native Odin + raylib 3D desktop client (`odin/client/`, `odin/ui/`) with secondary `js_wasm32` canvas web build (`odin/web/`).
 - In-game pause loop: `Esc` -> `Model Editor` -> choose model (`Mamluk Base [Hero/Player/Enemy preview & optional variant fork]`, `Pine Tall`, `Pine Mid`, `Oak Broad`, `Oak Elder`, `Boulder Moss`, `Shrub Fern`, `Waypoint Disc`, `Goal Banner`, `Selection Ring`) -> edit mesh -> `Save` -> `Resume Game`.
 - Dev workflow runs on the Dev lane (`./bin/dreamcraft-dev --control=7778` with `DEV - ` window title), then promotes via `./build.sh` and `./restart-build.sh` (`:7777`).
 - Future extensibility: structured around clean `Poly_Mesh` geometry, `Mat_Kind` vertex palettes, `Bone_Id` rigid-skinning assignments, and pose preview so future rigging, animation keyframes, and custom prop authoring plug into the same pipeline.

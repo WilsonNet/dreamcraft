@@ -3,6 +3,7 @@ package main
 
 import rl "vendor:raylib"
 import g "../game"
+import ui "../ui"
 
 handle_input :: proc() {
 	if handle_help_input() {
@@ -127,23 +128,13 @@ edge_cursor :: proc(dir: rl.Vector2) -> rl.MouseCursor {
 
 handle_left_press :: proc(mouse: rl.Vector2) {
 	if app.menu_open {
-		if rl.CheckCollisionPointRec(mouse, app.retry_button) {
-			retry_level()
-		} else if rl.CheckCollisionPointRec(mouse, app.editor_button) {
-			editor_open_picker()
-		} else if rl.CheckCollisionPointRec(mouse, app.resume_button) {
-			app.menu_open = false
-		}
 		return
 	}
 	if rl.CheckCollisionPointRec(mouse, app.minimap_rect) {
 		handle_minimap_click(mouse)
 		return
 	}
-	if handle_hud_button_click(mouse) {
-		return
-	}
-	if mouse.y >= f32(rl.GetScreenHeight()) - HUD_HEIGHT {
+	if ui.blocks_pointer(&app.ui_ctx) {
 		return
 	}
 
@@ -169,40 +160,11 @@ handle_left_press :: proc(mouse: rl.Vector2) {
 
 @(private)
 handle_middle_press :: proc(mouse: rl.Vector2) {
-	if mouse.y >= f32(rl.GetScreenHeight()) - HUD_HEIGHT {
-		return
-	}
-	if rl.CheckCollisionPointRec(mouse, app.minimap_rect) {
+	if rl.CheckCollisionPointRec(mouse, app.minimap_rect) || ui.blocks_pointer(&app.ui_ctx) {
 		return
 	}
 	app.dragging = false
 	start_camera_grip(mouse, false)
-}
-
-@(private)
-handle_hud_button_click :: proc(mouse: rl.Vector2) -> bool {
-	if rl.CheckCollisionPointRec(mouse, app.move_button) {
-		app.command_mode = app.command_mode == .Move ? .None : .Move
-		app.dragging = false
-		return true
-	}
-	if rl.CheckCollisionPointRec(mouse, app.attack_button) {
-		app.command_mode = app.command_mode == .Attack ? .None : .Attack
-		app.dragging = false
-		return true
-	}
-	if rl.CheckCollisionPointRec(mouse, app.patrol_button) {
-		app.command_mode = app.command_mode == .Patrol ? .None : .Patrol
-		app.dragging = false
-		return true
-	}
-	if rl.CheckCollisionPointRec(mouse, app.stop_button) {
-		_ = g.game_issue_stop(&app.game)
-		app.command_mode = .None
-		app.dragging = false
-		return true
-	}
-	return false
 }
 
 @(private)
@@ -257,10 +219,7 @@ handle_left_release :: proc(mouse: rl.Vector2) {
 }
 
 handle_right_click :: proc(mouse: rl.Vector2) {
-	if mouse.y >= f32(rl.GetScreenHeight()) - HUD_HEIGHT {
-		return
-	}
-	if rl.CheckCollisionPointRec(mouse, app.minimap_rect) {
+	if rl.CheckCollisionPointRec(mouse, app.minimap_rect) || ui.blocks_pointer(&app.ui_ctx) {
 		return
 	}
 	app.command_mode = .None

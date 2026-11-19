@@ -1,0 +1,17 @@
+DreamCraft UI Fonts - SIL Open Font License 1.1 Notice
+======================================================
+
+1. Chronicle Serif Bold (`ChronicleSerif-Bold.ttf`, derived from KaTeX_Main-Bold / AMS Computer Modern Roman)
+   Copyright (c) 2014-2019 Khan Academy and American Mathematical Society.
+   Licensed under the SIL Open Font License, Version 1.1.
+
+2. Lato (`Lato-Regular.ttf`)
+   Copyright (c) 2010, Lukasz Dziedzic (dziedzic@typoland.com),
+   with Reserved Font Name Lato.
+
+3. Source Code Pro (`SourceCodePro-Regular.ttf`, `SourceCodePro-Bold.ttf`)
+   Copyright 2010, 2012 Adobe Systems Incorporated (http://www.adobe.com/),
+   with Reserved Font Name "Source".
+
+All bundled font families are licensed under the SIL Open Font License, Version 1.1.
+Full license text is available at https://scripts.sil.org/OFL.

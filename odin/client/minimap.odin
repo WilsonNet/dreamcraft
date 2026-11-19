@@ -1,8 +1,9 @@
-// Minimap: one 80x50 texture updated from simulation state, scaled into the HUD.
+// Minimap: one 80x50 texture updated from simulation state, scaled into a clipped Quickshell card.
 package main
 
 import rl "vendor:raylib"
 import g "../game"
+import ui "../ui"
 
 update_minimap_pixels :: proc() {
 	for gy in 0..<g.GRID_H {
@@ -64,14 +65,35 @@ set_minimap_pixel :: proc(cell: g.Grid_Pos, color: rl.Color) {
 	app.minimap_pixels[int(cell.y) * g.GRID_W + int(cell.x)] = color
 }
 
-draw_minimap_panel :: proc() {
-	rect := app.minimap_rect
-	rl.DrawRectangleRec(rl.Rectangle{rect.x - 5, rect.y - 5, rect.width + 10, rect.height + 10}, rl.Color{8, 14, 8, 230})
-	source := rl.Rectangle{0, 0, g.GRID_W, -g.GRID_H}
-	rl.DrawTexturePro(app.minimap, source, rect, rl.Vector2{0, 0}, 0, rl.WHITE)
+compose_minimap_island :: proc(ctx: ^ui.Context, h: f32) {
+	// Outer card (216x161 at x=12, y=h-178) keeps minimap_tex strictly at {20, h-150, 200, 125}.
+	cm := ui.m_blocks(ui.m_pad_edges(ui.m_gap(ui.m_surface(ui.m_size(ui.m_at(ui.mod(), 12, h - 178), 216, 161), ui.style_island(ui.RAD_LG)), 6), ui.edges_ltrb(8, 6, 8, 8)))
+	ui.open_col(ctx, ui.id("minimap_card"), cm)
+
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_align(ui.m_h(ui.m_fill(ui.mod(), true, false), 16), .Center))
+	ui.label(ctx, "MINIMAP", .Mono_Bold, 11, ui.COL_TEXT_SECONDARY)
+	ui.spacer(ctx, 1)
+	cam_txt: cstring = app.camera_follow ? "LOCK" : "FREE"
+	ui.label(ctx, cam_txt, .Mono_Bold, 10.5, app.camera_follow ? ui.COL_TEXT_MOVE : ui.COL_TEXT_GOLD)
+	ui.close(ctx)
+
+	ui.clipped_texture(
+		ctx,
+		ui.id("minimap_view"),
+		app.minimap,
+		8,
+		true,
+		ui.COL_BORDER_DEFAULT,
+		ui.m_blocks(ui.m_size(ui.mod(), 200, 125)),
+		draw_minimap_camera_overlay,
+		nil,
+	)
+	ui.close(ctx)
+}
+
+@(private)
+draw_minimap_camera_overlay :: proc(rect: rl.Rectangle, _: rawptr) {
 	draw_minimap_camera_box(rect)
-	rl.DrawRectangleLinesEx(rl.Rectangle{rect.x - 5, rect.y - 5, rect.width + 10, rect.height + 10}, 2, rl.Color{90, 150, 90, 255})
-	rl.DrawText("MINIMAP", i32(rect.x), i32(rect.y - 24), 12, rl.Color{170, 200, 170, 230})
 }
 
 @(private)

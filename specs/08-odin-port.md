@@ -29,6 +29,7 @@ Measured on this machine (Apple Silicon):
 ```
 odin/
 ├── game/        # pure simulation, imports no rendering libraries
+├── ui/          # standalone Compose/Flutter/Elm declarative UI framework + 1-draw-call SDF batcher
 ├── client/      # raylib 3D isometric renderer, input, HUD, minimap, shaders, VFX, Model Editor
 │   ├── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props, spec/, edit/, models/
 │   └── svg/     # zero-dependency SVG parser + 4x4 SSAA anti-aliased rasterizer (icons.odin)
@@ -38,8 +39,9 @@ odin/
 ├── headless/    # JSONL scripts, file polling, --serve, replay
 ├── web/         # js_wasm32 build, 2:1 canvas renderer, DOM HUD
 ├── assets/
+│   ├── fonts/   # SIL-OFL ChronicleSerif-Bold, Lato-Regular, SourceCodePro-{Regular,Bold}.ttf
 │   ├── icons/   # 37 vector UI/HUD/editor .svg icons
-│   └── shaders/ # ground.{vs,fs}, unit.{vs,fs}, watercolor.fs
+│   └── shaders/ # ground.{vs,fs}, unit.{vs,fs}, watercolor.fs, ui_sdf.{vs,fs}, ui_clip_tex.fs
 └── tests/       # shell/JSONL smoke tests
 ```
 
@@ -366,7 +368,7 @@ Layers:
    reset, determinism, zero allocation.
 2. **Control tests** (`odin test control`): command execution, snapshots,
    unit/fog encoding, HTTP parser, HTTP round trip on localhost (13 tests).
-3. **Art, Edit, SVG, CLI & Client tests** (`odin test client/art`, `client/art/edit`, `client/svg`, `tools/mesh_cli`, `client`): procedural & override catalog geometry (`17`), Edit_Mesh topology & `.odin` round-trip (`9`), pure-Odin SVG parsing & AA rasterization over all 37 `.svg` icons (`5`), Playwright positive/negative CLI checks (`6`), and camera/input projection (`11`).
+3. **Art, Edit, SVG, UI, CLI & Client tests** (`odin test client/art`, `client/art/edit`, `client/svg`, `ui`, `tools/mesh_cli`, `client`): procedural & override catalog geometry (`17`), Edit_Mesh topology & `.odin` round-trip (`9`), pure-Odin SVG parsing & AA rasterization over all 37 `.svg` icons (`5`), standalone `odin/ui/` layout/memory/z-hit/zero-alloc checks (`7`), Playwright positive/negative CLI checks (`6`), and camera/input projection (`12`).
 4. **Headless JSONL** (`tests/smoke.jsonl`): status, move, verify, kill, spawn,
    attack, reset, invariant checks.
 4. **HTTP smoke** (`tests/control_smoke.sh`): start `--serve`, curl all
@@ -406,7 +408,7 @@ Layers:
   `slash_vfx.odin` attack ribbons; shaded by `assets/shaders/unit.{vs,fs}`.
 - Scene renders to a full-resolution `RenderTexture2D` (bilinear) and finishes
   with `assets/shaders/watercolor.fs` wash post-processing (`--no-shader` bypasses).
-- HUD, minimap, health bars and selection box stay full resolution.
+- HUD, minimap, health bars and selection box stay full resolution (`.WINDOW_HIGHDPI`), rendered through the standalone `odin/ui/` package (Compose/Flutter/Elm declarative builders, single-pass `BoxConstraints`, z-layered `Display_List`, batched 1-draw-call `ui_sdf.{vs,fs}` + `ui_clip_tex.fs` shaders with medieval brass filigree & corner diamonds, exact 2x-supersampled sRGB-gamma-corrected TTF fonts, and `--no-shader` fallback; see [`specs/09-ui-framework.md`](09-ui-framework.md) and [`DESIGN.md`](../DESIGN.md)).
 - Picking casts a camera ray at the ground plane.
 - One model instance per unit, so idle/walk/attack/dynamics differ per unit.
 

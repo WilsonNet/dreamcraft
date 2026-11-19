@@ -4,6 +4,7 @@ package main
 import rl "vendor:raylib"
 import rlgl "vendor:raylib/rlgl"
 import edit "./art/edit"
+import ui "../ui"
 
 @(private)
 GIZMO_AXES := [3]rl.Vector3{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
@@ -217,12 +218,16 @@ draw_gizmo_3d :: proc() {
 editor_draw_overlays_2d :: proc() {
 	ed := &app.editor
 	if !ed.mesh_loaded { return }
+	vp := editor_viewport_rect()
+	ui.begin_hi_dpi_scissor(vp)
+	defer rl.EndScissorMode()
+
 	if ed.mesh.mode == .Vertex {
 		view_dir := rl.Vector3Normalize(ed.camera.position - ed.camera.target)
 		for &v, vi in ed.mesh.verts {
 			p := editor_posed_vert_pos(vi)
 			sp := rl.GetWorldToScreen(p, ed.camera)
-			if !rl.CheckCollisionPointRec(sp, editor_viewport_rect()) { continue }
+			if !rl.CheckCollisionPointRec(sp, vp) { continue }
 			if v.selected {
 				rl.DrawRectangle(i32(sp.x) - 2, i32(sp.y) - 2, 4, 4, rl.Color{255, 205, 64, 255})
 			} else if vi == ed.hover_vert {
@@ -248,7 +253,6 @@ editor_draw_overlays_2d :: proc() {
 			x = min(ed.box_start.x, mouse.x), y = min(ed.box_start.y, mouse.y),
 			width = abs(mouse.x - ed.box_start.x), height = abs(mouse.y - ed.box_start.y),
 		}
-		rl.DrawRectangleRec(rect, rl.Color{235, 200, 82, 32})
-		rl.DrawRectangleLinesEx(rect, 1, rl.Color{245, 212, 96, 220})
+		ui.draw_raw_pill(&app.ui_ctx.renderer, rect, rl.Color{235, 200, 82, 34}, rl.Color{215, 175, 62, 24}, rl.Color{245, 212, 96, 225}, 4, 0.2)
 	}
 }

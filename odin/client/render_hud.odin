@@ -1,175 +1,204 @@
-// Screen-space HUD, minimap panel, command buttons and pause menu.
+// Screen-space Quickshell floating HUD islands, command card, pause modal, and marquee box.
 package main
 
+import "core:fmt"
 import rl "vendor:raylib"
 import g "../game"
+import ui "../ui"
 
 HUD_HEIGHT :: 170
 
-draw_hud :: proc() {
-	draw_bottom_bar()
-	draw_status_panel()
-	draw_minimap_panel()
-	draw_command_buttons()
-	draw_hint()
-	draw_campaign_announcement()
+compose_battlefield_hud :: proc(ctx: ^ui.Context, w, h: f32) {
+	compose_status_island(ctx)
+	compose_minimap_island(ctx, h)
+	compose_bottom_center_dock(ctx, w, h)
+	compose_command_card(ctx, w, h)
+	compose_campaign_banner(ctx, w)
+	compose_outcome_banner(ctx, w)
 }
 
-draw_bottom_bar :: proc() {
-	width := f32(rl.GetScreenWidth())
-	height := f32(rl.GetScreenHeight())
-	rl.DrawRectangleRec(rl.Rectangle{0, height - HUD_HEIGHT, width, HUD_HEIGHT}, rl.Color{12, 18, 12, 238})
-	rl.DrawLineV(rl.Vector2{0, height - HUD_HEIGHT}, rl.Vector2{width, height - HUD_HEIGHT}, rl.Color{60, 110, 60, 255})
+@(private)
+compose_status_island :: proc(ctx: ^ui.Context) {
+	card_m := ui.m_blocks(ui.m_pad_xy(ui.m_gap(ui.m_surface(ui.m_at(ui.m_w(ui.mod(), 468), 14, 14), ui.style_island(ui.RAD_LG)), 7), 14, 11))
+	ui.open_col(ctx, ui.id("status_island"), card_m)
+
+	compose_status_header(ctx)
+	compose_hero_stats_row(ctx)
+	compose_status_telemetry(ctx)
+	ui.close(ctx)
 }
 
-draw_status_panel :: proc() {
-	rl.DrawRectangleRec(rl.Rectangle{12, 12, 548, 116}, rl.Color{8, 14, 8, 210})
-	rl.DrawRectangleLinesEx(rl.Rectangle{12, 12, 548, 116}, 1, rl.Color{60, 110, 60, 200})
-	buffer: [256]u8
-	draw_icon_centered(.Hero_Crest, 35, 31, 24)
-	rl.DrawText("DREAMCRAFT RTS", 52, 22, 20, rl.Color{235, 215, 120, 255})
-	draw_help_badge(help_badge_rect(), cstring("? F1"))
-	rl.DrawText("Campaign: Tutorial 1 - Through the Woods", 24, 46, 14, rl.Color{180, 200, 180, 255})
-	rl.DrawText("MMB/Space+Drag grip | Edge/WASD pan | F follow | M/A/P/S | F1 Help | Esc", 24, 66, 11, rl.Color{140, 170, 140, 255})
+@(private)
+compose_status_header :: proc(ctx: ^ui.Context) {
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_align(ui.m_fill(ui.mod(), true, false), .Center), 9))
+	ui.icon(ctx, icon_texture(.Hero_Crest), 22)
+	ui.open_col(ctx, ui.INVALID_ID, ui.m_gap(ui.mod(), 1))
+	ui.label(ctx, "DREAMCRAFT RTS", .Heading, 16, ui.COL_TEXT_GOLD)
+	ui.label(ctx, "Tutorial 1: Through the Woods", .Body, 12, ui.COL_TEXT_SECONDARY)
+	ui.close(ctx)
+	ui.spacer(ctx, 1)
+	compose_help_badge_widget(ctx, 0)
+	ui.close(ctx)
+}
 
-	if player_index, ok := g.game_player_index(&app.game); ok {
-		pos := app.game.units.position[player_index]
-		hp := app.game.units.hp[player_index]
-		hp_max := app.game.units.hp_max[player_index]
-		dmg := g.unit_attack_damage(&app.game.units, player_index)
-		arm := g.unit_armor(&app.game.units, player_index)
-		text := format_text(buffer[:], "Liiroy, the Bold (%d,%d) | HP %d/%d | ATK %d ARM %d | WP %d/%d", pos.x, pos.y, hp, hp_max, dmg, arm, app.game.waypoints.current, app.game.waypoints.count)
-		rl.DrawText(text, 24, 88, 14, rl.Color{250, 226, 130, 255})
+@(private)
+compose_hero_stats_row :: proc(ctx: ^ui.Context) {
+	if idx, ok := g.game_player_index(&app.game); ok {
+		pos := app.game.units.position[idx]
+		hp := app.game.units.hp[idx]
+		hp_max := app.game.units.hp_max[idx]
+		dmg := g.unit_attack_damage(&app.game.units, idx)
+		arm := g.unit_armor(&app.game.units, idx)
+		pct := f32(hp) / f32(max(hp_max, 1))
+		bar_col := pct <= 0.25 ? ui.COL_TEXT_ATTACK : (pct <= 0.5 ? ui.COL_TEXT_GOLD : ui.COL_TEXT_MOVE)
+
+		ui.open_col(ctx, ui.INVALID_ID, ui.m_gap(ui.m_fill(ui.mod(), true, false), 4))
+		ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_align(ui.m_fill(ui.mod(), true, false), .Center), 8))
+		ui.label(ctx, ui_cstr(fmt.tprintf("Liiroy, the Bold  (%d,%d)", pos.x, pos.y)), .Medium, 13, ui.COL_TEXT_PRIMARY)
+		ui.spacer(ctx, 1)
+		ui.label(ctx, ui_cstr(fmt.tprintf("%d / %d HP", hp, hp_max)), .Mono_Bold, 11.5, bar_col)
+		ui.close(ctx)
+		ui.progress_bar(ctx, ui.id("hero_hud_hp"), pct, bar_col, ui.m_h(ui.m_fill(ui.mod(), true, false), 6))
+		ui.label(ctx, ui_cstr(fmt.tprintf("ATK %d   ARM %d   Waypoint %d / %d", dmg, arm, app.game.waypoints.current, app.game.waypoints.count)), .Mono, 11, ui.COL_TEXT_SECONDARY)
+		ui.close(ctx)
 	} else {
-		rl.DrawText("Liiroy, the Bold has fallen", 24, 88, 14, rl.Color{230, 80, 80, 255})
+		ui.badge(ctx, ui.INVALID_ID, "Liiroy, the Bold has fallen", .Crimson)
 	}
-
-	camera_mode := cstring("FOLLOW")
-	if !app.camera_follow {
-		camera_mode = cstring("FREE")
-	}
-	text := format_text(buffer[:], "FPS %d  |  Sel %d  |  Units %d  |  Fog %.1f%%  |  CAM %s", rl.GetFPS(), app.game.units.selected_count, app.game.units.alive_count, g.fog_coverage_percent(&app.game.fog), camera_mode)
-	rl.DrawText(text, 24, 108, 12, rl.Color{150, 180, 150, 255})
 }
 
-draw_hint :: proc() {
-	width := f32(rl.GetScreenWidth())
-	height := f32(rl.GetScreenHeight())
+@(private)
+compose_status_telemetry :: proc(ctx: ^ui.Context) {
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_align(ui.m_fill(ui.mod(), true, false), .Center), 8))
+	info := fmt.tprintf("FPS %d   Sel %d   Units %d   Fog %.1f%%", rl.GetFPS(), app.game.units.selected_count, app.game.units.alive_count, g.fog_coverage_percent(&app.game.fog))
+	ui.label(ctx, ui_cstr(info), .Mono, 11, ui.COL_TEXT_MUTED)
+	ui.spacer(ctx, 1)
+	cam_label: cstring = app.camera_follow ? "CAM FOLLOW" : "CAM FREE"
+	tone: ui.Badge_Tone = app.camera_follow ? .Emerald : .Amber
+	ui.badge(ctx, ui.id("cam_follow_chip"), cam_label, tone, ui.m_pad_xy(ui.mod(), 8, 3), u32(UI_Msg.Hud_Toggle_Follow))
+	ui.close(ctx)
+}
+
+@(private)
+compose_bottom_center_dock :: proc(ctx: ^ui.Context, w, h: f32) {
+	center_max := max(w - 492, 260)
 	if app.command_mode != .None {
-		mode_text := cstring("MOVE: Left-click destination (Esc/Right-click cancel)")
-		mode_col := rl.Color{120, 235, 140, 255}
-		if app.command_mode == .Attack {
-			mode_text = cstring("ATTACK-MOVE: Left-click target or terrain (Esc/Right-click cancel)")
-			mode_col = rl.Color{255, 115, 95, 255}
-		} else if app.command_mode == .Patrol {
-			mode_text = cstring("PATROL: Left-click patrol point (Esc/Right-click cancel)")
-			mode_col = rl.Color{105, 225, 255, 255}
-		}
-		mw := rl.MeasureText(mode_text, 14)
-		rl.DrawText(mode_text, i32(width * 0.5) - mw / 2, i32(height - 96), 14, mode_col)
+		msg, tone := command_prompt_data()
+		pm := ui.m_blocks(ui.m_pad_xy(ui.m_surface(ui.mod(), ui.style_island(ui.RAD_LG)), 14, 7))
+		pm.max_w = center_max
+		dock_w := min(center_max, f32(len(msg)) * 6.9 + 52)
+		ui.open_row(ctx, ui.id("cmd_prompt_pill"), ui.m_at(pm, (w - dock_w) * 0.5, h - 98))
+		ui.badge(ctx, ui.INVALID_ID, tone == .Attack ? "ATK" : (tone == .Patrol ? "PTR" : "MOV"), ui_prompt_tone(tone))
+		ui.gap_box(ctx, 8, 1)
+		ui.label(ctx, msg, .Medium, 12.5, ui.COL_TEXT_PRIMARY)
+		ui.close(ctx)
 	}
-	text := cstring("Bottom center reserved for control groups")
-	text_width := rl.MeasureText(text, 13)
-	rl.DrawText(text, i32(width * 0.5) - text_width / 2, i32(height - 32), 13, rl.Color{110, 140, 110, 255})
-	if app.game.game_over {
-		over := cstring("GAME OVER")
-		over_width := rl.MeasureText(over, 28)
-		rl.DrawText(over, i32(width * 0.5) - over_width / 2, 40, 28, rl.Color{230, 70, 70, 255})
-	} else if app.game.level_complete {
-		complete := cstring("LEVEL COMPLETE")
-		complete_width := rl.MeasureText(complete, 28)
-		rl.DrawText(complete, i32(width * 0.5) - complete_width / 2, 40, 28, rl.Color{255, 225, 80, 255})
-	}
+
+	dock_m := ui.m_blocks(ui.m_pad_xy(ui.m_gap(ui.m_surface(ui.m_h(ui.mod(), 34), ui.style_island(ui.RAD_LG)), 6), 10, 5))
+	dock_m.align = .Center
+	dock_w := min(center_max, f32(276))
+	dock_m.width = dock_w
+	ui.open_row(ctx, ui.id("ctrl_dock"), ui.m_at(dock_m, (w - dock_w) * 0.5, h - 50))
+	hero_sel := app.game.units.selected_count > 0
+	ui.badge(ctx, ui.id("grp_1"), "1: Hero", hero_sel ? .Gold : .Neutral, ui.m_pad_xy(ui.mod(), 8, 3), u32(UI_Msg.Hud_Select_Hero))
+	ui.spacer(ctx, 1)
+	ui.label(ctx, "Esc Pause  |  MMB Grip", .Mono, 11.5, ui.COL_TEXT_MUTED)
+	ui.close(ctx)
 }
 
-draw_command_buttons :: proc() {
-	draw_button(app.move_button, cstring("[M] Move"), app.command_mode == .Move, .Cmd_Move)
-	draw_button(app.attack_button, cstring("[A] Attack"), app.command_mode == .Attack, .Cmd_Attack)
-	draw_button(app.patrol_button, cstring("[P] Patrol"), app.command_mode == .Patrol, .Cmd_Patrol)
-	draw_button(app.stop_button, cstring("[S] Stop"), false, .Cmd_Stop)
+@(private)
+command_prompt_data :: proc() -> (cstring, Command_Mode) {
+	if app.command_mode == .Attack {
+		return "Click enemy or ground (Esc/RMB cancel)", .Attack
+	}
+	if app.command_mode == .Patrol {
+		return "Click patrol endpoint (Esc/RMB cancel)", .Patrol
+	}
+	return "Click destination (Esc/RMB cancel)", .Move
 }
 
-draw_button :: proc(rect: rl.Rectangle, label: cstring, active: bool, icon := Icon_Id.None) {
-	mouse := rl.GetMousePosition()
-	hover := rl.CheckCollisionPointRec(mouse, rect)
-	color := rl.Color{35, 55, 35, 240}
-	if hover {
-		color = rl.Color{55, 85, 55, 250}
-	}
-	if active {
-		color = rl.Color{120, 95, 25, 250}
-	}
-	rl.DrawRectangleRec(rect, color)
-	rl.DrawRectangleLinesEx(rect, 1, rl.Color{120, 160, 120, 255})
-	width := rl.MeasureText(label, 14)
-	if icon != .None {
-		draw_icon_centered(icon, rect.x + 16, rect.y + rect.height * 0.5, 18)
-		rl.DrawText(label, i32(rect.x + 29), i32(rect.y + 9), 14, rl.WHITE)
+@(private)
+ui_prompt_tone :: proc(m: Command_Mode) -> ui.Badge_Tone {
+	if m == .Attack { return .Crimson }
+	if m == .Patrol { return .Cyan }
+	return .Emerald
+}
+
+@(private)
+compose_command_card :: proc(ctx: ^ui.Context, w, h: f32) {
+	card_w := f32(246)
+	card_h := f32(104)
+	cm := ui.m_blocks(ui.m_pad(ui.m_gap(ui.m_surface(ui.m_size(ui.m_at(ui.mod(), w - card_w - 14, h - card_h - 14), card_w, card_h), ui.style_island(ui.RAD_LG)), 8), 10))
+	ui.open_col(ctx, ui.id("cmd_card"), cm)
+
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_fill(ui.mod(), true, false), 8))
+	ui.button(ctx, ui.id("cmd_move"), ui.Button_Opts{label = "Move", keycap = "M", icon_tex = icon_texture(.Cmd_Move), active = app.command_mode == .Move, msg_tag = u32(UI_Msg.Hud_Move)}, ui.m_h(ui.m_weight(ui.mod(), 1), 38))
+	ui.button(ctx, ui.id("cmd_attack"), ui.Button_Opts{label = "Attack", keycap = "A", icon_tex = icon_texture(.Cmd_Attack), active = app.command_mode == .Attack, msg_tag = u32(UI_Msg.Hud_Attack)}, ui.m_h(ui.m_weight(ui.mod(), 1), 38))
+	ui.close(ctx)
+
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_fill(ui.mod(), true, false), 8))
+	ui.button(ctx, ui.id("cmd_patrol"), ui.Button_Opts{label = "Patrol", keycap = "P", icon_tex = icon_texture(.Cmd_Patrol), active = app.command_mode == .Patrol, msg_tag = u32(UI_Msg.Hud_Patrol)}, ui.m_h(ui.m_weight(ui.mod(), 1), 38))
+	ui.button(ctx, ui.id("cmd_stop"), ui.Button_Opts{label = "Stop", keycap = "S", icon_tex = icon_texture(.Cmd_Stop), msg_tag = u32(UI_Msg.Hud_Stop)}, ui.m_h(ui.m_weight(ui.mod(), 1), 38))
+	ui.close(ctx)
+
+	ui.close(ctx)
+}
+
+@(private)
+compose_outcome_banner :: proc(ctx: ^ui.Context, w: f32) {
+	if !app.game.game_over && !app.game.level_complete {
 		return
 	}
-	rl.DrawText(label, i32(rect.x + rect.width * 0.5) - width / 2, i32(rect.y + 9), 14, rl.WHITE)
+	title: cstring = app.game.level_complete ? "LEVEL COMPLETE" : "GAME OVER"
+	border := app.game.level_complete ? ui.COL_BORDER_GOLD : ui.COL_BORDER_DANGER
+	fg := app.game.level_complete ? ui.COL_TEXT_GOLD : ui.COL_TEXT_DANGER
+	bw := f32(290)
+	by := w >= 1140 ? f32(18) : f32(138)
+	bm := ui.m_blocks(ui.m_align(ui.m_justify(ui.m_surface(ui.m_size(ui.m_at(ui.mod(), (w - bw) * 0.5, by), bw, 46), ui.style_modal(999, border)), .Center), .Center))
+	ui.open_row(ctx, ui.id("outcome_banner"), bm)
+	ui.label(ctx, title, .Heading, 20, fg)
+	ui.close(ctx)
+}
+
+compose_pause_menu :: proc(ctx: ^ui.Context) {
+	pm := ui.m_align(ui.m_gap(ui.m_pad(ui.m_w(ui.mod(), 380), 24), 10), .Center)
+	ui.open_scrim_modal(ctx, ui.id("pause_modal"), 2, u32(UI_Msg.Pause_Resume), pm)
+	ui.label(ctx, "PAUSED", .Heading, 24, ui.COL_TEXT_GOLD)
+	ui.label(ctx, "Choose an action or resume battle", .Body, 13, ui.COL_TEXT_SECONDARY)
+	ui.ornament_divider(ctx)
+
+	ui.button(ctx, ui.id("pause_resume"), ui.Button_Opts{label = "Resume Battle", keycap = "Esc", icon_tex = icon_texture(.Game), variant = .Primary, msg_tag = u32(UI_Msg.Pause_Resume)}, ui.m_h(ui.m_fill(ui.mod(), true, false), 42))
+	ui.button(ctx, ui.id("pause_editor"), ui.Button_Opts{label = "Model Editor", icon_tex = icon_texture(.Models), variant = .Tonal, msg_tag = u32(UI_Msg.Pause_Editor)}, ui.m_h(ui.m_fill(ui.mod(), true, false), 42))
+	ui.button(ctx, ui.id("pause_retry"), ui.Button_Opts{label = "Retry Level", icon_tex = icon_texture(.Reset), variant = .Danger, msg_tag = u32(UI_Msg.Pause_Retry)}, ui.m_h(ui.m_fill(ui.mod(), true, false), 42))
+
+	ui.gap_box(ctx, 1, 4)
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_align(ui.m_fill(ui.mod(), true, false), .Center))
+	ui.label(ctx, "Press F1 for context shortcuts", .Body, 11.5, ui.COL_TEXT_MUTED)
+	ui.spacer(ctx, 1)
+	compose_help_badge_widget(ctx, 2)
+	ui.close(ctx)
+	ui.close_scrim_modal(ctx)
+}
+
+@(private)
+compose_help_badge_widget :: proc(ctx: ^ui.Context, layer: u8) {
+	ui.button(
+		ctx,
+		ui.id("help_badge"),
+		ui.Button_Opts{label = "? F1", variant = .Compact, active = app.help_open, font_size = 11.5, msg_tag = u32(UI_Msg.Help_Toggle)},
+		ui.m_h(ui.m_layer(ui.m_pad_xy(ui.mod(), 9, 4), layer), 24),
+	)
 }
 
 draw_selection_box :: proc() {
 	if !app.dragging {
 		return
 	}
-	mouse := rl.GetMousePosition()
+	mouse := input_mouse_pos()
 	rect := rl.Rectangle{
-		x = min(app.drag_start.x, mouse.x),
-		y = min(app.drag_start.y, mouse.y),
-		width = abs(mouse.x - app.drag_start.x),
+		x      = min(app.drag_start.x, mouse.x),
+		y      = min(app.drag_start.y, mouse.y),
+		width  = abs(mouse.x - app.drag_start.x),
 		height = abs(mouse.y - app.drag_start.y),
 	}
-	rl.DrawRectangleRec(rect, rl.Color{120, 200, 120, 35})
-	rl.DrawRectangleLinesEx(rect, 1, rl.Color{140, 230, 140, 220})
-}
-
-draw_pause_menu :: proc() {
-	width := f32(rl.GetScreenWidth())
-	height := f32(rl.GetScreenHeight())
-	rl.DrawRectangleRec(rl.Rectangle{0, 0, width, height}, rl.Color{0, 0, 0, 165})
-	panel := rl.Rectangle{width * 0.5 - 220, height * 0.5 - 150, 440, 300}
-	rl.DrawRectangleRec(panel, rl.Color{15, 24, 15, 245})
-	rl.DrawRectangleLinesEx(panel, 2, rl.Color{90, 150, 90, 255})
-	title := cstring("PAUSED")
-	title_width := rl.MeasureText(title, 30)
-	rl.DrawText(title, i32(width * 0.5) - title_width / 2, i32(panel.y + 24), 30, rl.Color{235, 215, 120, 255})
-	subtitle := cstring("Choose an action or resume battle")
-	subtitle_width := rl.MeasureText(subtitle, 14)
-	rl.DrawText(subtitle, i32(width * 0.5) - subtitle_width / 2, i32(panel.y + 64), 14, rl.Color{160, 185, 160, 255})
-	draw_menu_button(app.resume_button, cstring("Resume"), .Game)
-	draw_menu_button(app.editor_button, cstring("Model Editor"), .Models)
-	draw_menu_button(app.retry_button, cstring("Retry Level"), .Reset)
-	hint := cstring("Press F1 for context shortcuts")
-	hw := rl.MeasureText(hint, 12)
-	rl.DrawText(hint, i32(width * 0.5) - hw / 2 - 20, i32(panel.y + 270), 12, rl.Color{150, 180, 150, 255})
-	draw_help_badge(help_badge_rect(), cstring("? F1"))
-}
-
-@(private)
-draw_help_badge :: proc(rect: rl.Rectangle, label: cstring) {
-	hover := rl.CheckCollisionPointRec(input_mouse_pos(), rect)
-	bg := app.help_open ? rl.Color{136, 102, 28, 255} : (hover ? rl.Color{55, 85, 55, 255} : rl.Color{28, 44, 30, 240})
-	rl.DrawRectangleRec(rect, bg)
-	rl.DrawRectangleLinesEx(rect, 1, rl.Color{130, 180, 130, 255})
-	tw := rl.MeasureText(label, 12)
-	rl.DrawText(label, i32(rect.x + rect.width * 0.5) - tw / 2, i32(rect.y + (rect.height - 12) * 0.5), 12, rl.Color{240, 212, 118, 255})
-}
-
-draw_menu_button :: proc(rect: rl.Rectangle, label: cstring, icon := Icon_Id.None) {
-	mouse := rl.GetMousePosition()
-	color := rl.Color{40, 65, 40, 255}
-	if rl.CheckCollisionPointRec(mouse, rect) {
-		color = rl.Color{70, 105, 70, 255}
-	}
-	rl.DrawRectangleRec(rect, color)
-	rl.DrawRectangleLinesEx(rect, 1, rl.Color{130, 180, 130, 255})
-	width := rl.MeasureText(label, 15)
-	if icon != .None {
-		draw_icon_centered(icon, rect.x + rect.width * 0.5 - f32(width) * 0.5 - 14, rect.y + rect.height * 0.5, 18)
-		rl.DrawText(label, i32(rect.x + rect.width * 0.5) - width / 2 + 10, i32(rect.y + 10), 15, rl.WHITE)
-		return
-	}
-	rl.DrawText(label, i32(rect.x + rect.width * 0.5) - width / 2, i32(rect.y + 10), 15, rl.WHITE)
+	ui.draw_raw_pill(&app.ui_ctx.renderer, rect, rl.Color{96, 198, 116, 36}, rl.Color{74, 168, 92, 24}, rl.Color{136, 232, 146, 230}, 5, 0.20)
 }

@@ -1,191 +1,92 @@
-// Model Picker and Model Editor 2D workshop UI chrome and shared layout rectangles.
+// Model Editor Quickshell UI chrome: Topbar, Tool Rail, Inspector cards, Statusbar, and Popups.
 package main
 
 import "core:fmt"
 import "core:strings"
-import rl "vendor:raylib"
 import art "./art"
 import edit "./art/edit"
 import spec "./art/spec"
+import ui "../ui"
 
-@(private)
-COL_CHROME_BG :: rl.Color{16, 23, 18, 244}
-@(private)
-COL_CHROME_LINE :: rl.Color{66, 98, 70, 230}
-@(private)
-COL_BTN_BG :: rl.Color{32, 46, 35, 255}
-@(private)
-COL_BTN_HOVER :: rl.Color{50, 72, 54, 255}
-@(private)
-COL_BTN_ACTIVE :: rl.Color{136, 102, 28, 255}
-@(private)
-COL_BTN_PRIMARY :: rl.Color{56, 104, 58, 255}
-@(private)
-COL_TEXT_DIM :: rl.Color{162, 182, 165, 255}
-@(private)
-COL_TEXT_GOLD :: rl.Color{240, 212, 118, 255}
-
-Topbar_Rects :: struct {
-	modes:   [3]rl.Rectangle,
-	undo:    rl.Rectangle,
-	redo:    rl.Rectangle,
-	mirror:  rl.Rectangle,
-	wire:    rl.Rectangle,
-	xray:    rl.Rectangle,
-	floor_y: rl.Rectangle,
-	pose:    rl.Rectangle,
-	team:    rl.Rectangle,
-	shader:  rl.Rectangle,
-	help:    rl.Rectangle,
-	models:  rl.Rectangle,
-	reset:   rl.Rectangle,
-	save:    rl.Rectangle,
-	game:    rl.Rectangle,
-}
-
-Inspector_Layout :: struct {
-	panel:        rl.Rectangle,
-	smooth_btn:   rl.Rectangle,
-	mat_origin:   [2]f32,
-	mat_cell:     f32,
-	mat_cols:     int,
-	bone_sel_btn: rl.Rectangle,
-	bone_origin:  [2]f32,
-	bone_w:       f32,
-	bone_h:       f32,
-}
-
-editor_topbar_rects :: proc() -> Topbar_Rects {
-	w := f32(rl.GetScreenWidth())
-	r: Topbar_Rects
-	x := f32(116)
-	for i in 0..<3 {
-		r.modes[i] = {x, 8, 42, 28}
-		x += 44
-	}
-	x += 8
-	r.undo = {x, 8, 30, 28}; x += 32
-	r.redo = {x, 8, 30, 28}; x += 38
-	r.mirror = {x, 8, 52, 28}; x += 54
-	r.wire = {x, 8, 52, 28}; x += 54
-	r.xray = {x, 8, 52, 28}; x += 54
-	r.floor_y = {x, 8, 48, 28}; x += 54
-	r.pose = {x, 8, 86, 28}; x += 88
-	r.team = {x, 8, 64, 28}; x += 66
-	r.shader = {x, 8, 50, 28}
-
-	rx := w - 8
-	r.game = {rx - 70, 8, 70, 28}; rx -= 76
-	r.save = {rx - 72, 8, 72, 28}; rx -= 78
-	r.reset = {rx - 68, 8, 68, 28}; rx -= 74
-	r.models = {rx - 76, 8, 76, 28}; rx -= 82
-	r.help = {rx - 44, 8, 44, 28}
-	return r
-}
-
-editor_rail_button_rect :: proc(idx: int) -> rl.Rectangle {
-	h := f32(rl.GetScreenHeight())
-	avail := max(h - EDITOR_TOPBAR_H - EDITOR_STATUS_H - 12, 360)
-	step := clamp(avail / 12.0, 30.0, 38.0)
-	return rl.Rectangle{6, EDITOR_TOPBAR_H + 8 + f32(idx) * step, EDITOR_LEFT_W - 12, step - 4}
-}
-
-editor_inspector_layout :: proc() -> Inspector_Layout {
-	w := f32(rl.GetScreenWidth())
-	h := f32(rl.GetScreenHeight())
-	px := w - EDITOR_RIGHT_W
-	py := EDITOR_TOPBAR_H
-	bone_top := f32(280)
-	bone_avail := max(h - py - EDITOR_STATUS_H - bone_top - 8, 180)
-	bone_h := clamp(bone_avail / 13.0, 16.0, 22.0)
-	return Inspector_Layout{
-		panel        = {px, py, EDITOR_RIGHT_W, h - EDITOR_TOPBAR_H - EDITOR_STATUS_H},
-		smooth_btn   = {px + EDITOR_RIGHT_W - 96, py + 72, 84, 22},
-		mat_origin   = {px + 12, py + 122},
-		mat_cell     = 28,
-		mat_cols     = 8,
-		bone_sel_btn = {px + EDITOR_RIGHT_W - 92, py + 252, 80, 20},
-		bone_origin  = {px + 12, py + bone_top},
-		bone_w       = 121,
-		bone_h       = bone_h,
-	}
-}
-
-editor_mat_swatch_rect :: proc(lay: Inspector_Layout, mat_idx: int) -> rl.Rectangle {
-	col := mat_idx % lay.mat_cols
-	row := mat_idx / lay.mat_cols
-	return {lay.mat_origin.x + f32(col) * 31, lay.mat_origin.y + f32(row) * lay.mat_cell, 27, lay.mat_cell - 4}
-}
-
-editor_bone_row_rect :: proc(lay: Inspector_Layout, bone_idx: int) -> rl.Rectangle {
-	col := bone_idx % 2
-	row := bone_idx / 2
-	return {lay.bone_origin.x + f32(col) * 125, lay.bone_origin.y + f32(row) * lay.bone_h, lay.bone_w, lay.bone_h - 2}
-}
-
-editor_delete_item_rect :: proc(idx: int) -> rl.Rectangle {
-	pos := app.editor.delete_menu_pos
-	return {pos.x + 6, pos.y + 24 + f32(idx) * 26, 148, 22}
-}
-
-editor_exit_dialog_rects :: proc() -> (panel, save_btn, discard_btn, cancel_btn: rl.Rectangle) {
-	w := f32(rl.GetScreenWidth())
-	h := f32(rl.GetScreenHeight())
-	panel = {w * 0.5 - 190, h * 0.5 - 75, 380, 150}
-	save_btn = {panel.x + 18, panel.y + 98, 120, 32}
-	discard_btn = {panel.x + 148, panel.y + 98, 102, 32}
-	cancel_btn = {panel.x + 260, panel.y + 98, 102, 32}
-	return
-}
-
-draw_editor_ui :: proc() {
-	draw_editor_topbar()
-	draw_editor_tool_rail()
-	draw_editor_inspector()
-	draw_editor_statusbar()
+compose_model_editor :: proc(ctx: ^ui.Context, w, h: f32) {
+	compose_editor_topbar(ctx, w)
+	compose_editor_tool_rail(ctx, h)
+	compose_editor_inspector(ctx, w, h)
+	compose_editor_statusbar(ctx, w, h)
 	if app.editor.delete_menu_open {
-		draw_editor_delete_popup()
+		compose_editor_delete_popup(ctx)
 	}
 	if app.editor.confirm_exit_open {
-		draw_editor_exit_dialog()
+		compose_editor_exit_dialog(ctx)
 	}
 }
 
 @(private)
-draw_editor_topbar :: proc() {
-	ed := &app.editor
-	w := f32(rl.GetScreenWidth())
-	rl.DrawRectangleRec({0, 0, w, EDITOR_TOPBAR_H}, COL_CHROME_BG)
-	rl.DrawLineV({0, EDITOR_TOPBAR_H}, {w, EDITOR_TOPBAR_H}, COL_CHROME_LINE)
-	star := ed.mesh.dirty ? "*" : ""
-	rl.DrawText(cstring_t(fmt.tprintf("%s%s", ed.mesh.id, star)), 12, 13, 15, COL_TEXT_GOLD)
-
-	tb := editor_topbar_rects()
-	draw_ui_button(tb.modes[0], "1:V", ed.mesh.mode == .Vertex, false, .Mode_Vert)
-	draw_ui_button(tb.modes[1], "2:E", ed.mesh.mode == .Edge, false, .Mode_Edge)
-	draw_ui_button(tb.modes[2], "3:F", ed.mesh.mode == .Face, false, .Mode_Face)
-	draw_ui_button(tb.undo, "", false, false, .Undo)
-	draw_ui_button(tb.redo, "", false, false, .Redo)
-	draw_ui_button(tb.mirror, "Mir", ed.mirror_x, false, .Mirror_X)
-	draw_ui_button(tb.wire, "Wire", ed.wire_overlay, false, .Wireframe)
-	draw_ui_button(tb.xray, "XRay", ed.xray_mode, false, .XRay)
-	draw_ui_button(tb.floor_y, "Y=0", false, false, .Floor_Y)
-	draw_ui_button(tb.pose, editor_pose_label(ed.pose_kind), ed.pose_kind != .Rest, false, .Pose)
-	draw_ui_button(tb.team, editor_team_label(ed.preview_team), false, false, .Team_Palette)
-	draw_ui_button(tb.shader, ed.use_watercolor ? "WC" : "Lit", ed.use_watercolor, false, .Shader_WC)
-	draw_ui_button(tb.help, "? F1", app.help_open)
-	draw_ui_button(tb.models, "Models", false, false, .Models)
-	draw_ui_button(tb.reset, "Reset", false, false, .Reset)
-	draw_ui_button(tb.save, ed.mesh.dirty ? "Save*" : "Save", false, true, .Save)
-	draw_ui_button(tb.game, "Game", false, false, .Game)
+compose_editor_topbar :: proc(ctx: ^ui.Context, w: f32) {
+	compact := w < 1180
+	tm := ui.m_blocks(ui.m_pad_xy(ui.m_gap(ui.m_align(ui.m_surface(ui.m_size(ui.m_at(ui.mod(), 0, 0), w, EDITOR_TOPBAR_H), ui.style_bar()), .Center), compact ? 4 : 6), 10, 6))
+	tm.layer = 1
+	ui.open_row(ctx, ui.id("ed_topbar"), tm)
+	compose_topbar_left(ctx, compact)
+	ui.spacer(ctx, 1)
+	compose_topbar_right(ctx, compact)
+	ui.close(ctx)
 }
 
 @(private)
-draw_editor_tool_rail :: proc() {
+compose_topbar_left :: proc(ctx: ^ui.Context, compact: bool) {
 	ed := &app.editor
-	h := f32(rl.GetScreenHeight())
-	rl.DrawRectangleRec({0, EDITOR_TOPBAR_H, EDITOR_LEFT_W, h - EDITOR_TOPBAR_H - EDITOR_STATUS_H}, COL_CHROME_BG)
-	rl.DrawLineV({EDITOR_LEFT_W, EDITOR_TOPBAR_H}, {EDITOR_LEFT_W, h - EDITOR_STATUS_H}, COL_CHROME_LINE)
+	star := ed.mesh.dirty ? "*" : ""
+	id_txt := compact && len(ed.mesh.id) > 10 ? fmt.tprintf("%s..%s", ed.mesh.id[:8], star) : fmt.tprintf("%s%s", ed.mesh.id, star)
+	ui.badge(ctx, ui.id("ed_model_badge"), ui_cstr(id_txt), ed.mesh.dirty ? .Gold : .Neutral, ui.m_pad_xy(ui.mod(), 8, 4))
+
+	mode_m := ui.m_pad(ui.m_gap(ui.m_surface(ui.m_h(ui.mod(), 30), ui.style_pill_track()), 2), 3)
+	ui.open_row(ctx, ui.id("ed_mode_track"), mode_m)
+	modes := [3]cstring{"1:V", "2:E", "3:F"}
+	m_icons := [3]Icon_Id{.Mode_Vert, .Mode_Edge, .Mode_Face}
+	for i in 0..<3 {
+		ui.segmented_tab(ctx, ui.id_idx("ed_mode", i), modes[i], icon_texture(m_icons[i]), int(ed.mesh.mode) == i, u32(UI_Msg.Ed_Mode), i32(i), ui.m_pad_xy(ui.m_h(ui.mod(), 24), compact ? 5 : 7, 2))
+	}
+	ui.close(ctx)
+
+	ui.button(ctx, ui.id("ed_undo"), ui.Button_Opts{icon_tex = icon_texture(.Undo), icon_size = 16, variant = .Compact, msg_tag = u32(UI_Msg.Ed_Undo)}, ui.m_size(ui.m_pad(ui.mod(), 4), 28, 28))
+	ui.button(ctx, ui.id("ed_redo"), ui.Button_Opts{icon_tex = icon_texture(.Redo), icon_size = 16, variant = .Compact, msg_tag = u32(UI_Msg.Ed_Redo)}, ui.m_size(ui.m_pad(ui.mod(), 4), 28, 28))
+
+	compose_topbar_toggles(ctx, compact)
+}
+
+@(private)
+compose_topbar_toggles :: proc(ctx: ^ui.Context, compact: bool) {
+	ed := &app.editor
+	bm := ui.m_h(ui.m_pad_xy(ui.mod(), compact ? 6 : 8, 3), 28)
+	ui.button(ctx, ui.id("ed_mir"), ui.Button_Opts{label = "Mir", icon_tex = icon_texture(.Mirror_X), variant = .Compact, active = ed.mirror_x, font_size = 11.5, msg_tag = u32(UI_Msg.Ed_Mirror)}, bm)
+	ui.button(ctx, ui.id("ed_wire"), ui.Button_Opts{label = compact ? "Wir" : "Wire", icon_tex = icon_texture(.Wireframe), variant = .Compact, active = ed.wire_overlay, font_size = 11.5, msg_tag = u32(UI_Msg.Ed_Wire)}, bm)
+	ui.button(ctx, ui.id("ed_xray"), ui.Button_Opts{label = compact ? "XR" : "XRay", icon_tex = icon_texture(.XRay), variant = .Compact, active = ed.xray_mode, font_size = 11.5, msg_tag = u32(UI_Msg.Ed_XRay)}, bm)
+	ui.button(ctx, ui.id("ed_floory"), ui.Button_Opts{label = "Y=0", icon_tex = icon_texture(.Floor_Y), variant = .Compact, font_size = 11.5, msg_tag = u32(UI_Msg.Ed_Floor_Y)}, bm)
+	if ed.mesh.skinned {
+		ui.button(ctx, ui.id("ed_pose"), ui.Button_Opts{label = editor_pose_short_label(ed.pose_kind, compact), icon_tex = icon_texture(.Pose), variant = .Compact, active = ed.pose_kind != .Rest, font_size = 11.5, msg_tag = u32(UI_Msg.Ed_Pose)}, bm)
+		ui.button(ctx, ui.id("ed_team"), ui.Button_Opts{label = editor_team_label(ed.preview_team), icon_tex = icon_texture(.Team_Palette), variant = .Compact, font_size = 11.5, msg_tag = u32(UI_Msg.Ed_Team)}, bm)
+	}
+	ui.button(ctx, ui.id("ed_shader"), ui.Button_Opts{label = ed.use_watercolor ? "WC" : "Lit", icon_tex = icon_texture(.Shader_WC), variant = .Compact, active = ed.use_watercolor, font_size = 11.5, msg_tag = u32(UI_Msg.Ed_Shader)}, bm)
+}
+
+@(private)
+compose_topbar_right :: proc(ctx: ^ui.Context, compact: bool) {
+	ed := &app.editor
+	bm := ui.m_h(ui.m_pad_xy(ui.mod(), compact ? 7 : 9, 3), 28)
+	compose_help_badge_widget(ctx, 1)
+	ui.button(ctx, ui.id("ed_models"), ui.Button_Opts{label = compact ? "List" : "Models", icon_tex = icon_texture(.Models), variant = .Tonal, font_size = 11.5, msg_tag = u32(UI_Msg.Ed_Models)}, bm)
+	ui.button(ctx, ui.id("ed_reset"), ui.Button_Opts{label = compact ? "Rst" : "Reset", icon_tex = icon_texture(.Reset), variant = .Compact, font_size = 11.5, msg_tag = u32(UI_Msg.Ed_Reset)}, bm)
+	ui.button(ctx, ui.id("ed_save"), ui.Button_Opts{label = ed.mesh.dirty ? "Save*" : "Save", icon_tex = icon_texture(.Save), variant = .Primary, font_size = 11.5, msg_tag = u32(UI_Msg.Ed_Save)}, bm)
+	ui.button(ctx, ui.id("ed_game"), ui.Button_Opts{label = "Game", icon_tex = icon_texture(.Game), variant = .Tonal, font_size = 11.5, msg_tag = u32(UI_Msg.Ed_Game)}, bm)
+}
+
+@(private)
+compose_editor_tool_rail :: proc(ctx: ^ui.Context, h: f32) {
+	ed := &app.editor
+	rm := ui.m_blocks(ui.m_pad(ui.m_gap(ui.m_surface(ui.m_size(ui.m_at(ui.mod(), 0, EDITOR_TOPBAR_H), EDITOR_LEFT_W, h - EDITOR_TOPBAR_H - EDITOR_STATUS_H), ui.style_bar()), 4), 6))
+	rm.layer = 1
+	ui.open_col(ctx, ui.id("ed_rail"), rm)
 	labels := [12]cstring{"Sel", "Box", "Grab", "Rot", "Scl", "Extr", "Ins", "Loop", "Knf", "Fill", "Mrg", "Del"}
 	icons := [12]Icon_Id{
 		.Tool_Select, .Tool_Box, .Tool_Grab, .Tool_Rotate, .Tool_Scale, .Tool_Extrude,
@@ -193,87 +94,135 @@ draw_editor_tool_rail :: proc() {
 	}
 	for i in 0..<12 {
 		active := (i < 11 && int(ed.tool) == i) || (i == 11 && ed.delete_menu_open)
-		draw_ui_button(editor_rail_button_rect(i), labels[i], active, false, icons[i])
+		tm := ui.m_pad_xy(ui.m_fill(ui.m_weight(ui.mod(), 1), true, false), 8, 2)
+		tm.max_h = 38
+		ui.button(ctx, ui.id_idx("ed_tool", i), ui.Button_Opts{label = labels[i], icon_tex = icon_texture(icons[i]), icon_size = 15, variant = .Tool, active = active, font_size = 12, msg_tag = u32(UI_Msg.Ed_Tool), msg_arg = i32(i)}, tm)
 	}
+	ui.close(ctx)
 }
 
 @(private)
-draw_editor_inspector :: proc() {
+compose_editor_inspector :: proc(ctx: ^ui.Context, w, h: f32) {
 	ed := &app.editor
-	lay := editor_inspector_layout()
-	rl.DrawRectangleRec(lay.panel, COL_CHROME_BG)
-	rl.DrawLineV({lay.panel.x, lay.panel.y}, {lay.panel.x, lay.panel.y + lay.panel.height}, COL_CHROME_LINE)
-	sv, se, sf := edit.edit_mesh_selected_counts(&ed.mesh)
-	x := i32(lay.panel.x + 12)
-	y := i32(lay.panel.y + 10)
-	rl.DrawText("MESH TELEMETRY", x, y, 12, COL_TEXT_GOLD)
-	rl.DrawText(cstring_t(fmt.tprintf("V %d  E %d  F %d", len(ed.mesh.verts), len(ed.mesh.edges), len(ed.mesh.faces))), x, y + 18, 12, rl.WHITE)
-	rl.DrawText(cstring_t(fmt.tprintf("Sel V:%d E:%d F:%d", sv, se, sf)), x, y + 36, 12, COL_TEXT_DIM)
-	if c, ok := edit.edit_selection_center(&ed.mesh); ok {
-		rl.DrawText(cstring_t(fmt.tprintf("Ctr %.2f %.2f %.2f", c[0], c[1], c[2])), x, y + 54, 11, COL_TEXT_DIM)
-	} else {
-		rl.DrawText("Ctr (no selection)", x, y + 54, 11, COL_TEXT_DIM)
-	}
-	draw_ui_button(lay.smooth_btn, "Smooth", false)
+	ih := h - EDITOR_TOPBAR_H - EDITOR_STATUS_H
+	im := ui.m_blocks(ui.m_pad(ui.m_gap(ui.m_surface(ui.m_size(ui.m_at(ui.mod(), w - EDITOR_RIGHT_W, EDITOR_TOPBAR_H), EDITOR_RIGHT_W, ih), ui.style_bar()), 8), 8))
+	im.layer = 1
+	ui.open_col(ctx, ui.id("ed_inspector"), im)
 
-	rl.DrawText(cstring_t(fmt.tprintf("MATERIAL: %s", spec.MAT_NAMES[ed.active_mat])), x, i32(lay.mat_origin.y - 18), 12, COL_TEXT_GOLD)
-	draw_mat_swatches(lay)
+	compose_telemetry_card(ctx)
+	compose_materials_card(ctx)
 	if ed.mesh.skinned {
-		rl.DrawText(cstring_t(fmt.tprintf("BONE: %s", spec.BONE_NAMES[ed.active_bone])), x, i32(lay.bone_sel_btn.y + 3), 12, COL_TEXT_GOLD)
-		draw_ui_button(lay.bone_sel_btn, "Sel Bone", false)
-		draw_bone_buttons(lay)
+		compose_bones_card(ctx)
 	}
+	ui.close(ctx)
 }
 
 @(private)
-draw_mat_swatches :: proc(lay: Inspector_Layout) {
+compose_telemetry_card :: proc(ctx: ^ui.Context) {
 	ed := &app.editor
-	mouse := input_mouse_pos()
+	sv, se, sf := edit.edit_mesh_selected_counts(&ed.mesh)
+	cm := ui.m_pad(ui.m_gap(ui.m_surface(ui.m_fill(ui.mod(), true, false), ui.style_card(ui.RAD_MD)), 4), 10)
+	ui.open_col(ctx, ui.id("ed_tele_card"), cm)
+
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_align(ui.m_fill(ui.mod(), true, false), .Center))
+	ui.label(ctx, "MESH TELEMETRY", .Mono_Bold, 11, ui.COL_TEXT_GOLD)
+	ui.spacer(ctx, 1)
+	ui.button(ctx, ui.id("ed_smooth"), ui.Button_Opts{label = "Smooth", variant = .Compact, font_size = 11, msg_tag = u32(UI_Msg.Ed_Smooth)}, ui.m_h(ui.m_pad_xy(ui.mod(), 8, 2), 22))
+	ui.close(ctx)
+
+	ui.label(ctx, ui_cstr(fmt.tprintf("V %d   E %d   F %d", len(ed.mesh.verts), len(ed.mesh.edges), len(ed.mesh.faces))), .Mono, 12, ui.COL_TEXT_PRIMARY)
+	ui.label(ctx, ui_cstr(fmt.tprintf("Sel V:%d  E:%d  F:%d", sv, se, sf)), .Mono, 11, ui.COL_TEXT_SECONDARY)
+	if c, ok := edit.edit_selection_center(&ed.mesh); ok {
+		ui.label(ctx, ui_cstr(fmt.tprintf("Ctr %.2f %.2f %.2f", c[0], c[1], c[2])), .Mono, 11, ui.COL_TEXT_MUTED)
+	} else {
+		ui.label(ctx, "Ctr (no selection)", .Mono, 11, ui.COL_TEXT_MUTED)
+	}
+	ui.close(ctx)
+}
+
+@(private)
+compose_materials_card :: proc(ctx: ^ui.Context) {
+	ed := &app.editor
+	cm := ui.m_pad(ui.m_gap(ui.m_surface(ui.m_fill(ui.mod(), true, false), ui.style_card(ui.RAD_MD)), 5), 10)
+	ui.open_col(ctx, ui.id("ed_mat_card"), cm)
+
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_align(ui.m_fill(ui.mod(), true, false), .Center))
+	ui.label(ctx, "MATERIAL", .Mono_Bold, 11, ui.COL_TEXT_GOLD)
+	ui.spacer(ctx, 1)
+	ui.badge(ctx, ui.INVALID_ID, ui_cstr(spec.MAT_NAMES[ed.active_mat]), .Neutral, ui.m_pad_xy(ui.mod(), 7, 2))
+	ui.close(ctx)
+
 	mat_count := int(art.Mat_Kind.COUNT)
-	for m in 0..<mat_count {
-		rect := editor_mat_swatch_rect(lay, m)
-		kind := art.Mat_Kind(m)
-		col := art.MAT_DEFS[kind].albedo
-		rl.DrawRectangleRec(rect, col)
-		border := kind == ed.active_mat ? rl.Color{255, 224, 96, 255} : rl.Color{40, 48, 42, 255}
-		if rl.CheckCollisionPointRec(mouse, rect) { border = rl.WHITE }
-		rl.DrawRectangleLinesEx(rect, kind == ed.active_mat ? 2 : 1, border)
+	for row := 0; row * 8 < mat_count; row += 1 {
+		ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_fill(ui.mod(), true, false), 4))
+		for col in 0..<8 {
+			m := row * 8 + col
+			if m < mat_count {
+				kind := art.Mat_Kind(m)
+				ui.swatch(ctx, ui.id_idx("ed_mat", m), art.MAT_DEFS[kind].albedo, kind == ed.active_mat, u32(UI_Msg.Ed_Mat), i32(m), ui.m_h(ui.m_weight(ui.mod(), 1), 22))
+			} else {
+				ui.spacer(ctx, 1)
+			}
+		}
+		ui.close(ctx)
 	}
+	ui.close(ctx)
 }
 
 @(private)
-draw_bone_buttons :: proc(lay: Inspector_Layout) {
+compose_bones_card :: proc(ctx: ^ui.Context) {
 	ed := &app.editor
+	cm := ui.m_pad(ui.m_gap(ui.m_surface(ui.m_fill(ui.m_weight(ui.mod(), 1), true, true), ui.style_card(ui.RAD_MD)), 4), 10)
+	ui.open_col(ctx, ui.id("ed_bone_card"), cm)
+
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_align(ui.m_fill(ui.mod(), true, false), .Center), 6))
+	ui.label(ctx, "BONE", .Mono_Bold, 11, ui.COL_TEXT_GOLD)
+	ui.badge(ctx, ui.INVALID_ID, ui_cstr(spec.BONE_NAMES[ed.active_bone]), .Gold, ui.m_pad_xy(ui.mod(), 7, 2))
+	ui.spacer(ctx, 1)
+	ui.button(ctx, ui.id("ed_sel_bone"), ui.Button_Opts{label = "Sel", variant = .Compact, font_size = 11, msg_tag = u32(UI_Msg.Ed_Bone_Sel)}, ui.m_h(ui.m_pad_xy(ui.mod(), 7, 2), 20))
+	ui.close(ctx)
+
 	bone_count := int(art.Bone_Id.COUNT)
-	for b in 0..<bone_count {
-		bone := art.Bone_Id(b)
-		draw_ui_button(editor_bone_row_rect(lay, b), cstring_t(spec.BONE_NAMES[bone]), bone == ed.active_bone)
+	for row := 0; row * 2 < bone_count; row += 1 {
+		ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_fill(ui.m_weight(ui.mod(), 1), true, false), 4))
+		for col in 0..<2 {
+			b := row * 2 + col
+			if b < bone_count {
+				bone := art.Bone_Id(b)
+				bm := ui.m_pad_xy(ui.m_fill(ui.m_weight(ui.mod(), 1), false, true), 6, 1)
+				bm.max_h = 22
+				ui.button(ctx, ui.id_idx("ed_bone", b), ui.Button_Opts{label = ui_cstr(spec.BONE_NAMES[bone]), variant = .Bone, active = bone == ed.active_bone, center_text = true, font_size = 10.5, msg_tag = u32(UI_Msg.Ed_Bone), msg_arg = i32(b)}, bm)
+			} else {
+				ui.spacer(ctx, 1)
+			}
+		}
+		ui.close(ctx)
 	}
+	ui.close(ctx)
 }
 
 @(private)
-draw_editor_statusbar :: proc() {
+compose_editor_statusbar :: proc(ctx: ^ui.Context, w, h: f32) {
 	ed := &app.editor
-	w := f32(rl.GetScreenWidth())
-	h := f32(rl.GetScreenHeight())
-	y := h - EDITOR_STATUS_H
-	rl.DrawRectangleRec({0, y, w, EDITOR_STATUS_H}, rl.Color{11, 16, 12, 248})
-	rl.DrawLineV({0, y}, {w, y}, COL_CHROME_LINE)
+	sm := ui.m_blocks(ui.m_pad_xy(ui.m_gap(ui.m_align(ui.m_surface(ui.m_size(ui.m_at(ui.mod(), 0, h - EDITOR_STATUS_H), w, EDITOR_STATUS_H), ui.style_bar()), .Center), 10), 12, 4))
+	sm.layer = 1
+	ui.open_row(ctx, ui.id("ed_statusbar"), sm)
+
 	msg := editor_modal_status_text()
-	col := ed.status_is_error ? rl.Color{245, 98, 86, 255} : COL_TEXT_GOLD
+	col := ed.status_is_error ? ui.COL_TEXT_DANGER : ui.COL_TEXT_GOLD
 	if len(msg) == 0 {
 		msg = editor_status_cstr()
 	} else {
-		col = rl.Color{135, 232, 255, 255}
+		col = ui.COL_TEXT_PATROL
 	}
 	if len(msg) > 0 {
-		rl.DrawText(msg, 12, i32(y + 7), 12, col)
+		ui.label(ctx, msg, .Mono_Bold, 11.5, col)
 	}
-	hints := cstring("F1 Help | G/R/S+X/Y/Z | E Extrude | I Inset | ^R Loop | K Knife | M Merge | X Del | Alt+Click Loop | MMB/RMB Orbit | . Frame")
-	hw := rl.MeasureText(hints, 11)
-	if w > 900 {
-		rl.DrawText(hints, i32(w) - hw - 12, i32(y + 8), 11, COL_TEXT_DIM)
+	ui.spacer(ctx, 1)
+	if w >= 1120 {
+		ui.label(ctx, "F1 Help  |  G/R/S+XYZ  |  E Extrude  |  I Inset  |  ^R Loop  |  K Knife  |  X Del  |  MMB/RMB Orbit", .Mono, 10.5, ui.COL_TEXT_MUTED)
 	}
+	ui.close(ctx)
 }
 
 @(private)
@@ -286,7 +235,7 @@ editor_modal_status_text :: proc() -> cstring {
 	case .Grab:     return cstring_t(fmt.tprintf("Grab%s (%.3f %.3f %.3f) %s | LMB confirm, RMB/Esc cancel", axis, ed.modal_delta[0], ed.modal_delta[1], ed.modal_delta[2], num))
 	case .Rotate:   return cstring_t(fmt.tprintf("Rotate%s %.1f deg %s | LMB confirm, RMB/Esc cancel", axis, ed.modal_angle * 57.2958, num))
 	case .Scale:    return cstring_t(fmt.tprintf("Scale%s %.3fx %s | LMB confirm, RMB/Esc cancel", axis, ed.modal_scale, num))
-	case .Inset:    return cstring_t(fmt.tprintf("Inset face | Move mouse / LMB confirm"))
+	case .Inset:    return cstring_t("Inset face | Move mouse / LMB confirm")
 	case .Loop_Cut: return cstring_t(fmt.tprintf("Loop Cut (%d cuts) | Wheel cuts, LMB apply, Esc cancel", ed.loop_cuts))
 	case .Knife:    return cstring_t(fmt.tprintf("Knife (%d nodes) | LMB point, Enter/Space cut, Esc cancel", len(ed.knife_nodes)))
 	case .Select, .Box, .Extrude, .Fill, .Merge:
@@ -295,58 +244,37 @@ editor_modal_status_text :: proc() -> cstring {
 }
 
 @(private)
-draw_editor_delete_popup :: proc() {
+compose_editor_delete_popup :: proc(ctx: ^ui.Context) {
 	pos := app.editor.delete_menu_pos
-	box := rl.Rectangle{pos.x, pos.y, 160, 134}
-	rl.DrawRectangleRec(box, COL_CHROME_BG)
-	rl.DrawRectangleLinesEx(box, 1, COL_TEXT_GOLD)
-	rl.DrawText("DELETE", i32(box.x + 8), i32(box.y + 6), 11, COL_TEXT_GOLD)
-	labels := [4]cstring{"[V] Vertices", "[E] Edges", "[F] Faces", "[D] Dissolve Edges"}
+	catch_m := ui.m_click(ui.m_layer(ui.m_fill(ui.mod()), 2), u32(UI_Msg.Ed_Delete_Choice), -1, true)
+	ui.open_box(ctx, ui.id("ed_del_catch"), catch_m)
+
+	pm := ui.m_blocks(ui.m_pad(ui.m_gap(ui.m_surface(ui.m_w(ui.m_at(ui.mod(), pos.x, pos.y), 182), ui.style_modal(ui.RAD_MD)), 5), 10))
+	pm.layer = 2
+	ui.open_col(ctx, ui.id("ed_del_menu"), pm)
+	ui.label(ctx, "DELETE ELEMENT", .Mono_Bold, 11, ui.COL_TEXT_GOLD)
+	labels := [4]cstring{"Vertices", "Edges", "Faces", "Dissolve Edges"}
+	keys := [4]cstring{"V", "E", "F", "D"}
 	for i in 0..<4 {
-		draw_ui_button(editor_delete_item_rect(i), labels[i], false)
+		ui.button(ctx, ui.id_idx("ed_del_item", i), ui.Button_Opts{label = labels[i], keycap = keys[i], variant = .Compact, msg_tag = u32(UI_Msg.Ed_Delete_Choice), msg_arg = i32(i)}, ui.m_h(ui.m_fill(ui.mod(), true, false), 26))
 	}
+	ui.close(ctx)
+	ui.close(ctx)
 }
 
 @(private)
-draw_editor_exit_dialog :: proc() {
-	w := f32(rl.GetScreenWidth())
-	h := f32(rl.GetScreenHeight())
-	rl.DrawRectangleRec({0, 0, w, h}, rl.Color{0, 0, 0, 155})
-	panel, save_btn, discard_btn, cancel_btn := editor_exit_dialog_rects()
-	rl.DrawRectangleRec(panel, COL_CHROME_BG)
-	rl.DrawRectangleLinesEx(panel, 2, COL_TEXT_GOLD)
-	rl.DrawText("UNSAVED MESH CHANGES", i32(panel.x + 20), i32(panel.y + 20), 16, COL_TEXT_GOLD)
-	rl.DrawText(cstring_t(fmt.tprintf("Save edits to %s/*.odin before leaving?", app.editor.mesh.id)), i32(panel.x + 20), i32(panel.y + 52), 13, rl.WHITE)
-	draw_ui_button(save_btn, "Save & Exit", false, true)
-	draw_ui_button(discard_btn, "Discard", false)
-	draw_ui_button(cancel_btn, "Cancel", false)
-}
-
-@(private)
-draw_ui_button :: proc(rect: rl.Rectangle, label: cstring, active: bool, primary := false, icon := Icon_Id.None) {
-	hover := rl.CheckCollisionPointRec(input_mouse_pos(), rect)
-	col := primary ? COL_BTN_PRIMARY : COL_BTN_BG
-	if hover { col = COL_BTN_HOVER }
-	if active { col = COL_BTN_ACTIVE }
-	rl.DrawRectangleRec(rect, col)
-	rl.DrawRectangleLinesEx(rect, 1, active ? COL_TEXT_GOLD : COL_CHROME_LINE)
-	fs := i32(rect.height >= 30 ? 13 : 11)
-	if len(label) == 0 && icon != .None {
-		isz := min(rect.width - 8, rect.height - 6)
-		draw_icon_centered(icon, rect.x + rect.width * 0.5, rect.y + rect.height * 0.5, isz)
-		return
-	}
-	if icon != .None {
-		isz := min(f32(16), rect.height - 8)
-		ix := rect.x + 6 + isz * 0.5
-		draw_icon_centered(icon, ix, rect.y + rect.height * 0.5, isz)
-		tw := rl.MeasureText(label, fs)
-		tx := max(i32(rect.x + 8 + isz), i32(rect.x + isz + (rect.width - isz) * 0.5) - tw / 2)
-		rl.DrawText(label, tx, i32(rect.y + (rect.height - f32(fs)) * 0.5), fs, rl.WHITE)
-		return
-	}
-	tw := rl.MeasureText(label, fs)
-	rl.DrawText(label, i32(rect.x + rect.width * 0.5) - tw / 2, i32(rect.y + (rect.height - f32(fs)) * 0.5), fs, rl.WHITE)
+compose_editor_exit_dialog :: proc(ctx: ^ui.Context) {
+	pm := ui.m_pad(ui.m_gap(ui.m_w(ui.mod(), 400), 12), 20)
+	ui.open_scrim_modal(ctx, ui.id("ed_exit_modal"), 2, u32(UI_Msg.Ed_Exit_Cancel), pm)
+	ui.label(ctx, "UNSAVED MESH CHANGES", .Heading, 17, ui.COL_TEXT_GOLD)
+	ui.label(ctx, ui_cstr(fmt.tprintf("Save edits to %s/*.odin before leaving?", app.editor.mesh.id)), .Body, 13.5, ui.COL_TEXT_PRIMARY)
+	ui.gap_box(ctx, 1, 4)
+	ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_fill(ui.mod(), true, false), 8))
+	ui.button(ctx, ui.id("ed_exit_cancel"), ui.Button_Opts{label = "Cancel", variant = .Secondary, center_text = true, msg_tag = u32(UI_Msg.Ed_Exit_Cancel)}, ui.m_h(ui.m_weight(ui.mod(), 1), 34))
+	ui.button(ctx, ui.id("ed_exit_discard"), ui.Button_Opts{label = "Discard", variant = .Danger, center_text = true, msg_tag = u32(UI_Msg.Ed_Exit_Discard)}, ui.m_h(ui.m_weight(ui.mod(), 1), 34))
+	ui.button(ctx, ui.id("ed_exit_save"), ui.Button_Opts{label = "Save & Exit", variant = .Primary, center_text = true, msg_tag = u32(UI_Msg.Ed_Exit_Save)}, ui.m_h(ui.m_weight(ui.mod(), 1.25), 34))
+	ui.close(ctx)
+	ui.close_scrim_modal(ctx)
 }
 
 @(private)

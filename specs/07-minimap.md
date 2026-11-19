@@ -143,7 +143,7 @@ The Odin client renders the minimap into a single 80×50 `rl.Texture2D`:
 - One RGBA pixel per grid cell.
 - Pixel colors derive from obstacle bitset, fog state, goal zone, waypoints,
   player, and visible enemies.
-- The texture is scaled to 200×125 with nearest-neighbor filtering.
+- The texture is scaled to 200×125 with nearest-neighbor filtering inside a rounded Quickshell card (`ui.clipped_texture` / `assets/shaders/ui_clip_tex.fs`), preserving exact interactive bounds `{20, h - 150, 200, 125}` for click/drag probes and mouse navigation.
 - The source rectangle has negative height to flip Y so grid `(0,0)` is at the
   bottom-left of the minimap.
 - Left-click and drag map minimap UV to grid coordinates to scrub the camera continuously.

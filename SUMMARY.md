@@ -48,8 +48,9 @@ Build a fantasy RTS called **DreamCraft** with:
 - Headless JSONL scripts, HTTP control server, hash-verified replays
 - Curve/state validation after every tick
 - Pure-Odin Vector SVG Renderer (`odin/client/svg/`), 37 vector UI/HUD/editor `.svg` icons (`odin/assets/icons/`), and HiDPI raylib texture atlas (`client/icons.odin`)
+- Standalone Native-Odin Declarative Reactive UI Framework (`odin/ui/`, `specs/09-ui-framework.md`, `DESIGN.md`) & Al-Dor Lore (`specs/10-lore.md`): Compose builders & value `Mod`, Flutter single-pass `BoxConstraints` & `Display_List`, Elm `UI_Msg` dispatch (`client/ui_app.odin`), `[512]Widget_Slot` springs/ripples, Arab/European medieval tokens & filigree `ui_sdf.{vs,fs}` + `ui_clip_tex.fs`, exact 2x-supersampled (4x SSAA) sRGB-gamma-corrected font engine (`assets/fonts/`), and `.WINDOW_HIGHDPI`
 - In-game 3D Model Picker & Blender-shortcut Model Editor (`Esc -> Model Editor` or `--editor[=<model>]`), view-conditional `F1` Shortcut Window (`client/shortcuts.odin` + `? F1` UI badges), two-way chunked `.odin` asset persistence (`client/art/{spec,edit,models}/`), `Ctrl+S` live hot-reload, and Playwright-style Cooperative Mesh CLI (`odin/tools/mesh_cli/` -> `bin/dreamcraft-mesh`) for zero-script Human <-> AI art authoring
-- 131 native unit tests (69 game, 13 control, 17 art, 9 art/edit, 5 svg, 6 mesh_cli, 12 client) + web WASM/headless/replay/HTTP/mouse smoke: invariants,
+- 138 native unit tests (69 game, 13 control, 17 art, 9 art/edit, 5 svg, 7 ui, 6 mesh_cli, 12 client) + web WASM/headless/replay/HTTP/mouse smoke: invariants,
   allocations, determinism, HTTP round trip, `.odin` round trip, live OS mouse camera validation, browser API
 - Bevy BRP MCP removed; control API replaces it
 
