@@ -40,14 +40,10 @@ check_prop_mesh :: proc(t: ^testing.T, b: ^Mesh_Builder) -> (min_y, max_y, max_r
 
 @(test)
 tree_variants_tower_within_expected_height_bands :: proc(t: ^testing.T) {
-	builders := [4](proc() -> Mesh_Builder){
-		build_pine_tall,
-		build_pine_mid,
-		build_oak_broad,
-		build_oak_elder,
-	}
-	for fn in builders {
-		b := fn()
+	ids := [4]string{"pine_tall", "pine_mid", "oak_broad", "oak_elder"}
+	for id in ids {
+		b, ok := build_procedural_by_id(id)
+		testing.expect(t, ok)
 		defer mb_delete(&b)
 		min_y, max_y, max_r := check_prop_mesh(t, &b)
 		testing.expect(t, min_y >= -0.05)
@@ -58,14 +54,16 @@ tree_variants_tower_within_expected_height_bands :: proc(t: ^testing.T) {
 
 @(test)
 rock_and_shrub_props_build_cleanly :: proc(t: ^testing.T) {
-	rock := build_boulder_moss()
+	rock, r_ok := build_procedural_by_id("boulder_moss")
+	testing.expect(t, r_ok)
 	defer mb_delete(&rock)
 	r_min_y, r_max_y, r_max_r := check_prop_mesh(t, &rock)
 	testing.expect(t, r_min_y >= -0.06)
 	testing.expect(t, r_max_y >= 0.30 && r_max_y <= 0.48)
 	testing.expect(t, r_max_r <= 0.45)
 
-	shrub := build_shrub_fern()
+	shrub, s_ok := build_procedural_by_id("shrub_fern")
+	testing.expect(t, s_ok)
 	defer mb_delete(&shrub)
 	s_min_y, s_max_y, s_max_r := check_prop_mesh(t, &shrub)
 	testing.expect(t, s_min_y >= -0.05)
@@ -75,20 +73,23 @@ rock_and_shrub_props_build_cleanly :: proc(t: ^testing.T) {
 
 @(test)
 waypoint_banner_and_selection_ring_match_specs :: proc(t: ^testing.T) {
-	wp := build_waypoint_disc()
+	wp, w_ok := build_procedural_by_id("waypoint_disc")
+	testing.expect(t, w_ok)
 	defer mb_delete(&wp)
 	wp_min_y, wp_max_y, wp_max_r := check_prop_mesh(t, &wp)
 	testing.expect(t, wp_min_y >= -0.01 && wp_max_y < 0.15)
 	testing.expect(t, wp_max_r <= 0.52)
 
-	bn := build_goal_banner()
+	bn, b_ok := build_procedural_by_id("goal_banner")
+	testing.expect(t, b_ok)
 	defer mb_delete(&bn)
 	bn_min_y, bn_max_y, bn_max_r := check_prop_mesh(t, &bn)
 	testing.expect(t, bn_min_y >= -0.01)
 	testing.expect(t, bn_max_y >= 2.45 && bn_max_y <= 2.80)
 	testing.expect(t, bn_max_r <= 0.70)
 
-	sr := build_selection_ring()
+	sr, sr_ok := build_procedural_by_id("selection_ring")
+	testing.expect(t, sr_ok)
 	defer mb_delete(&sr)
 	sr_min_y, sr_max_y, sr_max_r := check_prop_mesh(t, &sr)
 	testing.expect(t, sr_min_y >= 0.028 && sr_max_y <= 0.036)

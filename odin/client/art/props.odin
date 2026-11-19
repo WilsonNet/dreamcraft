@@ -5,6 +5,7 @@ import "core:math"
 import rl "vendor:raylib"
 
 build_boulder_moss :: proc() -> Mesh_Builder {
+	if custom, ok := try_build_custom_model("boulder_moss"); ok { return custom }
 	b := mb_init_prop(0.45)
 	mb_ellipsoid(&b, xf_trs({0.00, 0.14, 0.00}, {0.10, 0.45, -0.08}), {0.24, 0.18, 0.21}, 10, 6, .Stone, 0.96)
 	mb_ellipsoid(&b, xf_trs({-0.16, 0.09, 0.12}, {-0.08, 1.10, 0.12}), {0.14, 0.11, 0.13}, 8, 5, .Stone_Dark, 0.88)
@@ -15,6 +16,7 @@ build_boulder_moss :: proc() -> Mesh_Builder {
 }
 
 build_shrub_fern :: proc() -> Mesh_Builder {
+	if custom, ok := try_build_custom_model("shrub_fern"); ok { return custom }
 	b := mb_init_prop(0.45)
 	mb_ellipsoid(&b, xf_at(0, 0.06, 0), {0.085, 0.065, 0.085}, 8, 4, .Leaf_Deep, 0.84)
 	for i in 0..<7 {
@@ -36,6 +38,7 @@ build_shrub_fern :: proc() -> Mesh_Builder {
 }
 
 build_waypoint_disc :: proc() -> Mesh_Builder {
+	if custom, ok := try_build_custom_model("waypoint_disc"); ok { return custom }
 	b := mb_init_prop(0.15)
 	outer := [4]rl.Vector2{{0.48, 0.000}, {0.48, 0.018}, {0.44, 0.034}, {0.00, 0.034}}
 	mb_lathe(&b, rl.Matrix(1), outer[:], 8, .Stone_Dark, true, false, 0.90)
@@ -51,6 +54,7 @@ build_waypoint_disc :: proc() -> Mesh_Builder {
 }
 
 build_goal_banner :: proc() -> Mesh_Builder {
+	if custom, ok := try_build_custom_model("goal_banner"); ok { return custom }
 	b := mb_init_prop(2.8)
 	plinth := [4]rl.Vector2{{0.34, 0.00}, {0.34, 0.12}, {0.30, 0.16}, {0.00, 0.16}}
 	mb_lathe(&b, rl.Matrix(1), plinth[:], 8, .Stone_Dark, true, false, 0.90)
@@ -86,6 +90,7 @@ emit_banner_cloth :: proc(b: ^Mesh_Builder) {
 }
 
 build_selection_ring :: proc() -> Mesh_Builder {
+	if custom, ok := try_build_custom_model("selection_ring"); ok { return custom }
 	b := mb_init_prop(0.10)
 	emit_flat_annulus(&b, 0.45, 0.51, 0.032, 32, .Banner_Gold, 0.35)
 	emit_flat_annulus(&b, 0.385, 0.415, 0.032, 32, .Banner_Gold, 0.35)

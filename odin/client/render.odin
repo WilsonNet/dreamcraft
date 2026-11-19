@@ -5,6 +5,14 @@ import rl "vendor:raylib"
 import g "../game"
 
 draw_frame :: proc() {
+	if app.mode == .Model_Picker {
+		draw_picker_frame()
+		return
+	}
+	if app.mode == .Model_Editor {
+		draw_editor_frame()
+		return
+	}
 	update_fog_texture()
 	set_unit_shader_uniforms(f32(rl.GetTime()))
 	rl.BeginTextureMode(app.pixel)

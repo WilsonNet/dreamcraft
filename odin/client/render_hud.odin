@@ -26,7 +26,8 @@ draw_status_panel :: proc() {
 	rl.DrawRectangleRec(rl.Rectangle{12, 12, 548, 116}, rl.Color{8, 14, 8, 210})
 	rl.DrawRectangleLinesEx(rl.Rectangle{12, 12, 548, 116}, 1, rl.Color{60, 110, 60, 200})
 	buffer: [256]u8
-	rl.DrawText("DREAMCRAFT RTS", 24, 22, 20, rl.Color{235, 215, 120, 255})
+	draw_icon_centered(.Hero_Crest, 35, 31, 24)
+	rl.DrawText("DREAMCRAFT RTS", 52, 22, 20, rl.Color{235, 215, 120, 255})
 	rl.DrawText("Campaign: Tutorial 1 - Through the Woods", 24, 46, 14, rl.Color{180, 200, 180, 255})
 	rl.DrawText("MMB/Space+Drag grip | Edge/WASD pan | F follow | M/A/P/S | Esc", 24, 66, 11, rl.Color{140, 170, 140, 255})
 
@@ -81,13 +82,13 @@ draw_hint :: proc() {
 }
 
 draw_command_buttons :: proc() {
-	draw_button(app.move_button, cstring("[M] Move"), app.command_mode == .Move)
-	draw_button(app.attack_button, cstring("[A] Attack"), app.command_mode == .Attack)
-	draw_button(app.patrol_button, cstring("[P] Patrol"), app.command_mode == .Patrol)
-	draw_button(app.stop_button, cstring("[S] Stop"), false)
+	draw_button(app.move_button, cstring("[M] Move"), app.command_mode == .Move, .Cmd_Move)
+	draw_button(app.attack_button, cstring("[A] Attack"), app.command_mode == .Attack, .Cmd_Attack)
+	draw_button(app.patrol_button, cstring("[P] Patrol"), app.command_mode == .Patrol, .Cmd_Patrol)
+	draw_button(app.stop_button, cstring("[S] Stop"), false, .Cmd_Stop)
 }
 
-draw_button :: proc(rect: rl.Rectangle, label: cstring, active: bool) {
+draw_button :: proc(rect: rl.Rectangle, label: cstring, active: bool, icon := Icon_Id.None) {
 	mouse := rl.GetMousePosition()
 	hover := rl.CheckCollisionPointRec(mouse, rect)
 	color := rl.Color{35, 55, 35, 240}
@@ -100,6 +101,11 @@ draw_button :: proc(rect: rl.Rectangle, label: cstring, active: bool) {
 	rl.DrawRectangleRec(rect, color)
 	rl.DrawRectangleLinesEx(rect, 1, rl.Color{120, 160, 120, 255})
 	width := rl.MeasureText(label, 14)
+	if icon != .None {
+		draw_icon_centered(icon, rect.x + 16, rect.y + rect.height * 0.5, 18)
+		rl.DrawText(label, i32(rect.x + 29), i32(rect.y + 9), 14, rl.WHITE)
+		return
+	}
 	rl.DrawText(label, i32(rect.x + rect.width * 0.5) - width / 2, i32(rect.y + 9), 14, rl.WHITE)
 }
 
@@ -122,20 +128,21 @@ draw_pause_menu :: proc() {
 	width := f32(rl.GetScreenWidth())
 	height := f32(rl.GetScreenHeight())
 	rl.DrawRectangleRec(rl.Rectangle{0, 0, width, height}, rl.Color{0, 0, 0, 165})
-	panel := rl.Rectangle{width * 0.5 - 210, height * 0.5 - 130, 420, 260}
+	panel := rl.Rectangle{width * 0.5 - 220, height * 0.5 - 150, 440, 300}
 	rl.DrawRectangleRec(panel, rl.Color{15, 24, 15, 245})
 	rl.DrawRectangleLinesEx(panel, 2, rl.Color{90, 150, 90, 255})
 	title := cstring("PAUSED")
 	title_width := rl.MeasureText(title, 30)
-	rl.DrawText(title, i32(width * 0.5) - title_width / 2, i32(panel.y + 30), 30, rl.Color{235, 215, 120, 255})
-	subtitle := cstring("Simulation keeps running")
+	rl.DrawText(title, i32(width * 0.5) - title_width / 2, i32(panel.y + 24), 30, rl.Color{235, 215, 120, 255})
+	subtitle := cstring("Choose an action or resume battle")
 	subtitle_width := rl.MeasureText(subtitle, 14)
-	rl.DrawText(subtitle, i32(width * 0.5) - subtitle_width / 2, i32(panel.y + 74), 14, rl.Color{160, 185, 160, 255})
-	draw_menu_button(app.retry_button, cstring("Retry Level"))
-	draw_menu_button(app.resume_button, cstring("Resume"))
+	rl.DrawText(subtitle, i32(width * 0.5) - subtitle_width / 2, i32(panel.y + 64), 14, rl.Color{160, 185, 160, 255})
+	draw_menu_button(app.resume_button, cstring("Resume"), .Game)
+	draw_menu_button(app.editor_button, cstring("Model Editor"), .Models)
+	draw_menu_button(app.retry_button, cstring("Retry Level"), .Reset)
 }
 
-draw_menu_button :: proc(rect: rl.Rectangle, label: cstring) {
+draw_menu_button :: proc(rect: rl.Rectangle, label: cstring, icon := Icon_Id.None) {
 	mouse := rl.GetMousePosition()
 	color := rl.Color{40, 65, 40, 255}
 	if rl.CheckCollisionPointRec(mouse, rect) {
@@ -144,5 +151,10 @@ draw_menu_button :: proc(rect: rl.Rectangle, label: cstring) {
 	rl.DrawRectangleRec(rect, color)
 	rl.DrawRectangleLinesEx(rect, 1, rl.Color{130, 180, 130, 255})
 	width := rl.MeasureText(label, 15)
+	if icon != .None {
+		draw_icon_centered(icon, rect.x + rect.width * 0.5 - f32(width) * 0.5 - 14, rect.y + rect.height * 0.5, 18)
+		rl.DrawText(label, i32(rect.x + rect.width * 0.5) - width / 2 + 10, i32(rect.y + 10), 15, rl.WHITE)
+		return
+	}
 	rl.DrawText(label, i32(rect.x + rect.width * 0.5) - width / 2, i32(rect.y + 10), 15, rl.WHITE)
 }

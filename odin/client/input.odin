@@ -5,6 +5,14 @@ import rl "vendor:raylib"
 import g "../game"
 
 handle_input :: proc() {
+	if app.mode == .Model_Picker {
+		handle_picker_input()
+		return
+	}
+	if app.mode == .Model_Editor {
+		handle_editor_input()
+		return
+	}
 	mouse := input_mouse_pos()
 
 	if input_left_pressed() {
@@ -68,6 +76,18 @@ handle_keyboard :: proc() {
 }
 
 update_cursor :: proc() {
+	if app.mode == .Model_Picker {
+		if !app.cursor_initialized || app.last_cursor != .DEFAULT {
+			rl.SetMouseCursor(.DEFAULT)
+			app.last_cursor = .DEFAULT
+			app.cursor_initialized = true
+		}
+		return
+	}
+	if app.mode == .Model_Editor {
+		editor_update_cursor()
+		return
+	}
 	next := rl.MouseCursor.DEFAULT
 	if app.menu_open {
 		next = .DEFAULT
@@ -106,6 +126,8 @@ handle_left_press :: proc(mouse: rl.Vector2) {
 	if app.menu_open {
 		if rl.CheckCollisionPointRec(mouse, app.retry_button) {
 			retry_level()
+		} else if rl.CheckCollisionPointRec(mouse, app.editor_button) {
+			editor_open_picker()
 		} else if rl.CheckCollisionPointRec(mouse, app.resume_button) {
 			app.menu_open = false
 		}

@@ -2,7 +2,10 @@
 package main
 
 import "core:encoding/json"
+import "core:fmt"
 import rl "vendor:raylib"
+import control "../control"
+import art "./art"
 
 Mouse_Probe :: struct {
 	active:      bool,
@@ -57,6 +60,8 @@ Camera_Snapshot :: struct {
 	window_pos:       [2]f32  `json:"window_pos"`,
 	mouse:            [2]f32  `json:"mouse"`,
 	probe_active:     bool    `json:"probe_active"`,
+	app_mode:         string  `json:"app_mode"`,
+	editor_model:     string  `json:"editor_model"`,
 }
 
 input_mouse_pos :: proc() -> rl.Vector2 {
@@ -205,6 +210,8 @@ capture_camera_snapshot :: proc(_: rawptr) -> ([]byte, bool) {
 		window_pos       = [2]f32{win_pos.x, win_pos.y},
 		mouse            = [2]f32{mouse.x, mouse.y},
 		probe_active     = app.probe.active,
+		app_mode         = app_mode_name(app.mode),
+		editor_model     = app.editor.mesh_loaded ? app.editor.mesh.id : "",
 	}
 	data, err := json.marshal(snap)
 	if err != nil {
@@ -244,11 +251,51 @@ handle_mouse_probe :: proc(_: rawptr, body: string) -> ([]byte, bool) {
 			probe_begin_frame()
 			update_layout()
 			handle_input()
-			update_camera(1.0 / 60.0)
+			if app.mode == .Game || app.mode == .Pause_Menu {
+				update_camera(1.0 / 60.0)
+			}
 			update_cursor()
 			probe_end_frame()
 		}
 		return capture_camera_snapshot(nil)
 	}
 	return nil, false
+}
+
+@(private)
+app_mode_name :: proc(m: App_Mode) -> string {
+	switch m {
+	case .Game:         return "Game"
+	case .Pause_Menu:   return "Pause_Menu"
+	case .Model_Picker: return "Model_Picker"
+	case .Model_Editor: return "Model_Editor"
+	}
+	return "Game"
+}
+
+handle_client_command :: proc(_: rawptr, cmd: control.Command) -> (msg: string, ok: bool, handled: bool) {
+	switch cmd.cmd {
+	case "reload_models":
+		art.clear_all_live_edit_meshes()
+		reload_live_game_models()
+		if app.mode == .Model_Editor && app.editor.mesh_loaded && !app.editor.mesh.dirty {
+			_ = editor_reload_from_odin()
+		}
+		return "Reloaded custom .odin models", true, true
+	case "open_picker":
+		editor_open_picker()
+		return "Opened Model Picker", true, true
+	case "open_editor":
+		id := cmd.model != "" ? cmd.model : "mamluk"
+		loaded := editor_open_model(id, false)
+		return loaded ? fmt.tprintf("Opened Model Editor: %s", id) : fmt.tprintf("Unknown model: %s", id), loaded, true
+	case "close_editor":
+		editor_close_to_game()
+		return "Closed Model Editor", true, true
+	case "pause_menu":
+		editor_close_to_game()
+		app.menu_open = true
+		return "Opened Pause Menu", true, true
+	}
+	return "", false, false
 }

@@ -53,10 +53,14 @@ load_unit_shader :: proc() -> (Unit_Shader, bool) {
 }
 
 set_unit_shader_uniforms :: proc(time: f32) {
+	set_unit_shader_uniforms_at(time, app.camera.position)
+}
+
+set_unit_shader_uniforms_at :: proc(time: f32, cam_pos: rl.Vector3) {
 	if !app.unit_shader.ready {
 		return
 	}
-	camera := app.camera.position
+	camera := cam_pos
 	direction := rl.Vector3Normalize(KEY_LIGHT_DIR)
 	clock := time
 	rl.SetShaderValue(app.unit_shader.shader, app.unit_shader.camera, &camera, .VEC3)

@@ -29,12 +29,16 @@ Measured on this machine (Apple Silicon):
 ```
 odin/
 ├── game/        # pure simulation, imports no rendering libraries
-├── client/      # raylib 3D isometric renderer, input, HUD, minimap, shaders, VFX
-│   └── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props
+├── client/      # raylib 3D isometric renderer, input, HUD, minimap, shaders, VFX, Model Editor
+│   ├── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props, spec/, edit/, models/
+│   └── svg/     # zero-dependency SVG parser + 4x4 SSAA anti-aliased rasterizer (icons.odin)
+├── tools/
+│   └── mesh_cli/# Playwright-style Cooperative Mesh CLI (bin/dreamcraft-mesh)
 ├── control/     # JSON command model + localhost HTTP server
 ├── headless/    # JSONL scripts, file polling, --serve, replay
 ├── web/         # js_wasm32 build, 2:1 canvas renderer, DOM HUD
 ├── assets/
+│   ├── icons/   # 37 vector UI/HUD/editor .svg icons
 │   └── shaders/ # ground.{vs,fs}, unit.{vs,fs}, watercolor.fs
 └── tests/       # shell/JSONL smoke tests
 ```
@@ -337,6 +341,8 @@ Commands:
 | `kill` | `x,y` | test hook: destroy unit |
 | `set_hp` | `x,y,value` | test hook: set HP |
 | `teleport` | `x,y` | test hook: move player |
+| `reload_models` | — | client: clear override cache & reload custom `.odin` models |
+| `open_picker` / `open_editor` / `close_editor` / `pause_menu` | `model?` | client: open Model Picker/Editor, return to game, or toggle Pause Menu |
 
 Every result includes:
 
@@ -359,8 +365,9 @@ Layers:
    commands, movement, combat, patrol, waypoints, goal, validation branches,
    reset, determinism, zero allocation.
 2. **Control tests** (`odin test control`): command execution, snapshots,
-   unit/fog encoding, HTTP parser, HTTP round trip on localhost.
-3. **Headless JSONL** (`tests/smoke.jsonl`): status, move, verify, kill, spawn,
+   unit/fog encoding, HTTP parser, HTTP round trip on localhost (13 tests).
+3. **Art, Edit, SVG, CLI & Client tests** (`odin test client/art`, `client/art/edit`, `client/svg`, `tools/mesh_cli`, `client`): procedural & override catalog geometry (`17`), Edit_Mesh topology & `.odin` round-trip (`9`), pure-Odin SVG parsing & AA rasterization over all 37 `.svg` icons (`5`), Playwright positive/negative CLI checks (`6`), and camera/input projection (`11`).
+4. **Headless JSONL** (`tests/smoke.jsonl`): status, move, verify, kill, spawn,
    attack, reset, invariant checks.
 4. **HTTP smoke** (`tests/control_smoke.sh`): start `--serve`, curl all
    endpoints, run a move command, verify position, verify invariants.

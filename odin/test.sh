@@ -12,6 +12,15 @@ odin test control -vet -strict-style
 echo "== unit tests: art =="
 odin test client/art -vet -strict-style
 
+echo "== unit tests: art/edit =="
+odin test client/art/edit -vet -strict-style
+
+echo "== unit tests: svg =="
+odin test client/svg -vet -strict-style
+
+echo "== unit tests: mesh_cli =="
+odin test tools/mesh_cli -vet -strict-style
+
 echo "== unit tests: client projection =="
 odin test client -vet -strict-style
 
@@ -19,6 +28,7 @@ echo "== build: dev lane =="
 mkdir -p bin
 odin build headless -out:bin/headless-dev -o:speed
 odin build client -out:bin/dreamcraft-dev -o:speed -define:DREAMCRAFT_DEV=true
+odin build tools/mesh_cli -out:bin/dreamcraft-mesh-dev -o:speed
 
 echo "== headless script test =="
 ./bin/headless-dev --script tests/smoke.jsonl >/dev/null

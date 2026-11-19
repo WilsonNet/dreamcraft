@@ -60,8 +60,12 @@ App :: struct {
 	cmd_fx: [MAX_CMD_FX]Cmd_Fx,
 	cmd_fx_next: int,
 	minimap_rect: rl.Rectangle,
+	icons: Icon_Atlas,
+	mode: App_Mode,
+	editor_button: rl.Rectangle,
 	retry_button: rl.Rectangle,
 	resume_button: rl.Rectangle,
+	editor: Model_Editor_State,
 	last_fps: int,
 	camera_follow: bool,
 	edge_armed: bool,
@@ -100,6 +104,7 @@ main :: proc() {
 		if app.serving {
 			app.server.camera_state = capture_camera_snapshot
 			app.server.mouse_input = handle_mouse_probe
+			app.server.client_command = handle_client_command
 		}
 	}
 	defer if app.serving {
@@ -113,6 +118,13 @@ main :: proc() {
 		return
 	}
 	init_world_assets()
+	if edit_id, ok := find_editor_arg(os.args); ok {
+		if edit_id == "" {
+			editor_open_picker()
+		} else {
+			_ = editor_open_model(edit_id, false)
+		}
+	}
 	for !rl.WindowShouldClose() {
 		step_client_frame()
 	}
@@ -144,13 +156,17 @@ step_client_frame :: proc() {
 	probe_begin_frame()
 	update_layout()
 	handle_input()
-	update_simulation(dt)
-	update_camera(dt)
+	if app.mode == .Game || app.mode == .Pause_Menu {
+		update_simulation(dt)
+		update_camera(dt)
+	}
 	update_cursor()
 	probe_end_frame()
-	update_warrior_visuals(f32(dt))
-	update_command_fx(f32(dt))
-	update_minimap_pixels()
+	if app.mode == .Game || app.mode == .Pause_Menu {
+		update_warrior_visuals(f32(dt))
+		update_command_fx(f32(dt))
+		update_minimap_pixels()
+	}
 	draw_frame()
 	if app.serving {
 		control.server_poll(&app.server)
@@ -160,6 +176,7 @@ step_client_frame :: proc() {
 
 @(private)
 init_world_assets :: proc() {
+	init_icons()
 	init_ground()
 	init_shadow_assets()
 	init_env_assets()
@@ -178,6 +195,8 @@ init_world_assets :: proc() {
 
 @(private)
 unload_world_assets :: proc() {
+	editor_cleanup()
+	unload_icons()
 	unload_warrior_assets()
 	unload_slash_vfx()
 	unload_env_assets()
@@ -200,12 +219,13 @@ update_layout :: proc() {
 	height := f32(rl.GetScreenHeight())
 	ensure_pixel_target(int(width), int(height))
 	app.minimap_rect = rl.Rectangle{20, height - 150, 200, 125}
-	app.move_button = rl.Rectangle{width - 208, height - 100, 92, 34}
-	app.attack_button = rl.Rectangle{width - 108, height - 100, 92, 34}
-	app.patrol_button = rl.Rectangle{width - 208, height - 58, 92, 34}
-	app.stop_button = rl.Rectangle{width - 108, height - 58, 92, 34}
-	app.retry_button = rl.Rectangle{width * 0.5 - 150, height * 0.5 + 20, 140, 36}
-	app.resume_button = rl.Rectangle{width * 0.5 + 10, height * 0.5 + 20, 140, 36}
+	app.move_button = rl.Rectangle{width - 236, height - 100, 108, 34}
+	app.attack_button = rl.Rectangle{width - 120, height - 100, 108, 34}
+	app.patrol_button = rl.Rectangle{width - 236, height - 58, 108, 34}
+	app.stop_button = rl.Rectangle{width - 120, height - 58, 108, 34}
+	app.resume_button = rl.Rectangle{width * 0.5 - 130, height * 0.5 - 46, 260, 38}
+	app.editor_button = rl.Rectangle{width * 0.5 - 130, height * 0.5 + 4, 260, 38}
+	app.retry_button = rl.Rectangle{width * 0.5 - 130, height * 0.5 + 54, 260, 38}
 }
 
 update_simulation :: proc(dt: f64) {
@@ -302,6 +322,18 @@ parse_decimal :: proc(text: string) -> f64 {
 		}
 	}
 	return whole + fraction
+}
+
+find_editor_arg :: proc(args: []string) -> (id: string, ok: bool) {
+	for arg in args {
+		if arg == "--editor" || arg == "--model-editor" {
+			return "", true
+		}
+		if strings.has_prefix(arg, "--editor=") {
+			return arg[len("--editor="):], true
+		}
+	}
+	return "", false
 }
 
 find_control_port :: proc(args: []string) -> (port: int, ok: bool) {

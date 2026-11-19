@@ -15,6 +15,7 @@ import g "../game"
 Screenshot_Proc :: proc(user: rawptr) -> (data: []byte, ok: bool)
 Camera_State_Proc :: proc(user: rawptr) -> (data: []byte, ok: bool)
 Mouse_Input_Proc :: proc(user: rawptr, body: string) -> (data: []byte, ok: bool)
+Client_Command_Proc :: proc(user: rawptr, command: Command) -> (msg: string, ok: bool, handled: bool)
 
 Server :: struct {
 	listener: net.TCP_Socket,
@@ -25,6 +26,7 @@ Server :: struct {
 	screenshot_user: rawptr,
 	camera_state: Camera_State_Proc,
 	mouse_input: Mouse_Input_Proc,
+	client_command: Client_Command_Proc,
 }
 
 server_start :: proc(
@@ -298,7 +300,15 @@ handle_command :: proc(server: ^Server, client: net.TCP_Socket, body: string, ke
 		send_response(client, 400, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"invalid json"}`))
 		return
 	}
-	result := execute(server.game, command)
+	result: Result
+	if server.client_command != nil {
+		if msg, ok, handled := server.client_command(server.screenshot_user, command); handled {
+			result = make_result(server.game, ok, msg)
+			send_json(client, keep_alive, json.marshal(result))
+			return
+		}
+	}
+	result = execute(server.game, command)
 	data, err := json.marshal(result)
 	if err != nil {
 		send_response(client, 500, keep_alive, "application/json", transmute([]byte)string(`{"ok":false,"msg":"marshal failed"}`))

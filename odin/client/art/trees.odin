@@ -30,6 +30,7 @@ Pine_Tier :: struct {
 }
 
 build_pine_tall :: proc() -> Mesh_Builder {
+	if custom, ok := try_build_custom_model("pine_tall"); ok { return custom }
 	b := mb_init_prop(3.2)
 	trunk := [5]Loft_Ring{
 		{{0.00, 0.00, 0.00}, 0.21, 0.21},
@@ -54,6 +55,7 @@ build_pine_tall :: proc() -> Mesh_Builder {
 }
 
 build_pine_mid :: proc() -> Mesh_Builder {
+	if custom, ok := try_build_custom_model("pine_mid"); ok { return custom }
 	b := mb_init_prop(3.2)
 	trunk := [5]Loft_Ring{
 		{{0.00, 0.00, 0.00}, 0.20, 0.20},
@@ -77,6 +79,7 @@ build_pine_mid :: proc() -> Mesh_Builder {
 }
 
 build_oak_broad :: proc() -> Mesh_Builder {
+	if custom, ok := try_build_custom_model("oak_broad"); ok { return custom }
 	b := mb_init_prop(3.2)
 	trunk := [4]Loft_Ring{
 		{{0.00, 0.00, 0.00}, 0.23, 0.23},
@@ -108,6 +111,7 @@ build_oak_broad :: proc() -> Mesh_Builder {
 }
 
 build_oak_elder :: proc() -> Mesh_Builder {
+	if custom, ok := try_build_custom_model("oak_elder"); ok { return custom }
 	b := mb_init_prop(3.2)
 	trunk := [4]Loft_Ring{
 		{{0.00, 0.00, 0.00}, 0.24, 0.24},

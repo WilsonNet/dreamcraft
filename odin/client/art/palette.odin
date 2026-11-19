@@ -6,41 +6,9 @@
 package art
 
 import rl "vendor:raylib"
+import spec "./spec"
 
-Mat_Kind :: enum u8 {
-	Skin,
-	Steel,
-	Steel_Dark,
-	Iron,
-	Brass,
-	Brass_Dark,
-	Mail,
-	Leather,
-	Leather_Dark,
-	Blade,
-	Cloth,
-	Cloth_Dark,
-	Cream,
-	Cream_Dark,
-	Jet,
-	Glow,
-	Hair,
-	Eye,
-	Iris,
-	Bark,
-	Bark_Dark,
-	Leaf_Deep,
-	Leaf_Mid,
-	Leaf_Sun,
-	Leaf_Pine,
-	Leaf_Pine_Sun,
-	Moss,
-	Stone,
-	Stone_Dark,
-	Banner_Cloth,
-	Banner_Gold,
-	COUNT,
-}
+Mat_Kind :: spec.Mat_Kind
 
 Mat_Def :: struct {
 	albedo: rl.Color,

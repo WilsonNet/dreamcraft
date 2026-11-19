@@ -197,6 +197,8 @@ node test_wasm.mjs
   `os.read_entire_file(path, context.allocator)`.
 - `net.listen_tcp` returns `Network_Error` (union) → compare to `nil`.
   Recv/accept/send errors are enums → compare to `.None`.
+- `os.make_directory_all` returns `.Exist` when the target directory already exists; check `err != nil && err != .Exist` when overwriting existing output folders.
+- `or_return` inside procedures with >1 return value requires named return values.
 
 ## Project Rules
 

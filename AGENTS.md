@@ -35,8 +35,8 @@ cd odin
 
 ./run.sh                    # build + run native client
 ./run.sh --control          # client + HTTP control API on :7777
-./build.sh                  # stable build: bin/dreamcraft + bin/headless + web
-./build.sh --dev            # dev build: bin/dreamcraft-dev + bin/headless-dev
+./build.sh                  # stable build: bin/dreamcraft + bin/headless + bin/dreamcraft-mesh + web
+./build.sh --dev            # dev build: bin/dreamcraft-dev + bin/headless-dev + bin/dreamcraft-mesh-dev
 ./test.sh                   # tests + dev build only (stable lane untouched)
 ./restart-build.sh          # restart the stable herdr game pane on :7777
 cd web && ./build.sh && ./serve.sh 8080   # browser build
@@ -44,9 +44,13 @@ cd web && ./build.sh && ./serve.sh 8080   # browser build
 odin test game -vet -strict-style
 odin test control -vet -strict-style
 odin test client/art -vet -strict-style
+odin test client/art/edit -vet -strict-style
+odin test client/svg -vet -strict-style
+odin test tools/mesh_cli -vet -strict-style
 odin test client -vet -strict-style
 odin build client -out:bin/dreamcraft -o:speed
 odin build headless -out:bin/headless -o:speed
+odin build tools/mesh_cli -out:bin/dreamcraft-mesh -o:speed
 ```
 
 Model reference renders (no map hunting):
@@ -111,8 +115,11 @@ odin/
 │   ├── validation.odin  # runtime invariant checker
 │   ├── hash.odin        # deterministic state hash
 │   └── *_test.odin      # unit tests
-├── client/      # raylib 3D renderer, input, HUD, minimap, VFX, shaders
-│   └── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props
+├── client/      # raylib 3D renderer, input, HUD, minimap, VFX, shaders, in-game Model Editor
+│   ├── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props + spec/, edit/, models/
+│   └── svg/     # zero-dependency SVG parser + 4x4 SSAA rasterizer (icons.odin, assets/icons/*.svg)
+├── tools/
+│   └── mesh_cli/# Playwright-style Cooperative Mesh CLI (bin/dreamcraft-mesh)
 ├── control/     # JSON commands + localhost HTTP server
 ├── headless/    # script runner, polling, --serve, record/replay
 ├── web/         # js_wasm32 2:1 canvas client + DOM HUD
@@ -208,6 +215,8 @@ responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 - Procedural Mamluk unit (`client/art/`): 5.36-head heroic rig (26 joints),
   kinetic-chain idle/walk/attack clips, turn banking & stop-settle cushion
 - Painterly shading (`unit.{vs,fs}`, `ground.{vs,fs}`, `watercolor.fs`), no GLB assets
+- In-game 3D Model Editor (`Esc -> Model Editor` or `--editor[=<model>]`) + two-way git-friendly chunked `.odin` assets (`client/art/{spec,edit,models}/`, <= 420 lines/file) + live `Ctrl+S` game hot-reload
+- Playwright-style Cooperative Mesh CLI (`bin/dreamcraft-mesh` / `bin/dreamcraft-mesh-dev`): zero saved scripts, positive/negative checks (`!`, `--expect-fail`), Human <-> AI asset co-authoring (`--notify=<port>`)
 - Minimap stays top-down; browser build keeps the 2:1 canvas view
 
 ## Skills Map

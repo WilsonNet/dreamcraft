@@ -56,10 +56,17 @@ capacity arrays.
 - [x] HTTP control API replacing Bevy BRP MCP
   - [x] `GET /state`, `/units`, `/fog`, `/screenshot`, `/camera`, `/health`
   - [x] `POST /command`: move, patrol, patrol_to, attack, attack_move, stop, run, reset, verify,
-        select, spawn, kill, set_hp, teleport
+        select, spawn, kill, set_hp, teleport, reload_models, open_picker, open_editor, close_editor, pause_menu
   - [x] `POST /mouse` + `odin/tests/camera_mouse_check.py` live mouse & OS camera validation tool
   - [x] Every response carries `valid` + `validation`
-- [x] 106 unit/integration tests (69 game, 13 control, 13 art, 11 client)
+- [x] In-game 3D Model Picker & Model Editor (`Esc -> Model Editor` or `--editor[=<model>]`):
+  - [x] Edit all 12 catalog models (`mamluk`, `mamluk_hero`, `mamluk_enemy`, 4 trees, 5 props) with `base_fallback` fork-on-save
+  - [x] Blender Edit Mode workflow (`1/2/3`, `G/R/S` + XYZ gizmo + numeric input, `E` Extrude, `I` Inset, `Ctrl+R` Loop Cut, `K` Knife, `F` Fill, `M`/`Alt+M` Merge, `X` Delete/Dissolve, `B` Box, `L` Linked, `Alt+Click` Loop, `Alt+Z` X-Ray, X-Mirror, `Ctrl+Z/Shift+Z`)
+  - [x] `Mat_Kind` swatch painter, 26-bone `Bone_Id` rigging, Rest/Idle/Walk/Attack pose & Hero/Unit/Enemy palette preview, Watercolour toggle
+  - [x] Two-way Git-friendly `.odin` chunk persistence (`client/art/models/<id>/{v_NNN,f_NNN,asset}.odin` + `manifest.odin`) & `Ctrl+S` live hot-reload back into game
+- [x] Playwright-style Cooperative Mesh CLI (`odin/tools/mesh_cli/` -> `bin/dreamcraft-mesh`): `list`, `extract`, `info`, positive/negative `assert` (`!`, `--expect-fail`), `do`/`edit` inline ops & `--notify=<port>` hot-reload without saved script files
+- [x] Pure-Odin Vector SVG Renderer & Icon Atlas (`client/svg/`, `assets/icons/*.svg`, `client/icons.odin`): `<path>`/`<rect>`/`<circle>`/`<ellipse>`/`<line>`/`<poly*>` + `<g>`/transform + 4x4 SSAA fills & smooth strokes for HUD command card, Pause Menu, hero crests, & Model Editor toolbars
+- [x] 130 unit/integration tests (69 game, 13 control, 17 art, 9 art/edit, 5 svg, 6 mesh_cli, 11 client)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator
@@ -209,12 +216,17 @@ odin/
 │   ├── sim.odin        # fixed system order
 │   ├── validation.odin # runtime invariants
 │   └── hash.odin       # deterministic state hash
-├── client/          # raylib native rendering, input, HUD, minimap, VFX
-│   └── art/         # procedural Mamluk model, 26-bone rig, anims, trees, props
+├── client/          # raylib native rendering, input, HUD, minimap, VFX, in-game Model Editor
+│   ├── art/         # procedural Mamluk/trees/props + spec/, edit/, models/ two-way .odin pipeline
+│   └── svg/         # zero-dependency SVG parser + 4x4 SSAA anti-aliased rasterizer (icons.odin)
+├── tools/
+│   └── mesh_cli/    # Playwright-style Cooperative Mesh CLI (bin/dreamcraft-mesh)
 ├── control/         # JSON command API + localhost HTTP server
 ├── headless/        # JSONL scripts, file polling, --serve
 ├── web/             # js_wasm32 2:1 canvas build
-├── assets/shaders/  # ground.{vs,fs}, unit.{vs,fs}, watercolor.fs
+├── assets/
+│   ├── icons/       # 37 vector UI/HUD/editor .svg icons
+│   └── shaders/     # ground.{vs,fs}, unit.{vs,fs}, watercolor.fs
 └── tests/           # smoke scripts
 ```
 

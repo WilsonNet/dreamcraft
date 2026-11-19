@@ -7,35 +7,9 @@
 package art
 
 import rl "vendor:raylib"
+import spec "./spec"
 
-Bone_Id :: enum u8 {
-	Root,
-	Pelvis,
-	Spine,
-	Chest,
-	Neck,
-	Head,
-	Plume,
-	Shoulder_L,
-	Arm_L,
-	Forearm_L,
-	Hand_L,
-	Shoulder_R,
-	Arm_R,
-	Forearm_R,
-	Hand_R,
-	Thigh_L,
-	Shin_L,
-	Foot_L,
-	Thigh_R,
-	Shin_R,
-	Foot_R,
-	Cape_1,
-	Cape_2,
-	Cape_3,
-	Sash,
-	COUNT,
-}
+Bone_Id :: spec.Bone_Id
 
 BONE_COUNT :: int(Bone_Id.COUNT)
 

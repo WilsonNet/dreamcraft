@@ -155,16 +155,21 @@ Endpoints:
 | GET | `/units` | unit list with name, hero, team, position, HP, damage, armor, state, path, target, discovered, aggro_ticks |
 | GET | `/fog` | 80×50 ASCII map |
 | GET | `/screenshot` | live PNG (client only) |
-| GET | `/camera` | live camera, zoom, focus, cursor, edge-pan & grip state (client only) |
-| POST | `/command` | execute a JSON command |
+| GET | `/camera` | live camera, zoom, focus, cursor, `app_mode`, `editor_model`, edge-pan & grip state (client only) |
+| POST | `/command` | execute a JSON command (plus client `reload_models`, `open_picker`, `open_editor`, `close_editor`, `pause_menu`) |
 | POST | `/mouse` | inject deterministic client mouse/wheel/focus probe frames (client only) |
 
 Mouse & camera validation tool (`odin/tests/camera_mouse_check.py`):
 - `--mode probe`: tests edge arming, exact `0`/`width`/`height` borders, pitch-compensated vertical/horizontal speed, MMB 1:1 grip, `Space`+Left grip, wheel zoom, minimap click/drag, unfocus disarm, and PNG screenshots via `POST /mouse` + `GET /camera`.
 - `--mode os`: drives real macOS CoreGraphics mouse events (`mouseMoved`, `leftMouseDown/Up`, `otherMouseDown/Dragged/Up`, scroll wheel) over a live `dreamcraft-dev` window and verifies camera movement via `GET /camera`.
 
-Commands: `status`, `goto`, `patrol`, `attack`, `stop`, `run`, `reset`,
-`verify`, `select`, `select_all`, `spawn`, `kill`, `set_hp`, `teleport`.
+Commands: `status`, `goto`, `patrol`, `patrol_to`, `attack`, `attack_move`, `stop`, `run`, `reset`,
+`verify`, `select`, `select_all`, `spawn`, `kill`, `set_hp`, `teleport`, and client-only
+`reload_models`, `open_picker`, `open_editor`, `close_editor`, `pause_menu` (`model` specifies asset ID).
+
+Playwright-style Cooperative Mesh CLI (`odin/tools/mesh_cli/` -> `odin/bin/dreamcraft-mesh` / `odin/bin/dreamcraft-mesh-dev`):
+- Zero saved scripts: inline CLI args or stdin (`-`) operate on any of the 12 catalog models in chunked `.odin` format (`client/art/models/<id>/`), with `--root=`, `--json`, `--dry-run`, `--expect-fail`, and `--notify=<port>` (`POST /command {"cmd":"reload_models"}`).
+- Subcommands: `list`, `extract <model>`, `info <model> [--bones|--mats|--bounds|--parts]`, `assert <model> <checks...>` (`!` negation, `--expect-fail`), `do|edit <model> <ops...>` (atomic ops + inline `expect:`).
 
 Every response includes `valid` and `validation`, plus `game_over` when the
 player has died. Agents can detect invariant violations without reading logs.

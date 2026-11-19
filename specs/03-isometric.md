@@ -113,6 +113,14 @@ renderer. The native client is the full 3D target.
 - `odin test client/art`: Mamluk mesh counts/bounds/normals/grounding (`min_y` at `Y=0`,
   heroic height), Richard Williams walk weight arc (`down < contact < pass < up`) and
   32-phase foot grounding, 16-phase idle grounding, joint child isolation, attack windup/return,
-  face clearance, and tree/prop mesh validity (12 tests).
+  face clearance, tree/prop mesh validity via `build_procedural_by_id`, and catalog override round-trips (17 tests).
+- `odin test client/art/edit`: Edit_Mesh topology rebuild, selection conversion, edge loops, Grab/Rotate/Scale + X-Mirror, Extrude/Inset/Loop Cut/Knife/Fill/Merge/Delete/Dissolve, Undo/Redo, and chunked `.odin` writer/parser round-trip (9 tests).
 - `odin test client`: deterministic cell hashes, `angle_toward` (`0° +Z`, `90° +X`),
-  shortest-arc `turn_toward`, isometric `camera_pan_axes`, isometric pan speed equalization, 1:1 ground grip delta, edge-scroll border/focus behavior, macOS `cursor_inside` recovery, and `command_fx` ring updates (10 tests).
+  shortest-arc `turn_toward`, isometric `camera_pan_axes`, isometric pan speed equalization, 1:1 ground grip delta, edge-scroll border/focus behavior, macOS `cursor_inside` recovery, and `command_fx` ring updates (11 tests).
+
+## In-Game Model Editor & Two-Way Odin Assets
+
+- Entered via `Esc -> Pause Menu -> Model Editor`, `--editor[=<model>]`, or `POST /command` (`open_picker` / `open_editor`).
+- **Catalog (`client/art/catalog.odin`, `catalog_bridge.odin`)**: all 12 assets (`mamluk`, `mamluk_hero`, `mamluk_enemy`, 4 trees, 5 props) are editable; `mamluk_hero` and `mamluk_enemy` fall back to `mamluk` until forked.
+- **Two-Way Persistence (`client/art/edit/odin_{writer,parser}.odin`, `client/art/models/`)**: 1-item-per-line chunked declarative `.odin` packages (`v_NNN.odin`, `f_NNN.odin`, `asset.odin`, <= 300 items/chunk, <= 420 lines/file) orchestrated by `models/manifest.odin`.
+- **Stage & Viewport (`editor_{state,render,camera,gizmo,reload,picker,ui,input,modal}.odin`)**: 3D studio stage with 1×1 game tile footprint, RGB XYZ gizmo, front-facing vertex culling, `Mat_Kind` swatch painter, 26-bone `Bone_Id` rigging, Rest/Idle/Walk/Attack pose preview, Hero/Unit/Enemy palette switcher, toggleable Watercolour post-process, and `Ctrl+S` save + live hot-reload back into the running game.

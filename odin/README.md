@@ -58,13 +58,16 @@ Runs (against dev binaries; the stable build is not touched):
 
 1. `odin test game` — simulation unit tests
 2. `odin test control` — command/HTTP tests
-3. `odin test client/art` — Mamluk mesh, gait weight-wave, & tree/prop geometry tests
-4. `odin test client` — isometric camera, mouse/cursor recovery, command FX, facing/turn & hash tests
-5. headless JSONL smoke script
-6. replay hash verification
-7. web wasm smoke test (Node)
-8. HTTP control smoke test
-9. `python3 tests/camera_mouse_check.py --launch --mode both --port 7778` — live probe + real macOS OS mouse/camera validation
+3. `odin test client/art` — Mamluk mesh, gait weight-wave, catalog override & tree/prop geometry tests
+4. `odin test client/art/edit` — Edit_Mesh topology, Blender operators & chunked `.odin` round-trip tests
+5. `odin test client/svg` — pure-Odin SVG parser & 4x4 SSAA rasterizer tests across all 37 `assets/icons/*.svg` files
+6. `odin test tools/mesh_cli` — Playwright-style positive/negative CLI & cooperative workflow tests
+7. `odin test client` — isometric camera, mouse/cursor recovery, command FX, facing/turn & hash tests
+8. headless JSONL smoke script
+9. replay hash verification
+10. web wasm smoke test (Node)
+11. HTTP control smoke test
+12. `python3 tests/camera_mouse_check.py --launch --mode both --port 7778` — live probe + real macOS OS mouse/camera validation
 
 Individual:
 

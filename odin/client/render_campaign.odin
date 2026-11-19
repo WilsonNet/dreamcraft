@@ -114,6 +114,8 @@ draw_announcement_banner :: proc(aggro_ticks: u16, grace_active: bool) {
 	}
 	rl.DrawRectangleRec(rl.Rectangle{f32(bx), f32(by), f32(banner_w), f32(banner_h)}, rl.Color{14, 14, 18, 224})
 	rl.DrawRectangleLinesEx(rl.Rectangle{f32(bx), f32(by), f32(banner_w), f32(banner_h)}, 2, border)
+	draw_icon_centered(.Enemy_Alert, f32(bx + 26), f32(by + 36), 24)
+	draw_icon_centered(.Enemy_Alert, f32(bx + banner_w - 26), f32(by + 36), 24)
 	draw_announcement_copy(bx + banner_w / 2, bx + 20, by, banner_w - 40, aggro_ticks, grace_active)
 }
 

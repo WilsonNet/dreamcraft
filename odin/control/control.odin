@@ -16,6 +16,7 @@ Command :: struct {
 	value: int `json:"value"`,
 	ticks: int `json:"ticks"`,
 	team: string `json:"team"`,
+	model: string `json:"model"`,
 	verify: Verify `json:"verify"`,
 }
 

@@ -11,7 +11,8 @@ case "$MODE" in
   --dev|dev)
     odin build client -out:bin/dreamcraft-dev -o:speed -vet -strict-style -define:DREAMCRAFT_DEV=true
     odin build headless -out:bin/headless-dev -o:speed -vet -strict-style
-    echo "built bin/dreamcraft-dev and bin/headless-dev"
+    odin build tools/mesh_cli -out:bin/dreamcraft-mesh-dev -o:speed -vet -strict-style
+    echo "built bin/dreamcraft-dev, bin/headless-dev, and bin/dreamcraft-mesh-dev"
     exit 0
     ;;
   --stable|stable) ;;
@@ -23,7 +24,8 @@ esac
 
 odin build client -out:bin/dreamcraft -o:speed -vet -strict-style
 odin build headless -out:bin/headless -o:speed -vet -strict-style
-echo "built bin/dreamcraft and bin/headless"
+odin build tools/mesh_cli -out:bin/dreamcraft-mesh -o:speed -vet -strict-style
+echo "built bin/dreamcraft, bin/headless, and bin/dreamcraft-mesh"
 
 if ! command -v wasm-ld >/dev/null 2>&1; then
   for dir in /opt/homebrew/opt/lld@22/bin /opt/homebrew/opt/lld/bin /usr/lib/llvm-22/bin /usr/lib/llvm-21/bin /usr/lib/llvm-20/bin /usr/lib/llvm22/bin /usr/lib/llvm21/bin /usr/lib/llvm20/bin /usr/lib/llvm/bin; do

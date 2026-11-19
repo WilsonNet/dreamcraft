@@ -7,6 +7,10 @@ import "core:math"
 import rl "vendor:raylib"
 
 build_mamluk :: proc(enemy: bool, hero: bool = false) -> Mesh_Builder {
+	id := hero ? "mamluk_hero" : (enemy ? "mamluk_enemy" : "mamluk")
+	if custom, ok := try_build_custom_model(id, enemy, hero); ok {
+		return custom
+	}
 	b := mb_init(palette_for_unit(enemy, hero))
 	mamluk_legs(&b)
 	mamluk_skirt(&b)

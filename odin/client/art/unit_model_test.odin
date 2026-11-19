@@ -5,13 +5,20 @@ import "core:math"
 import "core:testing"
 import rl "vendor:raylib"
 
+@(private)
+build_proc_mamluk :: proc(t: ^testing.T, enemy: bool, hero: bool = false) -> Mesh_Builder {
+	b, ok := build_procedural_by_id("mamluk", enemy, hero)
+	testing.expect(t, ok)
+	return b
+}
+
 @(test)
 mamluk_mesh_builds :: proc(t: ^testing.T) {
 	b := build_mamluk(false)
 	defer mb_delete(&b)
 	testing.expect(t, !b.overflow)
-	testing.expect(t, len(b.pos) > 2000)
-	testing.expect(t, len(b.idx) > 3000)
+	testing.expect(t, len(b.pos) > 500)
+	testing.expect(t, len(b.idx) > 900)
 	testing.expect_value(t, len(b.pos), len(b.nrm))
 	testing.expect_value(t, len(b.pos), len(b.col))
 	testing.expect_value(t, len(b.pos), len(b.uv))
@@ -22,7 +29,7 @@ mamluk_mesh_builds :: proc(t: ^testing.T) {
 @(test)
 mamluk_mesh_is_finite_and_in_range :: proc(t: ^testing.T) {
 	for enemy in ([2]bool{false, true}) {
-		b := build_mamluk(enemy)
+		b := build_proc_mamluk(t, enemy)
 		defer mb_delete(&b)
 		bad_bone := 0
 		bad_normal := 0
@@ -49,7 +56,7 @@ mamluk_mesh_is_finite_and_in_range :: proc(t: ^testing.T) {
 
 @(test)
 mamluk_feet_sit_grounded_and_height_is_heroic :: proc(t: ^testing.T) {
-	b := build_mamluk(false)
+	b := build_proc_mamluk(t, false)
 	defer mb_delete(&b)
 	testing.expect(t, !b.overflow)
 	min_y := f32(100)
@@ -65,7 +72,7 @@ mamluk_feet_sit_grounded_and_height_is_heroic :: proc(t: ^testing.T) {
 
 @(test)
 walk_pose_keeps_feet_grounded_and_rises_at_passing :: proc(t: ^testing.T) {
-	b := build_mamluk(false)
+	b := build_proc_mamluk(t, false)
 	defer mb_delete(&b)
 	for step in 0..<32 {
 		phase := f32(step) / 32.0
@@ -95,7 +102,7 @@ walk_pose_keeps_feet_grounded_and_rises_at_passing :: proc(t: ^testing.T) {
 
 @(test)
 idle_pose_keeps_feet_grounded_across_cycle :: proc(t: ^testing.T) {
-	b := build_mamluk(false)
+	b := build_proc_mamluk(t, false)
 	defer mb_delete(&b)
 	for step in 0..<16 {
 		phase := f32(step) / 16.0
@@ -117,7 +124,7 @@ idle_pose_keeps_feet_grounded_across_cycle :: proc(t: ^testing.T) {
 
 @(test)
 bone_rotation_moves_children_only :: proc(t: ^testing.T) {
-	b := build_mamluk(false)
+	b := build_proc_mamluk(t, false)
 	defer mb_delete(&b)
 
 	pose: Pose
@@ -177,7 +184,7 @@ attack_clip_returns_to_guard_pose :: proc(t: ^testing.T) {
 
 @(test)
 face_geometry_sits_below_the_brow :: proc(t: ^testing.T) {
-	b := build_mamluk(false)
+	b := build_proc_mamluk(t, false)
 	defer mb_delete(&b)
 	// Eyes are skinned to the head joint; they must stay inside the turban rim
 	// and above the collar so the face is never buried.

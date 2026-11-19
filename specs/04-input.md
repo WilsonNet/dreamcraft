@@ -120,5 +120,23 @@
   add selection, Esc cancel mode, F select all, `M`/`A`/`P`/`S` hotkeys.
   Buttons: Move, Attack, Patrol (single-click from current position), Stop,
   Select All, Reset.
+- **Hover / Focus**: Active game camera/unit input pauses cleanly while in `Model_Picker` or `Model_Editor`.
+
 - Commands are queued as fixed-size `Command` values; input never mutates
   simulation state directly.
+
+## Model Editor (Blender Edit Mode Shortcuts)
+
+Entered via `Esc -> Model Editor` (or `--editor[=<model>]`):
+
+| Input | Action |
+|-------|--------|
+| `1` / `2` / `3` | Vertex / Edge / Face select mode |
+| `LMB` / `Shift+LMB` / Drag / `B` | Pick element / additive toggle / Marquee Box select |
+| `Alt+Click` (Edge mode) / `L` / `A` / `Alt+A` / `Shift+I` | Edge Loop / Linked verts / All-None / Invert selection |
+| `G` / `R` / `S` (+ `X`/`Y`/`Z`, `Shift+X/Y/Z`, numeric input, `Ctrl` snap) | Grab / Rotate / Scale selection or drag 3D XYZ Gizmo |
+| `E` / `I` / `Ctrl+R` (+ Wheel) / `K` (+ `Enter`/`Space`) | Extrude / Inset (22%) / Loop Cut (1..6 cuts) / Knife |
+| `F` / `M` (`Alt+M`) / `X` (`Del`) -> `V/E/F/D` | Fill quad/tri / Merge center / Delete or Dissolve popup |
+| `Alt+Z` / `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+S` | X-Ray toggle / Undo / Redo / Save `.odin` & hot-reload game |
+| `MMB` / `Alt+LMB` / `RMB` drag, `Shift+MMB`, Wheel | Orbit camera / Pan / Zoom |
+| `Numpad 1/3/7`, `Numpad 5` (`O`), `.` (`Numpad .`), `Esc` | Front/Right/Top view, Ortho/Persp, Frame selection, Back/Confirm Exit |
