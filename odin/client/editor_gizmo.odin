@@ -4,7 +4,6 @@ package main
 import rl "vendor:raylib"
 import rlgl "vendor:raylib/rlgl"
 import edit "./art/edit"
-import ui "../ui"
 
 @(private)
 GIZMO_AXES := [3]rl.Vector3{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
@@ -219,7 +218,7 @@ editor_draw_overlays_2d :: proc() {
 	ed := &app.editor
 	if !ed.mesh_loaded { return }
 	vp := editor_viewport_rect()
-	ui.begin_hi_dpi_scissor(vp)
+	rl.BeginScissorMode(i32(vp.x), i32(vp.y), i32(vp.width), i32(vp.height))
 	defer rl.EndScissorMode()
 
 	if ed.mesh.mode == .Vertex {
@@ -253,6 +252,7 @@ editor_draw_overlays_2d :: proc() {
 			x = min(ed.box_start.x, mouse.x), y = min(ed.box_start.y, mouse.y),
 			width = abs(mouse.x - ed.box_start.x), height = abs(mouse.y - ed.box_start.y),
 		}
-		ui.draw_raw_pill(&app.ui_ctx.renderer, rect, rl.Color{235, 200, 82, 34}, rl.Color{215, 175, 62, 24}, rl.Color{245, 212, 96, 225}, 4, 0.2)
+		rl.DrawRectangleRec(rect, rl.Color{227, 201, 138, 30})
+		rl.DrawRectangleLinesEx(rect, 1, rl.Color{227, 201, 138, 230})
 	}
 }

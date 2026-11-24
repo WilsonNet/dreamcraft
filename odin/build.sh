@@ -9,7 +9,7 @@ mkdir -p bin
 MODE="${1:-stable}"
 case "$MODE" in
   --dev|dev)
-    odin build client -out:bin/dreamcraft-dev -o:speed -vet -strict-style -define:DREAMCRAFT_DEV=true
+    odin build client -collection:vinland="${VINLAND_UI:-../../vinland-ui}" -out:bin/dreamcraft-dev -o:speed -vet -strict-style -define:DREAMCRAFT_DEV=true
     odin build headless -out:bin/headless-dev -o:speed -vet -strict-style
     odin build tools/mesh_cli -out:bin/dreamcraft-mesh-dev -o:speed -vet -strict-style
     echo "built bin/dreamcraft-dev, bin/headless-dev, and bin/dreamcraft-mesh-dev"
@@ -22,7 +22,7 @@ case "$MODE" in
     ;;
 esac
 
-odin build client -out:bin/dreamcraft -o:speed -vet -strict-style
+odin build client -collection:vinland="${VINLAND_UI:-../../vinland-ui}" -out:bin/dreamcraft -o:speed -vet -strict-style
 odin build headless -out:bin/headless -o:speed -vet -strict-style
 odin build tools/mesh_cli -out:bin/dreamcraft-mesh -o:speed -vet -strict-style
 echo "built bin/dreamcraft, bin/headless, and bin/dreamcraft-mesh"

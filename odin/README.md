@@ -75,7 +75,7 @@ Individual:
 odin test game -vet -strict-style
 odin test control -vet -strict-style
 odin test client/art -vet -strict-style
-odin test client -vet -strict-style
+odin test client -vet -strict-style -collection:vinland="${VINLAND_UI:-../../vinland-ui}"
 ./bin/headless --script tests/smoke.jsonl
 ./tests/control_smoke.sh
 ```

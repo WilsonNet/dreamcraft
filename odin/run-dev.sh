@@ -4,5 +4,5 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p bin
-odin build client -out:bin/dreamcraft-dev -o:speed -vet -strict-style -define:DREAMCRAFT_DEV=true
+odin build client -collection:vinland="${VINLAND_UI:-../../vinland-ui}" -out:bin/dreamcraft-dev -o:speed -vet -strict-style -define:DREAMCRAFT_DEV=true
 exec ./bin/dreamcraft-dev "$@"

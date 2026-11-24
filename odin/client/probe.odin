@@ -63,6 +63,7 @@ Camera_Snapshot :: struct {
 	app_mode:         string  `json:"app_mode"`,
 	editor_model:     string  `json:"editor_model"`,
 	help_open:        bool    `json:"help_open"`,
+	minimap:          [4]f32  `json:"minimap"`, // live HUD rect: x, y, w, h (logical px)
 }
 
 input_mouse_pos :: proc() -> rl.Vector2 {
@@ -214,6 +215,7 @@ capture_camera_snapshot :: proc(_: rawptr) -> ([]byte, bool) {
 		app_mode         = app_mode_name(app.mode),
 		editor_model     = app.editor.mesh_loaded ? app.editor.mesh.id : "",
 		help_open        = app.help_open,
+		minimap          = {app.minimap_rect.x, app.minimap_rect.y, app.minimap_rect.width, app.minimap_rect.height},
 	}
 	data, err := json.marshal(snap)
 	if err != nil {
@@ -248,23 +250,50 @@ handle_mouse_probe :: proc(_: rawptr, body: string) -> ([]byte, bool) {
 			app.probe.space = cmd.space
 			app.probe.wheel_y = cmd.wheel
 		}
-		steps := clamp(cmd.steps, 0, 600)
-		for _ in 0..<steps {
-			probe_begin_frame()
-			update_layout()
-			ui_step_and_dispatch(1.0 / 60.0)
-			handle_input()
-			if app.mode == .Game || app.mode == .Pause_Menu {
-				update_camera(1.0 / 60.0)
-			}
-			update_cursor()
-			probe_end_frame()
-			ui_build_active(1.0 / 60.0)
-			free_all(context.temp_allocator)
-		}
+		probe_run(clamp(cmd.steps, 0, 600))
 		return capture_camera_snapshot(nil)
 	}
 	return nil, false
+}
+
+// Advances the client frame (input, camera, HUD) without the simulation, driven by the probe.
+probe_run :: proc(steps: int) {
+	for _ in 0 ..< steps {
+		probe_begin_frame()
+		update_layout()
+		handle_input()
+		if app.mode == .Game || app.mode == .Pause_Menu {
+			update_camera(1.0 / 60.0)
+		}
+		update_cursor()
+		vui_frame(1.0 / 60.0)
+		probe_end_frame()
+		free_all(context.temp_allocator)
+	}
+}
+
+// Synthetic left click at a logical point through the same path as /mouse.
+probe_click_at :: proc(p: [2]f32) {
+	prev := app.probe
+	app.probe.active = true
+	app.probe.mouse = rl.Vector2{p.x, p.y}
+	app.probe.focused = true
+	app.probe.on_screen = true
+	app.probe.left = false
+	probe_run(1)
+	app.probe.left = true
+	probe_run(1)
+	app.probe.left = false
+	probe_run(1)
+	if prev.active {
+		app.probe = prev
+		return
+	}
+	// leave the synthetic pointer off-screen for a frame so edge pan / hover state do not
+	// inherit its position when the real mouse takes over again
+	app.probe.on_screen = false
+	probe_run(1)
+	app.probe = {}
 }
 
 @(private)
@@ -310,6 +339,14 @@ handle_client_command :: proc(_: rawptr, cmd: control.Command) -> (msg: string, 
 	case "close_help":
 		app.help_open = false
 		return "Closed shortcut window", true, true
+	case "ui_tree":
+		return vui_tree_json(cmd.value), true, true
+	case "ui_stats":
+		return vui_stats_json(), true, true
+	case "ui_click":
+		text := cmd.text != "" ? cmd.text : cmd.model
+		msg, ok = vui_click_text(text, max(cmd.value, 0))
+		return msg, ok, true
 	}
 	return "", false, false
 }

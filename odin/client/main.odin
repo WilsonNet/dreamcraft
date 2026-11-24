@@ -9,7 +9,6 @@ import "core:strings"
 import rl "vendor:raylib"
 import control "../control"
 import g "../game"
-import ui "../ui"
 
 Command_Mode :: enum {
 	None,
@@ -54,21 +53,12 @@ App :: struct {
 	drag_start: rl.Vector2,
 	minimap: rl.Texture2D,
 	minimap_pixels: [g.GRID_CELLS]rl.Color,
-	move_button: rl.Rectangle,
-	attack_button: rl.Rectangle,
-	patrol_button: rl.Rectangle,
-	stop_button: rl.Rectangle,
 	cmd_fx: [MAX_CMD_FX]Cmd_Fx,
 	cmd_fx_next: int,
 	minimap_rect: rl.Rectangle,
 	icons: Icon_Atlas,
-	ui_ctx: ui.Context,
-	ui_last_sig: u64,
 	mode: App_Mode,
 	help_open: bool,
-	editor_button: rl.Rectangle,
-	retry_button: rl.Rectangle,
-	resume_button: rl.Rectangle,
 	editor: Model_Editor_State,
 	last_fps: int,
 	camera_follow: bool,
@@ -159,13 +149,14 @@ step_client_frame :: proc() {
 	dt := f64(rl.GetFrameTime())
 	probe_begin_frame()
 	update_layout()
-	ui_step_and_dispatch(f32(dt))
 	handle_input()
 	if app.mode == .Game || app.mode == .Pause_Menu {
 		update_simulation(dt)
 		update_camera(dt)
 	}
 	update_cursor()
+	// HUD after the camera so world-anchored plates never trail; its clicks act this frame
+	vui_frame(f32(dt))
 	probe_end_frame()
 	if app.mode == .Game || app.mode == .Pause_Menu {
 		update_warrior_visuals(f32(dt))
@@ -182,7 +173,7 @@ step_client_frame :: proc() {
 @(private)
 init_world_assets :: proc() {
 	init_icons()
-	ui.init(&app.ui_ctx, !has_arg(os.args, "--no-shader"))
+	vui_init()
 	init_ground()
 	init_shadow_assets()
 	init_env_assets()
@@ -202,7 +193,7 @@ init_world_assets :: proc() {
 @(private)
 unload_world_assets :: proc() {
 	editor_cleanup()
-	ui.unload(&app.ui_ctx)
+	vui_shutdown()
 	unload_icons()
 	unload_warrior_assets()
 	unload_slash_vfx()
@@ -225,10 +216,6 @@ update_layout :: proc() {
 	width := f32(rl.GetScreenWidth())
 	height := f32(rl.GetScreenHeight())
 	ensure_pixel_target(int(width), int(height))
-	app.minimap_rect = rl.Rectangle{20, height - 150, 200, 125}
-	if app.ui_ctx.prev_hit_count == 0 || ui_state_signature() != app.ui_last_sig {
-		ui_build_active(0)
-	}
 }
 
 update_simulation :: proc(dt: f64) {

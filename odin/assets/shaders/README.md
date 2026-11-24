@@ -14,12 +14,7 @@ Native client:
   warm/cool split tone and a soft vignette.
 - `pixelart.fs` — retired. Kept for reference; it produced the hard pixel
   outline and 12-level posterize that read as voxel art.
-- `ui_sdf.vs` / `ui_sdf.fs` — batched 1-draw-call Quickshell-style UI SDF card/pill
-  shader (4-corner rounding, soft shadows, top glass rim, click ripples, progress pills).
-- `ui_clip_tex.fs` — rounded `ClipRRect` shader for clipped textures such as the minimap
-  and model turntable preview.
 
-UI typography renders via dual-resolution anti-aliased TTF atlases (`client/ui/font.odin`)
-so small stems and headings remain crisp at both Retina and 1x DPI.
+The HUD and editor chrome are drawn by vinland-ui (`vinland:vui/gl`), not by shaders here.
 
 Run with `--no-shader` to bypass the post pass.

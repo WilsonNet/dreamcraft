@@ -3,7 +3,6 @@ package main
 
 import rl "vendor:raylib"
 import g "../game"
-import ui "../ui"
 
 draw_frame :: proc() {
 	if app.mode == .Model_Picker {
@@ -22,15 +21,12 @@ draw_frame :: proc() {
 	draw_world_3d()
 	rl.EndMode3D()
 	rl.EndTextureMode()
-
-	ui_build_active(rl.GetFrameTime())
+	render_hero_portrait()
 
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.BLACK)
 	draw_pixel_output()
-	draw_unit_health_bars()
-	draw_selection_box()
-	ui.render(&app.ui_ctx)
+	vui_render()
 	rl.EndDrawing()
 }
 
@@ -122,42 +118,4 @@ draw_units_3d :: proc() {
 		rl.DrawCylinder(ground, 0.32, 0.38, 1.3, 8, color)
 		rl.DrawSphere(ground + rl.Vector3{0, 1.55, 0}, 0.26, color)
 	}
-}
-
-draw_unit_health_bars :: proc() {
-	units := &app.game.units
-	for i in 0..<g.MAX_UNITS {
-		if !units.alive[i] || !g.enemy_is_visible(&app.game, i) {
-			continue
-		}
-		head_height := f32(1.85)
-		if units.kind[i] == .Hero {
-			head_height = 2.08
-		}
-		head := unit_ground(i) + rl.Vector3{0, head_height, 0}
-		screen := rl.GetWorldToScreen(head, app.camera)
-		if screen.x < 0 || screen.x > f32(rl.GetScreenWidth()) ||
-		   screen.y < 0 || screen.y > f32(rl.GetScreenHeight()) - HUD_HEIGHT {
-			continue
-		}
-		bar_pos := rl.Vector2{screen.x, screen.y + 18}
-		if units.kind[i] == .Hero {
-			draw_hero_health_bar(bar_pos, units.hp[i], units.hp_max[i])
-		} else {
-			draw_health_bar(bar_pos, units.hp[i], units.hp_max[i])
-		}
-		draw_unit_campaign_label(i, bar_pos)
-	}
-}
-
-draw_health_bar :: proc(position: rl.Vector2, hp, max_hp: u16) {
-	percent := clamp(f32(hp) / f32(max_hp), 0, 1)
-	color := rl.Color{66, 214, 88, 255}
-	if percent <= 0.25 {
-		color = rl.Color{235, 64, 58, 255}
-	} else if percent <= 0.5 {
-		color = rl.Color{238, 190, 48, 255}
-	}
-	bar := rl.Rectangle{position.x - 14, position.y - 26, 28, 6}
-	ui.draw_raw_bar(&app.ui_ctx.renderer, bar, percent, color, rl.Color{74, 96, 78, 215})
 }

@@ -1,9 +1,7 @@
 // View-conditional F1 Shortcut Window data, keyboard handling, and Quickshell modal layout.
 package main
 
-import "core:fmt"
 import rl "vendor:raylib"
-import ui "../ui"
 
 Help_View :: enum u8 {
 	Battlefield,
@@ -55,35 +53,35 @@ BATTLEFIELD_CAMERA := [?]Shortcut_Item{
 
 @(private)
 BATTLEFIELD_GROUPS := [2]Shortcut_Group{
-	{title = "UNITS & ORDERS", items = BATTLEFIELD_ORDERS[:]},
-	{title = "CAMERA & SYSTEM", items = BATTLEFIELD_CAMERA[:]},
+	{title = "Units & orders", items = BATTLEFIELD_ORDERS[:]},
+	{title = "Camera & system", items = BATTLEFIELD_CAMERA[:]},
 }
 
 @(private)
 PAUSE_MENU_ITEMS := [?]Shortcut_Item{
-	{"Esc / Resume", "Close pause overlay and resume battle"},
-	{"Model Editor", "Open 12-asset 3D Model Picker & Editor"},
-	{"Retry Level", "Reset Tutorial Level 1 to initial state"},
-	{"F1", "Close or open this shortcut window"},
+	{"Esc", "Resume the battle"},
+	{"LMB", "Model Editor: pick one of 12 assets to edit"},
+	{"LMB", "Retry Level: restart Tutorial Level 1"},
+	{"F1", "Open or close this window"},
 }
 
 @(private)
 PAUSE_GROUPS := [1]Shortcut_Group{
-	{title = "PAUSE MENU CONTROLS", items = PAUSE_MENU_ITEMS[:]},
+	{title = "Pause menu controls", items = PAUSE_MENU_ITEMS[:]},
 }
 
 @(private)
 PICKER_ITEMS := [?]Shortcut_Item{
 	{"Up / Down", "Select previous or next catalog model"},
-	{"All/Units/Trees/Props", "Filter models by asset category"},
-	{"Enter / Edit Model", "Edit saved .odin override or base model"},
-	{"Edit Procedural", "Open untouched procedural Odin geometry"},
-	{"Esc / Back", "Return to battlefield"},
+	{"LMB tab", "Filter: All, Units, Trees or Props"},
+	{"Enter", "Edit model: saved .odin override or base"},
+	{"LMB", "Edit procedural: untouched Odin geometry"},
+	{"Esc", "Back to the battlefield"},
 }
 
 @(private)
 PICKER_GROUPS := [1]Shortcut_Group{
-	{title = "MODEL PICKER NAVIGATION", items = PICKER_ITEMS[:]},
+	{title = "Model picker navigation", items = PICKER_ITEMS[:]},
 }
 
 @(private)
@@ -98,7 +96,7 @@ EDITOR_SELECT_ITEMS := [?]Shortcut_Item{
 @(private)
 EDITOR_TRANSFORM_ITEMS := [?]Shortcut_Item{
 	{"G / R / S", "Grab / Rotate / Scale selection"},
-	{"Drag Gizmo X/Y/Z", "Lock translation along RGB axis"},
+	{"LMB drag gizmo", "Move along the red, green or blue axis"},
 	{"X / Y / Z", "Constrain axis during modal op"},
 	{"Shift + X/Y/Z", "Lock plane (YZ / XZ / XY)"},
 	{"0-9 / - / .", "Type exact distance, deg, or scale"},
@@ -112,7 +110,7 @@ EDITOR_MODEL_ITEMS := [?]Shortcut_Item{
 	{"K (+ Enter)", "Knife cut points across mesh"},
 	{"F / M (Alt+M)", "Fill 3-4 verts / Merge at center"},
 	{"X -> V/E/F/D", "Delete or dissolve selected elems"},
-	{"Inspector Right", "Paint Mat_Kind & assign Bone_Id"},
+	{"LMB swatch / bone", "Paint material or assign bone (inspector)"},
 }
 
 @(private)
@@ -128,10 +126,10 @@ EDITOR_VIEW_ITEMS := [?]Shortcut_Item{
 
 @(private)
 EDITOR_MESH_GROUPS := [4]Shortcut_Group{
-	{title = "SELECTION & MODES", items = EDITOR_SELECT_ITEMS[:]},
-	{title = "TRANSFORM & GIZMO", items = EDITOR_TRANSFORM_ITEMS[:]},
-	{title = "MODELING & RIGGING", items = EDITOR_MODEL_ITEMS[:]},
-	{title = "VIEWPORT & FILE", items = EDITOR_VIEW_ITEMS[:]},
+	{title = "Selection & modes", items = EDITOR_SELECT_ITEMS[:]},
+	{title = "Transform & gizmo", items = EDITOR_TRANSFORM_ITEMS[:]},
+	{title = "Modeling & rigging", items = EDITOR_MODEL_ITEMS[:]},
+	{title = "Viewport & file", items = EDITOR_VIEW_ITEMS[:]},
 }
 
 @(private)
@@ -146,7 +144,7 @@ MODAL_TRANSFORM_ITEMS := [?]Shortcut_Item{
 
 @(private)
 MODAL_LOOP_ITEMS := [?]Shortcut_Item{
-	{"Hover Edge", "Preview edge ring cuts live"},
+	{"Mouse over edge", "Preview edge ring cuts live"},
 	{"Mouse Wheel", "Adjust number of loop cuts (1..6)"},
 	{"LMB", "Apply loop cuts to mesh"},
 	{"RMB / Esc", "Cancel loop cut tool"},
@@ -154,7 +152,7 @@ MODAL_LOOP_ITEMS := [?]Shortcut_Item{
 
 @(private)
 MODAL_KNIFE_ITEMS := [?]Shortcut_Item{
-	{"LMB in Viewport", "Place cut node on Vertex, Edge, or Face"},
+	{"LMB", "Place a cut node on a vertex, edge or face"},
 	{"Enter / Space", "Slice faces along placed knife chain"},
 	{"RMB / Esc", "Cancel and clear knife chain"},
 }
@@ -166,13 +164,13 @@ MODAL_OTHER_ITEMS := [?]Shortcut_Item{
 }
 
 @(private)
-MODAL_TRANS_GROUPS := [1]Shortcut_Group{{title = "ACTIVE TRANSFORM SHORTCUTS", items = MODAL_TRANSFORM_ITEMS[:]}}
+MODAL_TRANS_GROUPS := [1]Shortcut_Group{{title = "Active transform shortcuts", items = MODAL_TRANSFORM_ITEMS[:]}}
 @(private)
-MODAL_LOOP_GROUPS := [1]Shortcut_Group{{title = "ACTIVE LOOP CUT SHORTCUTS", items = MODAL_LOOP_ITEMS[:]}}
+MODAL_LOOP_GROUPS := [1]Shortcut_Group{{title = "Active loop cut shortcuts", items = MODAL_LOOP_ITEMS[:]}}
 @(private)
-MODAL_KNIFE_GROUPS := [1]Shortcut_Group{{title = "ACTIVE KNIFE TOOL SHORTCUTS", items = MODAL_KNIFE_ITEMS[:]}}
+MODAL_KNIFE_GROUPS := [1]Shortcut_Group{{title = "Active knife tool shortcuts", items = MODAL_KNIFE_ITEMS[:]}}
 @(private)
-MODAL_OTHER_GROUPS := [1]Shortcut_Group{{title = "ACTIVE TOOL", items = MODAL_OTHER_ITEMS[:]}}
+MODAL_OTHER_GROUPS := [1]Shortcut_Group{{title = "Active tool", items = MODAL_OTHER_ITEMS[:]}}
 
 active_help_view :: proc() -> Help_View {
 	if app.mode == .Model_Picker { return .Model_Picker }
@@ -186,14 +184,14 @@ active_help_view :: proc() -> Help_View {
 help_sheet_for_view :: proc(view: Help_View) -> Shortcut_Sheet {
 	switch view {
 	case .Battlefield:
-		badge: cstring = app.command_mode != .None ? "CMD TARGETING ACTIVE" : "TUTORIAL LEVEL 1"
-		return Shortcut_Sheet{.Battlefield, "BATTLEFIELD SHORTCUTS", badge, .Hero_Crest, BATTLEFIELD_GROUPS[:]}
+		badge: cstring = app.command_mode != .None ? "Targeting an order" : "Tutorial level 1"
+		return Shortcut_Sheet{.Battlefield, "Battlefield", badge, .Hero_Crest, BATTLEFIELD_GROUPS[:]}
 	case .Pause_Menu:
-		return Shortcut_Sheet{.Pause_Menu, "PAUSE MENU SHORTCUTS", "PAUSED OVERLAY", .Models, PAUSE_GROUPS[:]}
+		return Shortcut_Sheet{.Pause_Menu, "Pause Menu", "Paused", .Game, PAUSE_GROUPS[:]}
 	case .Model_Picker:
-		return Shortcut_Sheet{.Model_Picker, "MODEL PICKER SHORTCUTS", "12 CATALOG ASSETS", .Models, PICKER_GROUPS[:]}
+		return Shortcut_Sheet{.Model_Picker, "Model Picker", "12 assets", .Models, PICKER_GROUPS[:]}
 	case .Editor_Mesh:
-		return Shortcut_Sheet{.Editor_Mesh, "MODEL EDITOR SHORTCUTS", editor_mode_tag(), .Mode_Face, EDITOR_MESH_GROUPS[:]}
+		return Shortcut_Sheet{.Editor_Mesh, "Model Editor", editor_mode_tag(), .Mode_Face, EDITOR_MESH_GROUPS[:]}
 	case .Editor_Modal:
 		return editor_modal_sheet()
 	}
@@ -223,13 +221,6 @@ editor_modal_sheet :: proc() -> Shortcut_Sheet {
 	return Shortcut_Sheet{.Editor_Modal, "MODAL TOOL", "ACTIVE MODAL", .Tool_Select, MODAL_OTHER_GROUPS[:]}
 }
 
-help_badge_rect :: proc() -> rl.Rectangle {
-	if r, ok := ui.get_rect(&app.ui_ctx, ui.id("help_badge")); ok && r.width > 0 {
-		return r
-	}
-	return {496, 18, 56, 22}
-}
-
 handle_help_input :: proc() -> bool {
 	if rl.IsKeyPressed(.F1) {
 		app.help_open = !app.help_open
@@ -242,61 +233,4 @@ handle_help_input :: proc() -> bool {
 		return true
 	}
 	return false
-}
-
-compose_help_window :: proc(ctx: ^ui.Context, w, h: f32) {
-	sheet := help_sheet_for_view(active_help_view())
-	cols := len(sheet.groups) >= 2 ? 2 : 1
-	pw := min(cols == 2 ? f32(920) : f32(620), w - 28)
-	pm := ui.m_pad(ui.m_gap(ui.m_w(ui.mod(), pw), 12), 20)
-	pm.max_h = h - 32
-	ui.open_scrim_modal(ctx, ui.id("help_modal"), 3, u32(UI_Msg.Help_Close), pm)
-
-	compose_help_header(ctx, sheet)
-	ui.ornament_divider(ctx)
-	compose_help_groups(ctx, sheet.groups, cols)
-	ui.label(ctx, ui_cstr(fmt.tprintf("Conditional shortcuts for %s  |  Press F1 anytime", sheet.badge)), .Body, 12, ui.COL_TEXT_MUTED)
-	ui.close_scrim_modal(ctx)
-}
-
-@(private)
-compose_help_header :: proc(ctx: ^ui.Context, sheet: Shortcut_Sheet) {
-	ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_align(ui.m_fill(ui.mod(), true, false), .Center), 10))
-	ui.icon(ctx, icon_texture(sheet.icon), 24)
-	ui.label(ctx, sheet.heading, .Heading, 18, ui.COL_TEXT_GOLD)
-	ui.spacer(ctx, 1)
-	ui.badge(ctx, ui.INVALID_ID, sheet.badge, .Emerald)
-	ui.button(ctx, ui.id("help_close_btn"), ui.Button_Opts{label = "Close", keycap = "Esc", variant = .Compact, msg_tag = u32(UI_Msg.Help_Close)}, ui.m_h(ui.m_pad_xy(ui.mod(), 10, 4), 28))
-	ui.close(ctx)
-}
-
-@(private)
-compose_help_groups :: proc(ctx: ^ui.Context, groups: []Shortcut_Group, cols: int) {
-	for i := 0; i < len(groups); i += cols {
-		ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_fill(ui.mod(), true, false), 14))
-		for c in 0..<cols {
-			gi := i + c
-			if gi >= len(groups) {
-				ui.spacer(ctx, 1)
-				break
-			}
-			compose_single_help_group(ctx, groups[gi], gi)
-		}
-		ui.close(ctx)
-	}
-}
-
-@(private)
-compose_single_help_group :: proc(ctx: ^ui.Context, grp: Shortcut_Group, idx: int) {
-	cm := ui.m_pad(ui.m_gap(ui.m_surface(ui.m_weight(ui.mod(), 1), ui.style_card(ui.RAD_MD)), 5), 12)
-	ui.open_col(ctx, ui.id_idx("help_grp", idx), cm)
-	ui.label(ctx, grp.title, .Mono_Bold, 11.5, ui.COL_TEXT_GOLD)
-	ui.gap_box(ctx, 1, 2)
-	for it in grp.items {
-		ui.open_row(ctx, ui.INVALID_ID, ui.m_gap(ui.m_align(ui.m_fill(ui.mod(), true, false), .Center), 9))
-		ui.keycap(ctx, it.keys, .Gold, ui.mod(), 11)
-		ui.label(ctx, it.desc, .Body, 12, ui.COL_TEXT_PRIMARY)
-		ui.close(ctx)
-	}
-	ui.close(ctx)
 }

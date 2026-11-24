@@ -18,19 +18,16 @@ odin test client/art/edit -vet -strict-style
 echo "== unit tests: svg =="
 odin test client/svg -vet -strict-style
 
-echo "== unit tests: ui =="
-odin test ui -vet -strict-style
-
 echo "== unit tests: mesh_cli =="
 odin test tools/mesh_cli -vet -strict-style
 
 echo "== unit tests: client projection =="
-odin test client -vet -strict-style
+odin test client -collection:vinland="${VINLAND_UI:-../../vinland-ui}" -vet -strict-style
 
 echo "== build: dev lane =="
 mkdir -p bin
 odin build headless -out:bin/headless-dev -o:speed
-odin build client -out:bin/dreamcraft-dev -o:speed -define:DREAMCRAFT_DEV=true
+odin build client -collection:vinland="${VINLAND_UI:-../../vinland-ui}" -out:bin/dreamcraft-dev -o:speed -define:DREAMCRAFT_DEV=true
 odin build tools/mesh_cli -out:bin/dreamcraft-mesh-dev -o:speed
 
 echo "== headless script test =="

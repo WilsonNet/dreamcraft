@@ -28,6 +28,13 @@ Spiritual successor to StarCraft: Brood War. Primary implementation: **Odin + ra
 
 ---
 
+## Dependency: vinland-ui
+
+The native client's UI is built with vinland-ui (`specs/09-ui-framework.md`). Keep the checkout next
+to this repo (`../vinland-ui`) or set `VINLAND_UI=/path`; the scripts pass
+`-collection:vinland=...`. Drive and inspect the HUD with the `ui_tree`, `ui_click` and `ui_stats`
+control commands.
+
 ## Development Commands
 
 ```bash
@@ -47,8 +54,8 @@ odin test client/art -vet -strict-style
 odin test client/art/edit -vet -strict-style
 odin test client/svg -vet -strict-style
 odin test tools/mesh_cli -vet -strict-style
-odin test client -vet -strict-style
-odin build client -out:bin/dreamcraft -o:speed
+odin test client -collection:vinland=../../vinland-ui -vet -strict-style
+odin build client -collection:vinland=../../vinland-ui -out:bin/dreamcraft -o:speed
 odin build headless -out:bin/headless -o:speed
 odin build tools/mesh_cli -out:bin/dreamcraft-mesh -o:speed
 ```

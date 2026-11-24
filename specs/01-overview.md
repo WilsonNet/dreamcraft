@@ -66,9 +66,11 @@ capacity arrays.
   - [x] Two-way Git-friendly `.odin` chunk persistence (`client/art/models/<id>/{v_NNN,f_NNN,asset}.odin` + `manifest.odin`) & `Ctrl+S` live hot-reload back into game
 - [x] Playwright-style Cooperative Mesh CLI (`odin/tools/mesh_cli/` -> `bin/dreamcraft-mesh`): `list`, `extract`, `info`, positive/negative `assert` (`!`, `--expect-fail`), `do`/`edit` inline ops & `--notify=<port>` hot-reload without saved script files
 - [x] Pure-Odin Vector SVG Renderer & Icon Atlas (`client/svg/`, `assets/icons/*.svg`, `client/icons.odin`): `<path>`/`<rect>`/`<circle>`/`<ellipse>`/`<line>`/`<poly*>` + `<g>`/transform + 4x4 SSAA fills & smooth strokes for HUD command card, Pause Menu, hero crests, & Model Editor toolbars
-- [x] Standalone Native-Odin Declarative Reactive UI Framework (`odin/ui/`, `specs/09-ui-framework.md`, `DESIGN.md`) & Al-Dor Chivalric × Levantine Lore (`specs/10-lore.md`): Compose builders & value `Mod` modifiers, Flutter single-pass `BoxConstraints` layout & z-layered `Display_List`, Elm `UI_Msg` dispatch (`client/ui_app.odin`), `[512]Widget_Slot` spring/ripple memory, medieval brass double-rule filigree & corner diamond `ui_sdf.{vs,fs}` + `ui_clip_tex.fs` GPU shaders, exact 2x-supersampled (4x SSAA) sRGB-gamma-corrected font engine (`ChronicleSerif-Bold`, `Lato`, `Source Code Pro`), and `.WINDOW_HIGHDPI`
+- [x] vinland-ui HUD (`specs/09-ui-framework.md`): battlefield bottom console in the "Saint Louis Basin" world (hammered brass, bitumen, silver interlace, lapis medallions with gold-inlay armed state), pause and defeat arches, F1 window, world nameplates, Model Picker and Model Editor chrome, embedded over raylib via `vinland:vui/raylib` (replaced the in-tree `odin/ui/` framework)
+- [x] Agent UI loop: `ui_tree`, `ui_click`, `ui_stats` control commands; `/camera` exposes the live minimap rect
+- [ ] Renderer port to SDL3 GPU (Metal / Vulkan) sharing VUI's device (`specs/11-renderer-port.md`)
 - [x] View-conditional **F1 Shortcut Window** (`client/shortcuts.odin`) with clickable `? F1` badges across Battlefield, Pause Menu, Model Picker, and Model Editor (plus focused Grab/Rotate/Scale/Loop Cut/Knife active modal sheet)
-- [x] 138 unit/integration tests (69 game, 13 control, 17 art, 9 art/edit, 5 svg, 7 ui, 6 mesh_cli, 12 client)
+- [x] 131 unit/integration tests (69 game, 13 control, 17 art, 9 art/edit, 5 svg, 6 mesh_cli, 12 client)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator

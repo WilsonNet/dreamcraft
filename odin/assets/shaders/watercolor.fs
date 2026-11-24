@@ -11,6 +11,12 @@ in vec4 fragColor;
 uniform sampler2D texture0;
 uniform vec4 colDiffuse;
 uniform vec2 texSize;
+// Shared grade with the vinland-ui HUD (vui.GRADE_PAINTED) so world and UI read as one image.
+uniform float uSat;       // saturation, 1 = unchanged
+uniform vec3 uTint;       // warm multiplier
+uniform vec3 uVoid;       // colour the empty void settles into (the HUD's bitumen)
+uniform float uHudPx;     // console height in physical px (0 = no console)
+uniform float uDpi;       // physical px per logical px
 
 out vec4 finalColor;
 
@@ -76,8 +82,24 @@ void main()
     col *= mix(shadow_tint, light_tint, smoothstep(0.08, 0.58, l_center));
     col += vec3(0.008, 0.007, 0.005) * smoothstep(0.06, 0.25, l_center);
 
+    // Shared grade: same saturation pull and warm tint as the HUD.
+    float lg = luma(col);
+    col = mix(vec3(lg), col, uSat) * uTint;
+
+    // The void settles into warm bitumen instead of cold blue-black.
+    col = mix(uVoid, col, smoothstep(0.015, 0.11, l_center));
+
+    // Contact shadow: the world tucks under the console's brass band.
+    if (uHudPx > 0.0) {
+        float y = gl_FragCoord.y;
+        float shade = 1.0 - smoothstep(uHudPx, uHudPx + 110.0 * uDpi, y);
+        col *= 1.0 - 0.42 * shade * shade;
+        float top_shade = 1.0 - smoothstep(0.0, 70.0 * uDpi, texSize.y * uDpi - y);
+        col *= 1.0 - 0.22 * top_shade;
+    }
+
     // Soft vignette.
-    float vignette = 1.0 - 0.14 * pow(clamp(length(uv - 0.5) * 1.32, 0.0, 1.0), 2.0);
+    float vignette = 1.0 - 0.24 * pow(clamp(length(uv - 0.5) * 1.32, 0.0, 1.0), 2.0);
     col *= vignette;
 
     finalColor = vec4(clamp(col, 0.0, 1.0), 1.0) * colDiffuse * fragColor;

@@ -44,6 +44,21 @@ The Agent Console is a React overlay that provides real-time game state inspecti
 | `watch` | Toggle live state output every 2s |
 | `clear` | Clear console output |
 
+## Native client UI commands (HTTP control API)
+
+The native client (`--control=<port>`) also answers these `POST /command` bodies, for driving and
+inspecting the vinland-ui HUD (see `specs/09-ui-framework.md`):
+
+| Body | Result |
+|------|--------|
+| `{"cmd":"ui_tree","value":40}` | `msg` holds a JSON list of elements: kind, class, text (`t`), rect |
+| `{"cmd":"ui_click","text":"Resume Battle"}` | Clicks the first visible element containing the text with the synthetic mouse |
+| `{"cmd":"ui_stats"}` | Nodes, instances, batches, build/render ms, pointer capture |
+| `{"cmd":"pause_menu"}`, `open_picker`, `open_editor` (+ `model`), `close_editor`, `open_help`, `close_help` | Jump to a screen |
+
+`GET /camera` includes `minimap: [x, y, w, h]`, the live minimap rect, so tests click it without
+hard-coding layout.
+
 ## Diagnostics
 
 The debug state includes automatic health checks:

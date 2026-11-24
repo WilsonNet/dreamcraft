@@ -122,8 +122,8 @@
   Buttons: Move, Attack, Patrol (single-click from current position), Stop,
   Select All, Reset.
 - **Hover / Focus**: Active game camera/unit input pauses cleanly while in `Model_Picker` or `Model_Editor`.
-- **Declarative UI Event Routing & Pointer Blocking (`odin/client/ui/`, `ui_app.odin`)**:
-  All HUD islands, minimap card, pause modal, F1 Shortcut Window, Model Picker, and Model Editor chrome are processed via reverse z-layer hit testing (`find_top_hit`) dispatching typed `UI_Msg` events; `ui.blocks_pointer(&app.ui_ctx)` gates world clicks, right-clicks, hover reticles, and selection marquee drag (`command_fx.odin`, `input.odin`).
+- **UI Event Routing & Pointer Blocking (`vui_host.odin`, `hud_basin.odin`, `editor_vui.odin`)**:
+  HUD, minimap, pause, F1 window, Model Picker and Model Editor chrome are vinland-ui elements; buttons act when built (immediate mode) and call the existing `handle_*_ui_msg` handlers. `ui_pointer_captured()` hit-tests the last laid-out frame and gates world clicks, right-clicks, hover reticles and the selection marquee (`command_fx.odin`, `input.odin`).
 - Commands are queued as fixed-size `Command` values; input never mutates
   simulation state directly.
 

@@ -1,0 +1,523 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-24T12:00:00Z",
+  "title": "Design System: DreamCraft",
+  "extensions": {
+    "colorMeta": {
+      "bitumen": {
+        "role": "neutral",
+        "displayName": "Bitumen",
+        "canonical": "#16130f",
+        "tonalRamp": [
+          "#050403",
+          "#0c0a08",
+          "#16130f",
+          "#221c16",
+          "#3a3128",
+          "#5a4e42",
+          "#8a7f72",
+          "#c9c1b6"
+        ]
+      },
+      "bitumen-raised": {
+        "role": "neutral",
+        "displayName": "Raised Bitumen",
+        "canonical": "#221c16",
+        "tonalRamp": [
+          "#050403",
+          "#0c0a08",
+          "#16130f",
+          "#221c16",
+          "#3a3128",
+          "#5a4e42",
+          "#8a7f72",
+          "#c9c1b6"
+        ]
+      },
+      "bitumen-deep": {
+        "role": "neutral",
+        "displayName": "Deep Bitumen",
+        "canonical": "#0c0a08",
+        "tonalRamp": [
+          "#050403",
+          "#0c0a08",
+          "#16130f",
+          "#221c16",
+          "#3a3128",
+          "#5a4e42",
+          "#8a7f72",
+          "#c9c1b6"
+        ]
+      },
+      "brass": {
+        "role": "primary",
+        "displayName": "Hammered Brass",
+        "canonical": "#9a7843",
+        "tonalRamp": [
+          "#2a1a08",
+          "#4a3618",
+          "#584222",
+          "#7c5d2a",
+          "#9a7843",
+          "#c9b07a",
+          "#cdb37c",
+          "#ecd9a6"
+        ]
+      },
+      "brass-hi": {
+        "role": "primary",
+        "displayName": "Lit Brass",
+        "canonical": "#cdb37c",
+        "tonalRamp": [
+          "#2a1a08",
+          "#4a3618",
+          "#584222",
+          "#7c5d2a",
+          "#9a7843",
+          "#c9b07a",
+          "#cdb37c",
+          "#ecd9a6"
+        ]
+      },
+      "brass-lo": {
+        "role": "primary",
+        "displayName": "Shaded Brass",
+        "canonical": "#584222",
+        "tonalRamp": [
+          "#2a1a08",
+          "#4a3618",
+          "#584222",
+          "#7c5d2a",
+          "#9a7843",
+          "#c9b07a",
+          "#cdb37c",
+          "#ecd9a6"
+        ]
+      },
+      "inlay": {
+        "role": "primary",
+        "displayName": "Gold Inlay",
+        "canonical": "#ecd9a6",
+        "tonalRamp": [
+          "#2a1a08",
+          "#6e4e1e",
+          "#7c5d2a",
+          "#c9a35f",
+          "#cdb37c",
+          "#e6d2a2",
+          "#ecd9a6",
+          "#f7efd9"
+        ]
+      },
+      "inlay-ink": {
+        "role": "primary",
+        "displayName": "Inlay Ink",
+        "canonical": "#2a1a08",
+        "tonalRamp": [
+          "#120a02",
+          "#24140a",
+          "#2a1a08",
+          "#3b2a16",
+          "#5a4226",
+          "#7c5d2a",
+          "#a88c5c",
+          "#d9c7a0"
+        ]
+      },
+      "plaque-light": {
+        "role": "neutral",
+        "displayName": "Plaque Light",
+        "canonical": "#e4d8bf",
+        "tonalRamp": [
+          "#2e281c",
+          "#4e4534",
+          "#6e634e",
+          "#91856c",
+          "#b3a68b",
+          "#cfc2a6",
+          "#e4d8bf",
+          "#f5efe1"
+        ]
+      },
+      "silver": {
+        "role": "neutral",
+        "displayName": "Silver Inlay",
+        "canonical": "#b8bab8",
+        "tonalRamp": [
+          "#2a2c2e",
+          "#4a4c4e",
+          "#5d6166",
+          "#8a8d8f",
+          "#a3a5a5",
+          "#b8bab8",
+          "#cfd3d6",
+          "#e9ebec"
+        ]
+      },
+      "silver-dim": {
+        "role": "neutral",
+        "displayName": "Tarnished Silver",
+        "canonical": "#8a8d8f",
+        "tonalRamp": [
+          "#2a2c2e",
+          "#4a4c4e",
+          "#5d6166",
+          "#8a8d8f",
+          "#a3a5a5",
+          "#b8bab8",
+          "#cfd3d6",
+          "#e9ebec"
+        ]
+      },
+      "lapis": {
+        "role": "secondary",
+        "displayName": "Lapis",
+        "canonical": "#253c68",
+        "tonalRamp": [
+          "#0a1226",
+          "#0b1428",
+          "#14213e",
+          "#253c68",
+          "#324e86",
+          "#3e5c96",
+          "#4f6fa8",
+          "#9fb2d6"
+        ]
+      },
+      "lapis-hi": {
+        "role": "secondary",
+        "displayName": "Lit Lapis",
+        "canonical": "#324e86",
+        "tonalRamp": [
+          "#0a1226",
+          "#0b1428",
+          "#14213e",
+          "#253c68",
+          "#324e86",
+          "#3e5c96",
+          "#4f6fa8",
+          "#9fb2d6"
+        ]
+      },
+      "lapis-lo": {
+        "role": "secondary",
+        "displayName": "Deep Lapis",
+        "canonical": "#14213e",
+        "tonalRamp": [
+          "#0a1226",
+          "#0b1428",
+          "#14213e",
+          "#253c68",
+          "#324e86",
+          "#3e5c96",
+          "#4f6fa8",
+          "#9fb2d6"
+        ]
+      },
+      "carnelian": {
+        "role": "tertiary",
+        "displayName": "Carnelian",
+        "canonical": "#74281d",
+        "tonalRamp": [
+          "#1a0806",
+          "#3a0d09",
+          "#561c14",
+          "#74281d",
+          "#a4473a",
+          "#c25a46",
+          "#d98c7e",
+          "#f0cdc6"
+        ]
+      },
+      "carnelian-hi": {
+        "role": "tertiary",
+        "displayName": "Lit Carnelian",
+        "canonical": "#a4473a",
+        "tonalRamp": [
+          "#1a0806",
+          "#3a0d09",
+          "#561c14",
+          "#74281d",
+          "#a4473a",
+          "#c25a46",
+          "#d98c7e",
+          "#f0cdc6"
+        ]
+      },
+      "amber-alert": {
+        "role": "tertiary",
+        "displayName": "Alarm Amber",
+        "canonical": "#d49a44",
+        "tonalRamp": [
+          "#2e1d06",
+          "#5a3a10",
+          "#7d5216",
+          "#9b6a1c",
+          "#b9822e",
+          "#d49a44",
+          "#e6bd7c",
+          "#f5e2c0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Cinzel 400 names on the battlefield HUD: level name, hero name, armed verb, challenge banner heading."
+      },
+      "dialog-title": {
+        "displayName": "Dialog Title",
+        "purpose": "Cinzel 700 dialog and window titles, 20-22px; the outcome arch rises to 24px."
+      },
+      "decorative": {
+        "displayName": "Decorative",
+        "purpose": "Cinzel Decorative, a single word on an arch dialog."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Cinzel 700 section headings inside editor inspector cards and popups."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Alegreya Sans hints, descriptions and dialog copy."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase tracked small headings (brass-hi) and stat names (silver-dim)."
+      },
+      "value": {
+        "displayName": "Value",
+        "purpose": "Every number, tabular figures; hero HP and stats at 800."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "Uppercase plaque button labels."
+      },
+      "chip": {
+        "displayName": "Chip",
+        "purpose": "Uppercase editor chip labels."
+      }
+    },
+    "shadows": [
+      {
+        "name": "plate-lip",
+        "value": "inset 0 2px 0 rgba(240,226,190,0.4), 0 0 0 1px rgba(0,0,0,0.85)",
+        "purpose": "Lit top edge and dark seam of every cast brass plate."
+      },
+      {
+        "name": "well-cut",
+        "value": "inset 0 2px 5px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.9), 0 0 0 2px rgba(205,179,124,0.4)",
+        "purpose": "Recessed bitumen well cut into a plate."
+      },
+      {
+        "name": "panel-lift",
+        "value": "0 8px 24px rgba(0,0,0,0.7)",
+        "purpose": "Floating basin panels over the battlefield."
+      },
+      {
+        "name": "console-lift",
+        "value": "0 -8px 20px rgba(0,0,0,0.6)",
+        "purpose": "The console band over the world; housings use ±4px 0 10px rgba(0,0,0,0.6) to the side, the prompt plaque 0 -4px 10px rgba(0,0,0,0.6)."
+      },
+      {
+        "name": "medallion-contact",
+        "value": "0 3px 4px rgba(0,0,0,0.8)",
+        "purpose": "Contact shadow under every medallion bezel."
+      },
+      {
+        "name": "medallion-armed-halo",
+        "value": "0 0 14px rgba(205,179,124,0.35), 0 3px 4px rgba(0,0,0,0.8)",
+        "purpose": "Warm halo of the armed medallion."
+      },
+      {
+        "name": "dome-shade",
+        "value": "inset 0 -4px 6px rgba(0,0,0,0.6)",
+        "purpose": "Lower curve of a domed lapis enamel."
+      },
+      {
+        "name": "dome-crescent",
+        "value": "inset 0 3px 2px rgba(255,250,235,0.22), inset 0 -3px 3px rgba(205,179,124,0.18)",
+        "purpose": "Specular crescent along the top of a domed enamel, with a faint brass reflection at its foot."
+      },
+      {
+        "name": "engraving",
+        "value": "text-shadow: 0 1px 0 rgba(0,0,0,0.9)",
+        "purpose": "Brass and silver text sitting on metal."
+      }
+    ],
+    "motion": [
+      {
+        "name": "hover-brightness",
+        "value": "filter brightness 1.15 hover, 0.9 active",
+        "purpose": "Plaque button feedback."
+      },
+      {
+        "name": "armed-pulse",
+        "value": "animate-pulse on a 2px brass-hi/70 ring 5px outside",
+        "purpose": "Armed medallion waiting for a click."
+      },
+      {
+        "name": "hp-fill",
+        "value": "transition-all 300ms; pulse at or below 25%",
+        "purpose": "Hit-point vial fill and low-health warning."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "march-strip",
+        "value": "1100px"
+      },
+      {
+        "name": "editor-hints",
+        "value": "1120px"
+      },
+      {
+        "name": "editor-compact",
+        "value": "1400px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Inlay Plaque",
+      "kind": "button",
+      "refersTo": "plaque-inlay",
+      "description": "The one primary action in a dialog: gold inlay, dark ink.",
+      "html": "<button class=\"ds-plaque ds-plaque-inlay\">Resume Battle <span class=\"ds-key\">Esc</span></button>",
+      "css": ".ds-plaque{display:inline-flex;align-items:center;gap:12px;height:44px;padding:0 16px;border-radius:6px;border:1px solid #9a7843;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25);font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:filter .15s}.ds-plaque:hover{filter:brightness(1.15)}.ds-plaque:active{filter:brightness(0.9)}.ds-plaque:focus-visible{outline:2px solid #cdb37c;outline-offset:2px}.ds-key{display:inline-block;padding:1px 6px;border-radius:3px;background:#0c0a08;border:1px solid #584222;color:#cdb37c;font-size:11px;font-weight:800;letter-spacing:0}.ds-plaque-inlay{background:linear-gradient(#ecd9a6,#cdb37c,#7c5d2a);color:#2a1a08}"
+    },
+    {
+      "name": "Lapis Plaque",
+      "kind": "button",
+      "refersTo": "plaque-lapis",
+      "description": "Secondary dialog action.",
+      "html": "<button class=\"ds-plaque ds-plaque-lapis\">Model Editor</button>",
+      "css": ".ds-plaque{display:inline-flex;align-items:center;gap:12px;height:44px;padding:0 16px;border-radius:6px;border:1px solid #9a7843;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25);font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:filter .15s}.ds-plaque:hover{filter:brightness(1.15)}.ds-plaque:active{filter:brightness(0.9)}.ds-plaque:focus-visible{outline:2px solid #cdb37c;outline-offset:2px}.ds-plaque-lapis{background:linear-gradient(#324e86,#14213e);color:#e4d8bf}"
+    },
+    {
+      "name": "Carnelian Plaque",
+      "kind": "button",
+      "refersTo": "plaque-carnelian",
+      "description": "Destructive action.",
+      "html": "<button class=\"ds-plaque ds-plaque-carn\">Retry Level</button>",
+      "css": ".ds-plaque{display:inline-flex;align-items:center;gap:12px;height:44px;padding:0 16px;border-radius:6px;border:1px solid #9a7843;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25);font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:filter .15s}.ds-plaque:hover{filter:brightness(1.15)}.ds-plaque:active{filter:brightness(0.9)}.ds-plaque:focus-visible{outline:2px solid #cdb37c;outline-offset:2px}.ds-plaque-carn{background:linear-gradient(#a4473a,#74281d);color:#e4d8bf}"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Editor bar toggle; active state fills with gold.",
+      "html": "<button class=\"ds-chip\">Wire</button> <button class=\"ds-chip ds-chip-on\">Mirror</button>",
+      "css": ".ds-chip{height:28px;padding:0 8px;border-radius:4px;border:1px solid #584222;background:linear-gradient(#221c16,#16130f);color:#b8bab8;font-family:'Alegreya Sans',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:color .15s,border-color .15s}.ds-chip:hover{border-color:#9a7843;color:#ecd9a6}.ds-chip:focus-visible{outline:2px solid #cdb37c;outline-offset:2px}.ds-chip-on{background:linear-gradient(#cdb37c,#7c5d2a);border-color:#b8bab8;color:#2a1a08}"
+    },
+    {
+      "name": "Command Medallion",
+      "kind": "custom",
+      "refersTo": "medallion",
+      "description": "Round domed lapis command with crescent highlight, keycap and label; armed fills with gold inlay.",
+      "html": "<div class=\"ds-med-row\"><button class=\"ds-med\"><span class=\"ds-bezel\"><span class=\"ds-dome\">&#187;</span><span class=\"ds-key\">M</span></span><span class=\"ds-mlabel\">Move</span></button><button class=\"ds-med ds-armed\"><span class=\"ds-bezel\"><span class=\"ds-dome\">&#215;</span><span class=\"ds-key\">A</span></span><span class=\"ds-mlabel\">Attack</span></button></div>",
+      "css": ".ds-key{display:inline-block;padding:1px 6px;border-radius:3px;background:#0c0a08;border:1px solid #584222;color:#cdb37c;font-size:11px;font-weight:800;letter-spacing:0}.ds-med-row{display:flex;gap:6px;background:#16130f;padding:12px}.ds-med{display:flex;flex-direction:column;align-items:center;gap:4px;width:68px;background:none;border:0;cursor:pointer}.ds-bezel{position:relative;width:58px;height:58px;padding:4px;box-sizing:border-box;border-radius:50%;background:linear-gradient(#cdb37c,#9a7843,#4a3618);box-shadow:0 0 0 1px rgba(0,0,0,.8),0 3px 4px rgba(0,0,0,.8)}.ds-dome{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:radial-gradient(#46659e,#253c68,#0b1428);box-shadow:inset 0 3px 2px rgba(255,250,235,.22),inset 0 -3px 3px rgba(205,179,124,.18),inset 0 -4px 6px rgba(0,0,0,.6);color:#b8bab8;font-size:22px}.ds-bezel .ds-key{position:absolute;right:-8px;bottom:-4px}.ds-mlabel{font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8a8d8f;text-shadow:0 1px 0 rgba(0,0,0,.9)}.ds-med:hover .ds-dome{color:#ecd9a6}.ds-med:hover .ds-mlabel{color:#b8bab8}.ds-med:focus-visible .ds-bezel{outline:2px solid #cdb37c;outline-offset:3px}.ds-armed .ds-bezel{background:linear-gradient(#e6d2a2,#cdb37c,#584222);box-shadow:0 0 14px rgba(205,179,124,.35),0 3px 4px rgba(0,0,0,.8)}.ds-armed .ds-dome{background:radial-gradient(#ecd8a8,#c9a35f,#6e4e1e);box-shadow:inset 0 3px 2px rgba(255,250,235,.22),inset 0 -4px 6px rgba(60,35,5,.55);color:#24140a}.ds-armed .ds-mlabel{color:#cdb37c;font-weight:800}"
+    },
+    {
+      "name": "Basin Panel",
+      "kind": "card",
+      "refersTo": "basin-panel",
+      "description": "Hammered brass plate with rivets around a recessed bitumen well.",
+      "html": "<div class=\"ds-panel\"><div class=\"ds-well\"><div class=\"ds-ptitle\">Unsaved mesh changes</div><p class=\"ds-pbody\">Save your edits before leaving the editor?</p></div></div>",
+      "css": ".ds-panel{width:360px;padding:10px;border-radius:16px;background:linear-gradient(#c9b07a,#9a7843,#5e4520);box-shadow:inset 0 2px 0 rgba(240,226,190,.4),0 0 0 1px rgba(0,0,0,.85),0 8px 24px rgba(0,0,0,.7)}.ds-well{padding:20px;border-radius:10px;background:#16130f;box-shadow:inset 0 2px 5px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.9),0 0 0 2px rgba(205,179,124,.4)}.ds-ptitle{font-family:Cinzel,serif;font-size:20px;color:#cdb37c}.ds-pbody{font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:700;color:#b8bab8;margin:8px 0 0}"
+    },
+    {
+      "name": "Keycap",
+      "kind": "custom",
+      "refersTo": "keycap",
+      "description": "Every visible shortcut.",
+      "html": "<span class=\"ds-key\">F1</span>",
+      "css": ".ds-key{display:inline-block;padding:1px 6px;border-radius:3px;background:#0c0a08;border:1px solid #584222;color:#cdb37c;font-size:11px;font-weight:800;letter-spacing:0}"
+    },
+    {
+      "name": "Hit-Point Vial",
+      "kind": "custom",
+      "refersTo": "hit-point-vial",
+      "description": "Carnelian glass vial in a brass channel with quarter ticks and tabular value.",
+      "html": "<div class=\"ds-hp\"><div class=\"ds-chan\"><div class=\"ds-vial\"><div class=\"ds-fill\"></div></div></div><span class=\"ds-hpv\">420 / 500</span></div>",
+      "css": ".ds-hp{display:flex;align-items:center;gap:8px;background:#16130f;padding:10px}.ds-chan{width:260px;height:22px;padding:0 5px;box-sizing:border-box;display:flex;align-items:center;border-radius:999px;background:linear-gradient(#c9b07a,#9a7843,#5e4520)}.ds-vial{position:relative;height:12px;flex:1;border-radius:999px;overflow:hidden;background:#1a0806;box-shadow:inset 0 2px 3px rgba(0,0,0,.9)}.ds-fill{width:84%;height:100%;border-radius:999px;background:linear-gradient(#a4473a 0%,#74281d 35%,#3a0d09);transition:width .3s}.ds-hpv{font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:#b8bab8}"
+    },
+    {
+      "name": "Console Housing",
+      "kind": "card",
+      "refersTo": "console-housing",
+      "description": "Raised brass housing with a registered chamfer (plate 44 / engraving 41 / well 35), a rivet on the cut and a pointed crest tab.",
+      "html": "<div class=\"ds-hs\"><div class=\"ds-crest\"></div><div class=\"ds-hs-eng\"></div><span class=\"ds-rv\" style=\"top:19px;right:19px\"></span><span class=\"ds-rv\" style=\"bottom:4px;left:4px\"></span><div class=\"ds-hs-well\"><span class=\"ds-hs-t\">Whispering March</span></div></div>",
+      "css": ".ds-hs{position:relative;width:262px;height:196px;margin-top:30px;padding:16px;box-sizing:border-box;background:linear-gradient(#c9b07a,#9a7843,#5e4520);clip-path:polygon(0 0,calc(100% - 44px) 0,100% 44px,100% 100%,0 100%);box-shadow:inset 0 2px 0 rgba(240,226,190,.4)}.ds-crest{position:absolute;top:-26px;left:96px;width:70px;height:34px;background:linear-gradient(#c9b07a,#9a7843);border-radius:38px 38px 0 0}.ds-hs-eng{position:absolute;inset:5px;background:rgba(22,19,15,.45);clip-path:polygon(0 0,calc(100% - 41px) 0,100% 41px,100% 100%,0 100%)}.ds-rv{position:absolute;width:10px;height:10px;border-radius:50%;background:radial-gradient(#e2cf9e,#9a7843,#4a3618);box-shadow:0 1px 1px rgba(0,0,0,.8)}.ds-hs-well{position:relative;height:100%;padding:8px;box-sizing:border-box;background:#16130f;clip-path:polygon(0 0,calc(100% - 35px) 0,100% 35px,100% 100%,0 100%);box-shadow:inset 0 2px 5px rgba(0,0,0,.7)}.ds-hs-t{font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#cdb37c}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Saint Louis Basin",
+    "overview": "Every surface of DreamCraft is cut from one object: a Mamluk inlaid brass basin, the vessel later used to baptise French kings and so owned by both sides of the Crusades. The battlefield console is the basin's band. Panels, dialogs, the model picker and the editor chrome are fittings cast from the same metal. Leaving the battle for the pause menu or the editor never changes worlds: it is the same brass, the same bitumen, the same inlay.\n\nThe system is material, not flat. Hammered brass plates (a gradient from lit top to shaded foot, a hammered texture tiled at 96px, a lit inner top edge and a black outer seam) hold recessed bitumen wells. Engraved interlace and khatam star textures are cut into rims and fields at low opacity. Rivets sit at plate corners, and where a plate is chamfered a rivet sits on the cut. Plate, engraving and well of one fitting share one registered corner cut, so every layer follows the one outside it. Inside the wells, information is silver inlay: uppercase tracked labels and tabular figures. Lapis fills medallion fields and secondary actions; carnelian carries damage, danger and destructive actions. Gold inlay is reserved for one job: what is armed, selected or the next actionable target.\n\nThe HUD and the world share one painted grade. The VUI context runs `GRADE_PAINTED` (saturation 0.78, contrast 0.94, grain 0.06, mottle 0.16, warm tint 1.0/0.95/0.86). The watercolour post-shader applies the world half: a lighter saturation pull (0.84), a warm tint (1.0/0.96/0.88), an empty void that settles into warm bitumen (0.075/0.062/0.048) rather than cold blue-black, a darkening where the world tucks under the console (up to 42%, over 110px) and a lighter one under the top edge. HUD and battlefield read as one image.",
+    "keyCharacteristics": [
+      "One vessel: a single brass-and-bitumen material language across battle, pause, picker and editor.",
+      "Gold inlay means \"armed, selected or next\"; nothing else is gold.",
+      "Silver inlay for all reading text; tabular figures in every number.",
+      "Every command is a round inlaid medallion with a visible keycap.",
+      "Engraved interlace and khatam textures, never flat fills alone, on structural surfaces.",
+      "Registered cuts: plate, engraving and well of one fitting share one corner geometry.",
+      "UI and world share one warm, painted grade."
+    ],
+    "rules": [
+      {
+        "name": "The One Gold Rule",
+        "body": "Gold inlay marks what is armed, selected, or the next actionable target, and the one primary action in a dialog. A gold fill anywhere else is a defect.",
+        "section": "colors"
+      },
+      {
+        "name": "The Gem Meaning Rule",
+        "body": "Lapis is secondary and calm, carnelian is damage, danger or destruction, amber is a running countdown. There is no green success tone and no verdigris.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Size HUD Rule",
+        "body": "On the battlefield HUD, text is 13px (labels, values, body) or 22px (Cinzel names and the challenge banner heading). Small headings take the 13px uppercase label, never a third size. Larger sizes live only in dialogs and the outcome arch; the editor's dense chrome may use 11-12px.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Every number is set with tabular figures in a fixed position so it never jitters as it changes.",
+        "section": "typography"
+      },
+      {
+        "name": "The Single Word Rule",
+        "body": "Cinzel Decorative sets a single word only; Cinzel carries every multi-word title.",
+        "section": "typography"
+      },
+      {
+        "name": "The Cast, Cut, Domed Rule",
+        "body": "A surface is either a cast plate (lit lip, drop shadow), a well cut into a plate (inset shadow, brass outer lip), or a domed gem (radial fill, inset crescent highlight, lower shade). Never a flat card.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Registered Cut Rule",
+        "body": "Every layer of a fitting takes the same corner shape as the layer outside it, at a radius derived from its inset. A well that rounds where its plate is chamfered is a defect.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** build every new surface from the plate, well and rivet set: hammered brass around a bitumen well, nested radii, an engraved band in the rim.",
+      "**Do** register every cut: when a plate is chamfered or arched, its engraving and well take the same corner shape at radii derived from the inset.",
+      "**Do** reserve gold inlay (`inlay`) for the armed command, the selected item, the next target and the one primary action in a dialog.",
+      "**Do** set every number with tabular figures at 13px on the battlefield HUD.",
+      "**Do** show the hotkey of every command as a keycap on the control itself.",
+      "**Do** keep reading text silver (`silver`, `silver-dim`), names Cinzel in `brass-hi`, and small headings in the 13px uppercase label.",
+      "**Do** use lapis for secondary actions, carnelian for damage and destructive actions, amber only for a running countdown.",
+      "**Do** seat transient HUD plaques on the console (frieze, housing) rather than floating them over the world.",
+      "**Do** keep the HUD on the painted grade (`GRADE_PAINTED`) so it matches the watercolour world."
+    ],
+    "donts": [
+      "**Don't** float detached tool-panel islands over the battlefield; the console is one band with cast housings.",
+      "**Don't** add a green success tone or a verdigris accent.",
+      "**Don't** put gold on a resting control, a decoration or a second dialog action.",
+      "**Don't** set phrases in Cinzel Decorative; it takes one word.",
+      "**Don't** use proportional figures for a value that changes during play.",
+      "**Don't** render a command as a square button; commands are round medallions."
+    ]
+  }
+}

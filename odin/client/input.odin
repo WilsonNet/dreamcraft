@@ -3,7 +3,6 @@ package main
 
 import rl "vendor:raylib"
 import g "../game"
-import ui "../ui"
 
 handle_input :: proc() {
 	if handle_help_input() {
@@ -134,7 +133,7 @@ handle_left_press :: proc(mouse: rl.Vector2) {
 		handle_minimap_click(mouse)
 		return
 	}
-	if ui.blocks_pointer(&app.ui_ctx) {
+	if ui_pointer_captured() {
 		return
 	}
 
@@ -160,7 +159,7 @@ handle_left_press :: proc(mouse: rl.Vector2) {
 
 @(private)
 handle_middle_press :: proc(mouse: rl.Vector2) {
-	if rl.CheckCollisionPointRec(mouse, app.minimap_rect) || ui.blocks_pointer(&app.ui_ctx) {
+	if rl.CheckCollisionPointRec(mouse, app.minimap_rect) || ui_pointer_captured() {
 		return
 	}
 	app.dragging = false
@@ -219,7 +218,7 @@ handle_left_release :: proc(mouse: rl.Vector2) {
 }
 
 handle_right_click :: proc(mouse: rl.Vector2) {
-	if rl.CheckCollisionPointRec(mouse, app.minimap_rect) || ui.blocks_pointer(&app.ui_ctx) {
+	if rl.CheckCollisionPointRec(mouse, app.minimap_rect) || ui_pointer_captured() {
 		return
 	}
 	app.command_mode = .None

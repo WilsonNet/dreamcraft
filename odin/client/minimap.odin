@@ -3,7 +3,6 @@ package main
 
 import rl "vendor:raylib"
 import g "../game"
-import ui "../ui"
 
 update_minimap_pixels :: proc() {
 	for gy in 0..<g.GRID_H {
@@ -40,7 +39,7 @@ update_minimap_pixels :: proc() {
 minimap_terrain_color :: proc(cell: g.Grid_Pos) -> rl.Color {
 	state := g.fog_state(&app.game.fog, cell)
 	if state == 0 {
-		return rl.Color{4, 6, 4, 255}
+		return rl.Color{30, 25, 18, 255} // unexplored: dark ink on the basin's bitumen
 	}
 	index, _ := g.cell_index(cell)
 	if g.bit_grid_test(&app.game.grid.obstacles, index) {
@@ -65,63 +64,11 @@ set_minimap_pixel :: proc(cell: g.Grid_Pos, color: rl.Color) {
 	app.minimap_pixels[int(cell.y) * g.GRID_W + int(cell.x)] = color
 }
 
-compose_minimap_island :: proc(ctx: ^ui.Context, h: f32) {
-	// Outer card (216x161 at x=12, y=h-178) keeps minimap_tex strictly at {20, h-150, 200, 125}.
-	cm := ui.m_blocks(ui.m_pad_edges(ui.m_gap(ui.m_surface(ui.m_size(ui.m_at(ui.mod(), 12, h - 178), 216, 161), ui.style_island(ui.RAD_LG)), 6), ui.edges_ltrb(8, 6, 8, 8)))
-	ui.open_col(ctx, ui.id("minimap_card"), cm)
-
-	ui.open_row(ctx, ui.INVALID_ID, ui.m_align(ui.m_h(ui.m_fill(ui.mod(), true, false), 16), .Center))
-	ui.label(ctx, "MINIMAP", .Mono_Bold, 11, ui.COL_TEXT_SECONDARY)
-	ui.spacer(ctx, 1)
-	cam_txt: cstring = app.camera_follow ? "LOCK" : "FREE"
-	ui.label(ctx, cam_txt, .Mono_Bold, 10.5, app.camera_follow ? ui.COL_TEXT_MOVE : ui.COL_TEXT_GOLD)
-	ui.close(ctx)
-
-	ui.clipped_texture(
-		ctx,
-		ui.id("minimap_view"),
-		app.minimap,
-		8,
-		true,
-		ui.COL_BORDER_DEFAULT,
-		ui.m_blocks(ui.m_size(ui.mod(), 200, 125)),
-		draw_minimap_camera_overlay,
-		nil,
-	)
-	ui.close(ctx)
-}
-
-@(private)
-draw_minimap_camera_overlay :: proc(rect: rl.Rectangle, _: rawptr) {
-	draw_minimap_camera_box(rect)
-}
-
 @(private)
 world_to_minimap :: proc(point: rl.Vector3, rect: rl.Rectangle) -> rl.Vector2 {
 	u := (point.x + f32(g.GRID_W) * 0.5) / f32(g.GRID_W)
 	v := 1.0 - (point.z + f32(g.GRID_H) * 0.5) / f32(g.GRID_H)
 	return rl.Vector2{rect.x + u * rect.width, rect.y + v * rect.height}
-}
-
-@(private)
-draw_minimap_camera_box :: proc(rect: rl.Rectangle) {
-	w := f32(rl.GetScreenWidth())
-	h := max(f32(rl.GetScreenHeight()) - HUD_HEIGHT, f32(1))
-	corners := [4]rl.Vector2{{0, 0}, {w, 0}, {w, h}, {0, h}}
-	pts: [4]rl.Vector2
-	for sc, idx in corners {
-		p, ok := screen_to_world_ground(sc)
-		if !ok {
-			return
-		}
-		pts[idx] = world_to_minimap(p, rect)
-	}
-	col := rl.Color{235, 240, 225, 210}
-	for i in 0..<4 {
-		if a, b, ok := clip_segment_rect(pts[i], pts[(i + 1) % 4], rect); ok {
-			rl.DrawLineV(a, b, col)
-		}
-	}
 }
 
 @(private)

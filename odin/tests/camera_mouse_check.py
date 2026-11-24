@@ -72,7 +72,8 @@ def check_probe(base: str):
 
     w, h = s1["screen"]
     # Move to map center via minimap so map bounds (-43..+43) don't clamp 20-frame pans.
-    post_json(f"{base}/mouse", {"action": "set", "x": 120, "y": h - 87, "focused": True, "on_screen": True, "left": True, "steps": 1})
+    mx, my = minimap_point(s1)
+    post_json(f"{base}/mouse", {"action": "set", "x": mx, "y": my, "focused": True, "on_screen": True, "left": True, "steps": 1})
     s_mid = post_json(f"{base}/mouse", {"action": "set", "x": 640, "y": 360, "focused": True, "on_screen": True, "left": False, "steps": 2})
 
     # 2. Exact border pixels: left (0), right (w), top (0), bottom (h)
@@ -87,7 +88,8 @@ def check_probe(base: str):
     dx_r = (s_right["target"][0] - s_left["target"][0], s_right["target"][2] - s_left["target"][2])
     assert dot2(dx_r, right) > 5.0, f"right edge failed to pan right: {dx_r} {s_right}"
 
-    post_json(f"{base}/mouse", {"action": "set", "x": 120, "y": h - 87, "focused": True, "on_screen": True, "left": True, "steps": 1})
+    mx, my = minimap_point(s_right)
+    post_json(f"{base}/mouse", {"action": "set", "x": mx, "y": my, "focused": True, "on_screen": True, "left": True, "steps": 1})
     s_center = post_json(f"{base}/mouse", {"action": "set", "x": 640, "y": 360, "focused": True, "on_screen": True, "left": False, "steps": 2})
     s_top = post_json(f"{base}/mouse", {"action": "set", "x": w * 0.5, "y": 0, "focused": True, "on_screen": True, "steps": 20})
     dy_top = (s_top["target"][0] - s_center["target"][0], s_top["target"][2] - s_center["target"][2])
@@ -138,9 +140,11 @@ def check_probe(base: str):
 
     # 7. Minimap click & drag
     post_json(f"{base}/mouse", {"action": "reset_camera"})
-    m0 = post_json(f"{base}/mouse", {"action": "set", "x": 180, "y": h - 90, "focused": True, "on_screen": True, "left": True, "steps": 1})
+    mx, my = minimap_point(s1, 0.8, 0.5)
+    m0 = post_json(f"{base}/mouse", {"action": "set", "x": mx, "y": my, "focused": True, "on_screen": True, "left": True, "steps": 1})
     assert m0["minimap_dragging"] and not m0["follow"] and m0["target"][0] > 10.0, m0
-    m1 = post_json(f"{base}/mouse", {"action": "set", "x": 60, "y": h - 90, "focused": True, "on_screen": True, "left": True, "steps": 1})
+    mx, my = minimap_point(m0, 0.2, 0.5)
+    m1 = post_json(f"{base}/mouse", {"action": "set", "x": mx, "y": my, "focused": True, "on_screen": True, "left": True, "steps": 1})
     assert m1["target"][0] < m0["target"][0] - 10.0, (m0["target"], m1["target"])
 
     # 8. Clear probe and check screenshot works
@@ -260,6 +264,12 @@ def run_swift_mouse(args: list[str]) -> str:
     return subprocess.check_output([bin_path] + args, text=True).strip()
 
 
+def minimap_point(snap: dict, fx: float = 0.5, fy: float = 0.5) -> tuple[float, float]:
+    """Point inside the live HUD minimap (the HUD layout owns its position)."""
+    x, y, mw, mh = snap["minimap"]
+    return x + mw * fx, y + mh * fy
+
+
 def check_os(base: str, pid: int | None):
     post_json(f"{base}/mouse", {"action": "reset_camera"})
     if pid is not None:
@@ -274,7 +284,8 @@ def check_os(base: str, pid: int | None):
     # Focus window and center camera via minimap click -> move to center to arm edge pan.
     run_swift_mouse(["click_left", str(wx + w * 0.5), str(wy + h * 0.5)])
     time.sleep(0.1)
-    run_swift_mouse(["click_left", str(wx + 120), str(wy + h - 87)])
+    mx, my = minimap_point(snap)
+    run_swift_mouse(["click_left", str(wx + mx), str(wy + my)])
     time.sleep(0.1)
     run_swift_mouse(["move", str(wx + w * 0.5), str(wy + h * 0.5)])
     time.sleep(0.15)
@@ -316,7 +327,8 @@ def check_os(base: str, pid: int | None):
     assert not c_out["cursor_inside"] and c_out["edge_dir"] == [0.0, 0.0] and c_out["vel"] == [0.0, 0.0, 0.0], c_out
 
     # Recenter via minimap, then test real OS MMB drag and wheel zoom
-    run_swift_mouse(["click_left", str(wx + 120), str(wy + h - 87)])
+    mx, my = minimap_point(snap)
+    run_swift_mouse(["click_left", str(wx + mx), str(wy + my)])
     time.sleep(0.08)
     run_swift_mouse(["move", str(wx + w * 0.5), str(wy + h * 0.5)])
     time.sleep(0.08)

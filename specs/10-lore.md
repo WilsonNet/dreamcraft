@@ -53,15 +53,20 @@ DreamCraft takes place in **Al-Dor**, a frontier realm where three mythic and hi
 
 ---
 
-## 4. How Lore Governs UI & Visual Craft (`odin/ui/`, `DESIGN.md`)
+## 4. How Lore Governs UI & Visual Craft (vinland-ui, `DESIGN.md`)
 
-Every screen in DreamCraft's Operate UI (Battlefield HUD, Minimap, Pause Overlay, Model Picker, 3D Model Editor, and F1 Shortcut Window) reflects the **Al-Dor Chivalric × Levantine** material world without cluttering gameplay:
+Every screen of the Operate UI (battlefield console, minimap, pause, F1 window, Model Picker and
+Model Editor chrome) is dressed as the band of a Mamluk inlaid brass basin, the "Saint Louis
+Basin" world: a Levantine object that carries both Frankish and Mamluk figures, which suits the
+Al-Dor setting. `DESIGN.md` is the source of truth for tokens and components.
 
-1. **Typography (`odin/ui/font.odin`)**:
-   - **Chronicle Serif Bold (`ChronicleSerif-Bold.ttf`)** carries `.Heading` titles (`DREAMCRAFT RTS`, `PAUSED`, `MODEL EDITOR - PICK ASSET`, `MODEL EDITOR SHORTCUTS`) like carved Gondorian inscriptions and illuminated Arabic/Latin manuscripts.
-   - **Lato (`Lato-Regular.ttf` + morphological stem-boldened `.Sans_Bold`)** carries `.Body`, `.Label`, `.Medium`, and `.Bold` controls with warm humanist clarity.
-   - **Source Code Pro (`SourceCodePro-{Regular,Bold}.ttf`)** carries `.Mono` and `.Mono_Bold` coordinates, FPS/fog telemetry, and engraved brass keycaps.
-2. **Materials & Palette (`odin/ui/theme.odin`)**:
-   - **Panels & Islands**: Torchlit Damascus obsidian and oiled walnut (`COL_SURFACE_0..3 = #110e0c..#2e261e`) over recessed velvet wells (`#0c0a08`).
-   - **Controls**: Tooled saddle leather (`Secondary`), Royal Lapis Lazuli (`Tonal` — e.g. `Model Editor`, `Edit Procedural`, `Models`, `Game`), Oasis Emerald (`Primary` — `Resume Battle`, `Edit Model`, `Save`), Sovereign Sun-Gold (`Active` selection), and Carbuncle Crimson (`Danger` — `Retry Level`).
-   - **Signature Shader Detail (`odin/assets/shaders/ui_sdf.fs`)**: Every card, island, and modal renders an analytical **burnished-brass outer frame**, a **torchlit gold-leaf top rim**, an **inner gilded filigree double-rule** (`2.6px` inset), and **45° Mamluk/Elven corner diamond studs** in a single GPU draw call.
+1. **Typography**: Cinzel (Roman inscriptional capitals) for names and titles, Cinzel Decorative
+   for single-word display, Alegreya Sans for labels, values and buttons. Two sizes carry the HUD.
+2. **Materials & Palette**: hammered brass housings and rivets over bitumen wells, silver
+   interlace friezes, lapis enamel medallions for commands, carnelian for danger, and a pale
+   gold inlay reserved for the armed command. A painted colour grade (desaturation, warm tint,
+   grain, mottle) runs in the VUI shader and in `watercolor.fs`, so console and world share one
+   palette.
+3. **Ornament without emblems**: geometry comes from the basin itself (khatam stars, interlace,
+   pointed arches, bevelled shoulders). Heraldic crosses and other militant emblems are not used
+   as decoration; Stop is a plain bossed shield.

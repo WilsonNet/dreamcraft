@@ -4,7 +4,6 @@ package main
 import rl "vendor:raylib"
 import art "./art"
 import edit "./art/edit"
-import ui "../ui"
 
 handle_editor_input :: proc() {
 	ed := &app.editor
@@ -14,7 +13,7 @@ handle_editor_input :: proc() {
 		ed.rmb_moved = false
 	}
 	vp := editor_viewport_rect()
-	in_vp := !ed.confirm_exit_open && !ed.delete_menu_open && !ui.blocks_pointer(&app.ui_ctx) && rl.CheckCollisionPointRec(mouse, vp)
+	in_vp := !ed.confirm_exit_open && !ed.delete_menu_open && !ui_pointer_captured() && rl.CheckCollisionPointRec(mouse, vp)
 	if !ed.modal_active && !ed.box_active {
 		editor_update_camera_input(mouse, in_vp)
 	}
@@ -311,7 +310,7 @@ editor_exec_merge :: proc() {
 editor_update_cursor :: proc() {
 	ed := &app.editor
 	next := rl.MouseCursor.DEFAULT
-	if ed.confirm_exit_open || ed.delete_menu_open || ui.blocks_pointer(&app.ui_ctx) {
+	if ed.confirm_exit_open || ed.delete_menu_open || ui_pointer_captured() {
 		next = .DEFAULT
 	} else if ed.cam_orbit_drag || ed.cam_pan_drag {
 		next = .RESIZE_ALL
