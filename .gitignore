@@ -19,3 +19,4 @@ odin/web/main.wasm
 
 !legacy/warrior-glb/assets/*.png
 legacy/warrior-glb/tools/build/
+__pycache__/
