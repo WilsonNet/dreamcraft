@@ -2,7 +2,7 @@
 package art
 
 import "core:math"
-import rl "vendor:raylib"
+import rl "../../gfx"
 
 build_boulder_moss :: proc() -> Mesh_Builder {
 	if custom, ok := try_build_custom_model("boulder_moss"); ok { return custom }

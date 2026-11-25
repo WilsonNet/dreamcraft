@@ -98,7 +98,7 @@ post pass.
   identity; joints align 1:1 with `BONES` in `Y = 0..1.945`).
 - 26 joints; rigid skinning; kinetic-chain analytic clips plus traveling S-wave
   cape/sash/plume secondary motion and turn/stop dynamics (`unit_visuals.odin`).
-- Meshes are uploaded once per unit (raylib-owned arrays) and only positions
+- Meshes are uploaded once per unit (`gfx.MemAlloc`-owned arrays) and only positions
   and normals are rewritten per frame.
 - `./bin/dreamcraft-dev --sheet` renders 12 reference views through the full
   pipeline to `build/sheet/`.

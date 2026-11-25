@@ -21,7 +21,7 @@ Measured on this machine (Apple Silicon):
 - Fixed-capacity arrays and slices; no hidden `Vec` growth.
 - Struct-of-arrays and bitsets are straightforward.
 - `core:testing` has leak tracking and a parallel test runner.
-- Easy C ABI/foreign calls (raylib).
+- Easy C ABI/foreign calls (SDL3).
 - Deterministic integer math; no hidden float behavior.
 
 ## Package Layout
@@ -29,7 +29,8 @@ Measured on this machine (Apple Silicon):
 ```
 odin/
 ├── game/        # pure simulation, imports no rendering libraries
-├── client/      # raylib 3D isometric renderer, input, HUD, minimap, shaders, VFX, Model Editor
+├── gfx/         # raylib-compatible API on SDL3 GPU (Metal / Vulkan)
+├── client/      # 3D isometric renderer, input, HUD, minimap, shaders, VFX, Model Editor
 │   ├── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props, spec/, edit/, models/
 │   └── svg/     # zero-dependency SVG parser + 4x4 SSAA anti-aliased rasterizer (icons.odin)
 ├── tools/
@@ -407,7 +408,7 @@ Layers:
   `slash_vfx.odin` attack ribbons; shaded by `assets/shaders/unit.{vs,fs}`.
 - Scene renders to a full-resolution `RenderTexture2D` (bilinear) and finishes
   with `assets/shaders/watercolor.fs` wash post-processing (`--no-shader` bypasses).
-- HUD, minimap, health bars and selection box stay full resolution (`.WINDOW_HIGHDPI`), rendered by vinland-ui embedded over raylib (`vinland:vui/gl`, `vinland:vui/raylib`; see [`specs/09-ui-framework.md`](09-ui-framework.md) and [`DESIGN.md`](../DESIGN.md)).
+- HUD, minimap, health bars and selection box stay full resolution (`.WINDOW_HIGHDPI`), rendered by vinland-ui inside the game's SDL3 GPU frame (`vinland:vui/sdlgpu`; see [`specs/09-ui-framework.md`](09-ui-framework.md) and [`DESIGN.md`](../DESIGN.md)).
 - Picking casts a camera ray at the ground plane.
 - One model instance per unit, so idle/walk/attack/dynamics differ per unit.
 

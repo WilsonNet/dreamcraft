@@ -1,10 +1,10 @@
 # DreamCraft RTS
 
 A deterministic fantasy RTS — spiritual successor to StarCraft: Brood War,
-rendered in full 3D isometric on native (raylib) with a pixel-art post shader;
+rendered in full 3D isometric on native (SDL3 GPU: Metal / Vulkan) with a pixel-art post shader;
 the browser build keeps a lightweight 2:1 canvas view.
 
-The primary implementation is **Odin** (`odin/`): native raylib client plus a
+The primary implementation is **Odin** (`odin/`): native SDL3 GPU client plus a
 browser WASM/canvas build. It compiles in seconds, uses fixed-capacity data
 structures, and has no garbage collector. Deprecated prototypes (`rust/`,
 `web-console/`, `warrior-glb/`, `reference.jpg`) are archived under `legacy/`.
@@ -55,7 +55,7 @@ cd odin
 | Layer | Technology |
 |-------|-----------|
 | Simulation | Odin, Q16.16 fixed point, fixed-timestep 60 Hz |
-| Rendering | raylib 6.2 3D + procedural art + watercolour & terrain shaders (native) / HTML canvas (web) |
+| Rendering | SDL3 GPU (Metal / Vulkan) via `odin/gfx` + procedural art + watercolour & terrain shaders (native) / HTML canvas (web) |
 | Units | Struct-of-arrays, generation handles, fixed pools |
 | Pathfinding | Allocation-free A*, preallocated scratch |
 | Fog | Two bitsets (explored / visible) |
@@ -67,7 +67,8 @@ cd odin
 ```
 odin/
 ├── game/          # pure deterministic simulation (no rendering, no allocation)
-├── client/        # raylib native client, HUD, minimap, input, shaders, VFX
+├── gfx/           # raylib-compatible API on SDL3 GPU, game shaders (MSL + SPIR-V)
+├── client/        # native client, HUD, minimap, input, VFX
 │   └── art/       # procedural Mamluk mesh, 26-bone rig, anims, trees, props
 ├── control/       # JSON control API + localhost HTTP server
 ├── headless/      # file/script runner, --serve, --record/--replay

@@ -4,7 +4,7 @@
 package main
 
 import "core:math"
-import rl "vendor:raylib"
+import rl "../gfx"
 import ui "vinland:vui"
 import g "../game"
 
@@ -28,7 +28,7 @@ render_hero_portrait :: proc() {
 			return
 		}
 		rl.SetTextureFilter(portrait.texture, .BILINEAR)
-		ui.image_external_update(&vh.ctx, vh.portrait_img, u64(portrait.texture.id), PORTRAIT_PX, PORTRAIT_PX)
+		ui.image_external_update(&vh.ctx, vh.portrait_img, rl.texture_handle(portrait.texture), PORTRAIT_PX, PORTRAIT_PX)
 	}
 	a := app.visuals[idx].angle * math.PI / 180
 	fwd := rl.Vector3{math.sin(a), 0, math.cos(a)}

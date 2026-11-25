@@ -1,7 +1,7 @@
 // Full 3D world rendering coordinator.
 package main
 
-import rl "vendor:raylib"
+import rl "../gfx"
 import g "../game"
 
 draw_frame :: proc() {

@@ -5,7 +5,7 @@
 package art
 
 import "core:math"
-import rl "vendor:raylib"
+import rl "../../gfx"
 
 LATHE_SEGMENTS :: 12
 

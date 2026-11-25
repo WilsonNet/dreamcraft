@@ -5,7 +5,7 @@ package main
 import "core:c"
 import "core:math"
 import "core:mem"
-import rl "vendor:raylib"
+import rl "../gfx"
 import g "../game"
 import art "./art"
 

@@ -3,7 +3,7 @@ package main
 
 import "core:encoding/json"
 import "core:fmt"
-import rl "vendor:raylib"
+import rl "../gfx"
 import control "../control"
 import art "./art"
 

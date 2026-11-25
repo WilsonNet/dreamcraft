@@ -20,7 +20,7 @@ Code-first two-way procedural asset pipeline (`Odin <-> Edit Mesh <-> Live GPU`)
 
 ## Operating Context
 
-- Native Odin + raylib 3D desktop client (`odin/client/`, UI on vinland-ui from `../vinland-ui`) with secondary `js_wasm32` canvas web build (`odin/web/`).
+- Native Odin 3D desktop client on SDL3 GPU (Metal / Vulkan) (`odin/client/`, UI on vinland-ui from `../vinland-ui`) with secondary `js_wasm32` canvas web build (`odin/web/`).
 - In-game pause loop: `Esc` -> `Model Editor` -> choose model (`Mamluk Base [Hero/Player/Enemy preview & optional variant fork]`, `Pine Tall`, `Pine Mid`, `Oak Broad`, `Oak Elder`, `Boulder Moss`, `Shrub Fern`, `Waypoint Disc`, `Goal Banner`, `Selection Ring`) -> edit mesh -> `Save` -> `Resume Game`.
 - Dev workflow runs on the Dev lane (`./bin/dreamcraft-dev --control=7778` with `DEV - ` window title), then promotes via `./build.sh` and `./restart-build.sh` (`:7777`).
 - Future extensibility: structured around clean `Poly_Mesh` geometry, `Mat_Kind` vertex palettes, `Bone_Id` rigid-skinning assignments, and pose preview so future rigging, animation keyframes, and custom prop authoring plug into the same pipeline.
@@ -35,7 +35,7 @@ Code-first two-way procedural asset pipeline (`Odin <-> Edit Mesh <-> Live GPU`)
 ## Brand Commitments
 
 - **Visual Direction (`.agents/skills/art-direction/SKILL.md`):** Akira Toriyama x Dragon Quest heroic silhouettes (`5.36`-head proportions), AoE-scale vegetation, warm olive/brass/gold watercolour aesthetic (`#0f180f` forest-slate surfaces, `#5a965a` sage borders, `#ebd778` burnished gold accents).
-- **Raylib Native Desktop UI:** Clean immediate-mode raylib tool panels, crisp legible ASCII labels (no broken UTF-8 glyphs in default bitmap font), zero cluttering animations or modal walls during viewport modeling.
+- **Native Desktop UI:** Clean immediate-mode vinland-ui tool panels, crisp legible ASCII labels (no broken UTF-8 glyphs in default bitmap font), zero cluttering animations or modal walls during viewport modeling.
 
 ## Evidence on Hand
 

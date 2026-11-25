@@ -4,7 +4,7 @@ package main
 import "core:math"
 import "core:os"
 import "core:strings"
-import rl "vendor:raylib"
+import rl "../gfx"
 import svg "./svg"
 
 ICON_TEX_PX :: 96

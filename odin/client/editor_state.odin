@@ -2,7 +2,7 @@
 package main
 
 import "core:fmt"
-import rl "vendor:raylib"
+import rl "../gfx"
 import art "./art"
 import edit "./art/edit"
 

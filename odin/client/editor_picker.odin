@@ -1,7 +1,7 @@
 // In-game Model Picker overlay: Compose split panel, category segmented control, and rounded turntable card.
 package main
 
-import rl "vendor:raylib"
+import rl "../gfx"
 import art "./art"
 
 picker_filtered_indices :: proc(cat: int) -> ([]int, int) {

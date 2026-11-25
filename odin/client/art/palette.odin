@@ -5,7 +5,7 @@
 // low so the watercolour shader keeps the surfaces matte and readable.
 package art
 
-import rl "vendor:raylib"
+import rl "../../gfx"
 import spec "./spec"
 
 Mat_Kind :: spec.Mat_Kind

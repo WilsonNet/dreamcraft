@@ -1,23 +1,24 @@
-// DreamCraft side of the vinland-ui raylib bridge (vinland:vui/raylib owns the generic part:
-// input sampling, GL render after rlgl flush, pointer capture). This file keeps only what is
-// specific to the game: the Basin tokens, icon registration, the probe-driven synthetic mouse
-// and the agent commands. The HUD is built once per frame after the camera update, so
+// vinland-ui inside the game's SDL3 GPU frame (vinland:vui/sdlgpu draws the HUD as the last
+// step of the backbuffer pass, in the same command buffer as the world). This file keeps what
+// is specific to the game: the Basin tokens, icon registration, the probe-driven synthetic
+// mouse and the agent commands. The HUD is built once per frame after the camera update, so
 // world-anchored labels never lag; world clicks are routed by hit-testing the last layout.
 package main
 
 import "core:fmt"
 import "core:strings"
 import "core:time"
-import rl "vendor:raylib"
+import rl "../gfx"
 import ui "vinland:vui"
-import vrl "vinland:vui/raylib"
+import sdl "vendor:sdl3"
+import vsg "vinland:vui/sdlgpu"
 import vfont "vinland:vui/fonts/game"
 import vicons "vinland:vui/icons/game"
 import vmat "vinland:vui/materials"
 
 Vui_Host :: struct {
 	ctx:          ui.Context,
-	host:         vrl.Host,
+	r:            vsg.Renderer,
 	ready:        bool,
 	gi:           vicons.Game_Icons,
 	draw:         ^ui.Draw_List,
@@ -27,7 +28,7 @@ Vui_Host :: struct {
 	portrait_img: ui.Image_Id,
 	icon_masks:   [dynamic]rl.Texture2D,
 	frame_ms:     f32, // CPU: build + layout + paint
-	render_ms:    f32, // CPU: GL submission
+	render_ms:    f32, // CPU: upload + draw recording inside the frame's command buffer
 }
 
 vh: Vui_Host
@@ -79,20 +80,20 @@ vui_init :: proc() {
 		// icon takes the one tint its class gives it (silver, brass, ink).
 		mask := icon_mask_texture(tex)
 		append(&vh.icon_masks, mask)
-		img := ui.image_register_external(&vh.ctx, u64(mask.id), int(mask.width), int(mask.height))
+		img := ui.image_register_external(&vh.ctx, rl.texture_handle(mask), int(mask.width), int(mask.height))
 		ui.image_name(&vh.ctx, icon_class_name(id), img)
 	}
-	vh.ready = vrl.init(&vh.host, &vh.ctx)
-	vh.minimap_img = vrl.texture_image(&vh.host, app.minimap)
+	vh.ready = vsg.init(&vh.r, rl.device(), rl.color_format(), rl.depth_format())
+	vh.minimap_img = ui.image_register_external(&vh.ctx, rl.texture_handle(app.minimap), int(app.minimap.width), int(app.minimap.height), nearest = true)
 	vh.picker_img = ui.image_register_external(&vh.ctx, 0, 1, 1, flip_y = true)
 	vh.portrait_img = ui.image_register_external(&vh.ctx, 0, 1, 1, flip_y = true)
 	if !vh.ready {
-		fmt.eprintln("dreamcraft: VUI GL renderer failed to initialise; HUD disabled")
+		fmt.eprintln("dreamcraft: VUI GPU renderer failed to initialise; HUD disabled")
 	}
 }
 
 vui_shutdown :: proc() {
-	vrl.destroy(&vh.host)
+	vsg.destroy(&vh.r, &vh.ctx)
 	for t in vh.icon_masks {
 		rl.UnloadTexture(t)
 	}
@@ -129,14 +130,26 @@ icon_tex :: proc(id: Icon_Id) -> string {
 
 @(private)
 vui_input :: proc() -> ui.Input {
-	// generic sampling from the bridge, then the probe-aware mouse so agents' synthetic
-	// clicks (/mouse, ui_click) drive the HUD exactly like the world
-	in_ := vrl.input()
+	// mouse only (game hotkeys never reach a focused button); the left button and position
+	// come from the probe-aware input so agents' synthetic clicks drive the HUD like the world
+	in_: ui.Input
 	in_.mouse = input_mouse_pos()
 	in_.mouse_inside = input_cursor_on_screen()
-	in_.buttons -= {.Left}
-	in_.pressed -= {.Left}
-	in_.released -= {.Left}
+	OTHER := [2]struct {
+		rb: rl.MouseButton,
+		vb: ui.Mouse_Button,
+	}{{.RIGHT, .Right}, {.MIDDLE, .Middle}}
+	for b in OTHER {
+		if rl.IsMouseButtonDown(b.rb) {
+			in_.buttons += {b.vb}
+		}
+		if rl.IsMouseButtonPressed(b.rb) {
+			in_.pressed += {b.vb}
+		}
+		if rl.IsMouseButtonReleased(b.rb) {
+			in_.released += {b.vb}
+		}
+	}
 	if input_left_down() {
 		in_.buttons += {.Left}
 	}
@@ -156,15 +169,16 @@ vui_frame :: proc(dt: f32) {
 	if !vh.ready {
 		return
 	}
-	size, _ := vrl.viewport()
-	w, h := size.x, size.y
+	w, h := f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())
+	scale := rl.GetWindowScaleDPI().x
 	if app.mode == .Model_Picker && app.editor.picker_rect_tex.id > 0 {
-		vrl.texture_update(&vh.host, vh.picker_img, app.editor.picker_rect_tex.texture)
+		t := app.editor.picker_rect_tex.texture
+		ui.image_external_update(&vh.ctx, vh.picker_img, rl.texture_handle(t), int(t.width), int(t.height))
 	}
 	t0 := time.tick_now()
-	vrl.begin(&vh.host, vui_input())
+	ui.begin_frame(&vh.ctx, vui_input(), {w, h}, scale, rl.GetTime())
 	compose_active_ui(w, h)
-	vh.draw = vrl.end(&vh.host)
+	vh.draw = ui.end_frame(&vh.ctx)
 	when #config(DC_UI_DEBUG, false) {
 		@(static) last: ui.Id
 		if vh.ctx.hover_id != last {
@@ -186,16 +200,36 @@ vui_frame :: proc(dt: f32) {
 	}
 }
 
-// Draws the UI over whatever raylib has drawn this frame (between BeginDrawing/EndDrawing).
+// Draws the UI over the frame drawn so far (between BeginDrawing/EndDrawing): recorded now,
+// uploaded and drawn when the frame's command buffer is replayed.
 vui_render :: proc() {
+	if !vh.ready || vh.draw == nil {
+		return
+	}
+	vh.render_ms = 0
+	rl.record_callback(vui_prepare, vui_draw, nil)
+}
+
+@(private)
+vui_prepare :: proc(cmd: ^sdl.GPUCommandBuffer, _: rawptr) {
 	t0 := time.tick_now()
-	vrl.render(&vh.host)
-	vh.render_ms = f32(time.duration_milliseconds(time.tick_since(t0)))
+	vsg.prepare(&vh.r, &vh.ctx, vh.draw, cmd)
+	vh.render_ms += f32(time.duration_milliseconds(time.tick_since(t0)))
+}
+
+@(private)
+vui_draw :: proc(cmd: ^sdl.GPUCommandBuffer, pass: ^sdl.GPURenderPass, w, h: i32, _: rawptr) {
+	t0 := time.tick_now()
+	vsg.draw(&vh.r, &vh.ctx, vh.draw, cmd, pass, w, h)
+	vh.render_ms += f32(time.duration_milliseconds(time.tick_since(t0)))
 }
 
 ui_pointer_captured :: proc() -> bool {
+	if !vh.ready {
+		return false
+	}
 	p := input_mouse_pos()
-	return vrl.pointer_over_ui(&vh.host, [2]f32{p.x, p.y})
+	return ui.pointer_over_ui(&vh.ctx, [2]f32{p.x, p.y})
 }
 
 // ---------------------------------------------------------------------------
@@ -226,6 +260,6 @@ vui_click_text :: proc(text_in: string, nth := 0) -> (msg: string, ok: bool) {
 vui_stats_json :: proc() -> string {
 	return fmt.tprintf(
 		`{{"nodes":%d,"draw_cmds":%d,"batches":%d,"build_ms":%.3f,"render_ms":%.3f,"pointer_over_ui":%v}}`,
-		len(vh.ctx.nodes), vh.host.r.last_cmds, vh.host.r.last_batches, vh.frame_ms, vh.render_ms, ui_pointer_captured(),
+		len(vh.ctx.nodes), vh.draw != nil ? len(vh.draw.cmds) : 0, vh.draw != nil ? len(vh.draw.batches) : 0, vh.frame_ms, vh.render_ms, ui_pointer_captured(),
 	)
 }

@@ -1,8 +1,8 @@
 // Model Editor 3D overlays: selection wire/faces/verts, XYZ gizmo, Loop Cut & Knife previews.
 package main
 
-import rl "vendor:raylib"
-import rlgl "vendor:raylib/rlgl"
+import rl "../gfx"
+import rlgl "../gfx/rlgl"
 import edit "./art/edit"
 
 @(private)

@@ -2,8 +2,7 @@
 package main
 
 import "core:os"
-import "core:strings"
-import rl "vendor:raylib"
+import rl "../gfx"
 
 PIXEL_MIN_WIDTH :: 640
 PIXEL_MIN_HEIGHT :: 360
@@ -40,18 +39,9 @@ init_pixel_pipeline :: proc() {
 }
 
 load_pixel_shader :: proc() -> rl.Shader {
-	paths := [2]string{"assets/shaders/watercolor.fs", "odin/assets/shaders/watercolor.fs"}
-	for path in paths {
-		if !os.exists(path) {
-			continue
-		}
-		cpath := strings.clone_to_cstring(path, context.temp_allocator)
-		shader := rl.LoadShader(nil, cpath)
-		if rl.IsShaderValid(shader) {
-			return shader
-		}
-	}
-	return {}
+	// embedded GPU program (gfx/shaders/watercolor.*)
+	shader := rl.LoadShader(nil, "watercolor.fs")
+	return rl.IsShaderValid(shader) ? shader : {}
 }
 
 ensure_pixel_target :: proc(width, height: int) {

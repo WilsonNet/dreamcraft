@@ -3,8 +3,8 @@
 package main
 
 import "core:math"
-import rl "vendor:raylib"
-import rlgl "vendor:raylib/rlgl"
+import rl "../gfx"
+import rlgl "../gfx/rlgl"
 import g "../game"
 
 MAX_CMD_FX :: 16

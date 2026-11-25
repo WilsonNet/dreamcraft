@@ -3,9 +3,7 @@
 package main
 
 import "core:math"
-import "core:os"
-import "core:strings"
-import rl "vendor:raylib"
+import rl "../gfx"
 import g "../game"
 
 GROUND_TEX_SCALE :: 16
@@ -110,22 +108,9 @@ draw_ground_3d :: proc() {
 
 @(private)
 load_ground_shader :: proc() -> rl.Shader {
-	prefixes := [2]string{"assets/shaders/", "odin/assets/shaders/"}
-	for prefix in prefixes {
-		vs := strings.concatenate({prefix, "ground.vs"}, context.temp_allocator)
-		fs := strings.concatenate({prefix, "ground.fs"}, context.temp_allocator)
-		if !os.exists(vs) || !os.exists(fs) {
-			continue
-		}
-		shader := rl.LoadShader(
-			strings.clone_to_cstring(vs, context.temp_allocator),
-			strings.clone_to_cstring(fs, context.temp_allocator),
-		)
-		if rl.IsShaderValid(shader) {
-			return shader
-		}
-	}
-	return {}
+	// embedded GPU program (gfx/shaders/ground.*), selected by its historical file name
+	shader := rl.LoadShader(nil, "ground.fs")
+	return rl.IsShaderValid(shader) ? shader : {}
 }
 
 @(private)

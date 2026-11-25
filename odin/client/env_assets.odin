@@ -3,7 +3,7 @@ package main
 
 import "core:c"
 import "core:mem"
-import rl "vendor:raylib"
+import rl "../gfx"
 import art "./art"
 
 Env_Assets :: struct {

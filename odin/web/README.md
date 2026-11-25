@@ -80,4 +80,4 @@ state. The `hash` is a string because JavaScript numbers cannot represent all
 - Fixed full-map view; no web camera zoom/pan.
 - No audio.
 - ASCII fog panel is for debugging.
-- Native raylib client remains the primary visual target.
+- The native SDL3 GPU client remains the primary visual target.

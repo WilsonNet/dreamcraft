@@ -6,7 +6,7 @@
 package art
 
 import "core:math"
-import rl "vendor:raylib"
+import rl "../../gfx"
 
 mamluk_head :: proc(b: ^Mesh_Builder) {
 	neck_collar(b)

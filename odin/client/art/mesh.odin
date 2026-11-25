@@ -8,7 +8,7 @@
 package art
 
 import "core:math"
-import rl "vendor:raylib"
+import rl "../../gfx"
 
 MAX_MODEL_VERTS :: 24000
 MAX_MODEL_INDICES :: 72000

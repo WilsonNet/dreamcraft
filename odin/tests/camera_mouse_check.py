@@ -65,6 +65,9 @@ def check_probe(base: str):
     assert snap["follow"] is True, snap
 
     # 1. Arming: border pixel before arming must NOT scroll; center arms.
+    # The window is really focused (the real cursor may rest inside it and arm edge scroll
+    # between commands): one unfocused probe step disarms, as losing focus does.
+    post_json(f"{base}/mouse", {"action": "set", "x": 640, "y": 360, "focused": False, "on_screen": False, "steps": 1})
     s0 = post_json(f"{base}/mouse", {"action": "set", "x": 0, "y": 360, "focused": True, "on_screen": True, "steps": 5})
     assert not s0["edge_armed"] and s0["follow"] is True, s0
     s1 = post_json(f"{base}/mouse", {"action": "set", "x": 640, "y": 360, "focused": True, "on_screen": True, "steps": 2})

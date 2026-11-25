@@ -6,7 +6,7 @@ Build a fantasy RTS called **DreamCraft** with:
 - Odin for deterministic game logic (Rust/Bevy prototype is legacy)
 - A* pathfinding for unit navigation
 - Tutorial "Through the Woods" level: navigate trees and fog to the goal
-- Long-term web/WebGPU target; native raylib is the current renderer
+- Long-term web/WebGPU target; the native renderer is SDL3 GPU (Metal / Vulkan) through the raylib-compatible `odin/gfx` layer
 
 ## Instructions
 
@@ -40,14 +40,14 @@ Build a fantasy RTS called **DreamCraft** with:
 - 8-way A*, fog of war, waypoints, goal
 - 256-slot SoA unit pool with generation handles
 - Melee combat (`Luk Soldier` 100 HP / 15 dmg), campaign hero **`Liiroy, the Bold`** (500 HP / 5 armor / 35 dmg / 40-tick cooldown / 180 speed / +4 HP/s regen, royal cobalt & gold rig), event-based 4.0s enemy discovery aggro grace + flavored warning banner, enemy chase AI, patrol loops
-- Native raylib full 3D isometric client with Age of Empires × Toriyama world scale and watercolour post shader
+- Native SDL3 GPU (Metal on macOS, Vulkan on Linux) full 3D isometric client with Age of Empires × Toriyama world scale and watercolour post shader
 - Procedural 26-bone Mamluk warrior & forest props in `odin/client/art/`, kinetic-chain idle/walk/attack animations, and double-crescent slash VFX
 - Two-lane build: always develop on `dev` binaries (`DEV - ` window prefix on `:7778`), then trigger `./build.sh` + `./restart-build.sh` after finishing a task for playable `bin/dreamcraft` on `:7777`
 - Dota 2 / SC2 camera movement (`MMB` / `Space`+Drag 1:1 Camera Grip, isometric pitch-compensated edge scroll, smooth vertical wheel zoom, minimap drag scrubbing + viewport frame) + `tests/camera_mouse_check.py` live probe & macOS OS mouse validator
 - Browser WASM/canvas client with DOM HUD and `window.dreamcraft` API
 - Headless JSONL scripts, HTTP control server, hash-verified replays
 - Curve/state validation after every tick
-- Pure-Odin Vector SVG Renderer (`odin/client/svg/`), 37 vector UI/HUD/editor `.svg` icons (`odin/assets/icons/`), and HiDPI raylib texture atlas (`client/icons.odin`)
+- Pure-Odin Vector SVG Renderer (`odin/client/svg/`), 37 vector UI/HUD/editor `.svg` icons (`odin/assets/icons/`), and HiDPI texture atlas (`client/icons.odin`)
 - HUD, menus, Model Picker and Model Editor chrome on vinland-ui (`../vinland-ui`, `specs/09-ui-framework.md`): Saint Louis Basin brass/lapis console (`client/hud_basin.odin`), painted colour grade shared with the watercolour world, agent `ui_tree` / `ui_click` / `ui_stats` commands, and Al-Dor Lore (`specs/10-lore.md`)
 - In-game 3D Model Picker & Blender-shortcut Model Editor (`Esc -> Model Editor` or `--editor[=<model>]`), view-conditional `F1` Shortcut Window (`client/shortcuts.odin` + `? F1` UI badges), two-way chunked `.odin` asset persistence (`client/art/{spec,edit,models}/`), `Ctrl+S` live hot-reload, and Playwright-style Cooperative Mesh CLI (`odin/tools/mesh_cli/` -> `bin/dreamcraft-mesh`) for zero-script Human <-> AI art authoring
 - 138 native unit tests (69 game, 13 control, 17 art, 9 art/edit, 5 svg, 7 ui, 6 mesh_cli, 12 client) + web WASM/headless/replay/HTTP/mouse smoke: invariants,
@@ -59,7 +59,8 @@ Build a fantasy RTS called **DreamCraft** with:
 ```
 odin/
 ├── game/       # pure simulation
-├── client/     # raylib renderer/input/HUD/minimap/VFX/shaders
+├── gfx/        # raylib-compatible API on SDL3 GPU (Metal/Vulkan) + game shaders
+├── client/     # renderer/input/HUD/minimap/VFX
 │   └── art/    # procedural Mamluk model, 26-bone rig, anims, trees, props
 ├── control/    # JSON API + localhost HTTP server
 ├── headless/   # scripts, polling, --serve, record/replay

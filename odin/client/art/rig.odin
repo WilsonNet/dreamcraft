@@ -6,7 +6,7 @@
 // sprite scale and the skinning cost trivial.
 package art
 
-import rl "vendor:raylib"
+import rl "../../gfx"
 import spec "./spec"
 
 Bone_Id :: spec.Bone_Id

@@ -7,7 +7,7 @@ related_targets: ["odin/client/editor_vui.odin","odin/client/vui_host.odin","odi
 
 # Surface: DreamCraft in-game UI (Battlefield HUD, Pause, Model Picker, Model Editor, Shortcut window)
 
-Mode: Operate. Built with vinland-ui (VUI) embedded in the raylib client; renderer moves to SDL3 GPU (Metal/Vulkan) in a later phase.
+Mode: Operate. Built with vinland-ui (VUI) drawn inside the game's SDL3 GPU frame (Metal/Vulkan) through `vinland:vui/sdlgpu`.
 
 Audience & job: the solo creator-player. Command Liiroy through the Whispering March (move / attack-move / patrol / stop, minimap scrub, camera follow), pause, and drop into the Model Editor to edit meshes with Blender shortcuts, then resume.
 Constraints: Blender shortcuts unchanged; control API commands keep working; HUD costs at most one draw batch per texture and must never steal world clicks outside its own shapes; 60 fps budget belongs to the world.

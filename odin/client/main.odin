@@ -5,8 +5,10 @@ import "core:c"
 import "core:fmt"
 import "core:mem"
 import "core:os"
+import "core:slice"
 import "core:strings"
-import rl "vendor:raylib"
+import "core:time"
+import rl "../gfx"
 import control "../control"
 import g "../game"
 
@@ -89,7 +91,8 @@ app: App
 
 main :: proc() {
 	sheet := has_arg(os.args, "--sheet")
-	open_window(sheet)
+	bench_frames, bench := find_bench(os.args)
+	open_window(sheet, bench)
 	defer rl.CloseWindow()
 
 	g.game_init(&app.game)
@@ -119,15 +122,19 @@ main :: proc() {
 			_ = editor_open_model(edit_id, false)
 		}
 	}
-	for !rl.WindowShouldClose() {
-		step_client_frame()
+	if bench {
+		run_bench(bench_frames)
+	} else {
+		for !rl.WindowShouldClose() {
+			step_client_frame()
+		}
 	}
 	unload_world_assets()
 }
 
 @(private)
-open_window :: proc(sheet: bool) {
-	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI})
+open_window :: proc(sheet: bool, bench := false) {
+	rl.SetConfigFlags(bench ? {.WINDOW_RESIZABLE, .WINDOW_HIGHDPI} : {.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI})
 	dev := DEV_BUILD || is_dev_executable()
 	window_title: cstring = WINDOW_TITLE
 	if dev {
@@ -140,7 +147,7 @@ open_window :: proc(sheet: bool) {
 		fmt.println("DEV build window:", window_title)
 	}
 	rl.SetWindowMinSize(800, 600)
-	rl.SetTargetFPS(60)
+	rl.SetTargetFPS(bench ? 0 : 60)
 	rl.SetExitKey(.KEY_NULL)
 }
 
@@ -362,4 +369,55 @@ capture_screenshot :: proc(_: rawptr) -> ([]byte, bool) {
 	data := make([]byte, len(source))
 	copy(data, source)
 	return data, true
+}
+
+// --bench=<frames>: uncapped frames (no vsync, no FPS cap) in the opening battlefield scene,
+// then prints CPU frame-time statistics and exits. Compare renderers with the same flags.
+find_bench :: proc(args: []string) -> (frames: int, ok: bool) {
+	for arg in args {
+		if strings.has_prefix(arg, "--bench=") {
+			n := 0
+			for ch in arg[len("--bench="):] {
+				if ch < '0' || ch > '9' {
+					return 0, false
+				}
+				n = n * 10 + int(ch - '0')
+			}
+			return max(n, 1), true
+		}
+	}
+	return 0, false
+}
+
+@(private)
+run_bench :: proc(frames: int) {
+	WARMUP :: 120
+	samples := make([]f64, frames)
+	defer delete(samples)
+	prev := time.tick_now()
+	for i := 0; i < WARMUP + frames && !rl.WindowShouldClose(); i += 1 {
+		step_client_frame()
+		now := time.tick_now()
+		if i >= WARMUP {
+			samples[i - WARMUP] = time.duration_milliseconds(time.tick_diff(prev, now))
+			when rl.GFX_TRACE {
+				if i % 300 == 0 {
+					when ODIN_OS == .Darwin {
+						fmt.eprintln(rl.app_state_debug())
+					}
+					fmt.eprintln("replay", rl.last_replay)
+				}
+			}
+		}
+		prev = now
+	}
+	slice.sort(samples)
+	sum: f64
+	for v in samples {
+		sum += v
+	}
+	avg := sum / f64(len(samples))
+	fmt.printfln("bench: %d frames at %dx%d px  avg %.3f ms (%.0f fps)  p50 %.3f  p95 %.3f  p99 %.3f",
+		len(samples), rl.GetRenderWidth(), rl.GetRenderHeight(), avg, 1000 / avg,
+		samples[len(samples) / 2], samples[len(samples) * 95 / 100], samples[len(samples) * 99 / 100])
 }

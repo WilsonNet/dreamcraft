@@ -3,7 +3,7 @@
 package art
 
 import "core:math"
-import rl "vendor:raylib"
+import rl "../../gfx"
 
 ANIM_IDLE_SECONDS :: 3.60
 ANIM_WALK_SECONDS :: 0.40

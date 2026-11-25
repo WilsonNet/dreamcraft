@@ -3,7 +3,7 @@ package main
 
 import "core:fmt"
 import "core:math"
-import rl "vendor:raylib"
+import rl "../gfx"
 import g "../game"
 
 campaign_cstr :: proc(buf: []u8, format: string, args: ..any) -> cstring {

@@ -4,7 +4,7 @@ package main
 import "core:c"
 import "core:fmt"
 import "core:os"
-import rl "vendor:raylib"
+import rl "../gfx"
 import art "./art"
 import edit "./art/edit"
 

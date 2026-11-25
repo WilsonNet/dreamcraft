@@ -1,6 +1,6 @@
 # DreamCraft RTS — Odin
 
-Deterministic RTS prototype. Native raylib full 3D isometric client with a
+Deterministic RTS prototype. Native full 3D isometric client on SDL3 GPU (Metal / Vulkan) with a
 pixel-art post shader, plus a lightweight browser canvas build. No GC, fixed
 pools, Q16.16 fixed point.
 
@@ -45,8 +45,9 @@ cd web
 Requirements:
 
 - Odin `dev-2026-11` or newer
-- raylib vendor bindings (included with Odin)
-- macOS: `brew install odin` (installs raylib + LLVM)
+- SDL3 (Odin's `vendor:sdl3` bindings link the system library): macOS `brew install sdl3`, Linux your distro's `sdl3` package
+- vinland-ui checked out next to this repository (`VINLAND_UI=/path` to override)
+- macOS: `brew install odin` (Odin + LLVM)
 
 ## Test
 
@@ -240,7 +241,7 @@ Allowed allocations outside hot paths:
 
 ## Rendering
 
-`client/` uses raylib:
+`client/` renders through `gfx/` (raylib-compatible API on SDL3 GPU, see `specs/11-renderer-port.md`):
 
 - 1280×720 window, resizable (min 800×600), orthographic 3D camera
 - ground, grid lines, goal zone, trees, waypoints

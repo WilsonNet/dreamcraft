@@ -1,9 +1,7 @@
 // Painterly model shader: loading and per-frame uniforms.
 package main
 
-import "core:os"
-import "core:strings"
-import rl "vendor:raylib"
+import rl "../gfx"
 
 Unit_Shader :: struct {
 	shader:  rl.Shader,
@@ -34,20 +32,10 @@ init_unit_shader :: proc() {
 
 @(private)
 load_unit_shader :: proc() -> (Unit_Shader, bool) {
-	prefixes := [2]string{"assets/shaders/", "odin/assets/shaders/"}
-	for prefix in prefixes {
-		vs := strings.concatenate({prefix, "unit.vs"}, context.temp_allocator)
-		fs := strings.concatenate({prefix, "unit.fs"}, context.temp_allocator)
-		if !os.exists(vs) || !os.exists(fs) {
-			continue
-		}
-		shader := rl.LoadShader(
-			strings.clone_to_cstring(vs, context.temp_allocator),
-			strings.clone_to_cstring(fs, context.temp_allocator),
-		)
-		if rl.IsShaderValid(shader) {
-			return Unit_Shader{shader = shader}, true
-		}
+	// embedded GPU program (gfx/shaders/unit.*)
+	shader := rl.LoadShader(nil, "unit.fs")
+	if rl.IsShaderValid(shader) {
+		return Unit_Shader{shader = shader}, true
 	}
 	return {}, false
 }

@@ -1,7 +1,7 @@
 // View-conditional F1 Shortcut Window data, keyboard handling, and Quickshell modal layout.
 package main
 
-import rl "vendor:raylib"
+import rl "../gfx"
 
 Help_View :: enum u8 {
 	Battlefield,

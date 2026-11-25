@@ -91,7 +91,7 @@
 
 - The native window is resizable (minimum 800×600). HUD, minimap,
   buttons and camera offset relayout from the current framebuffer size.
-- The Odin client implements the same RTS controls with raylib:
+- The Odin client implements the same RTS controls (SDL3 input through `odin/gfx`, raylib-compatible API):
   left-click/drag selection, right-click move/attack, 2×2 command card
   (`[M] Move`, `[A] Attack`, `[P] Patrol`, `[S] Stop`) and hotkeys,
   WASD/arrow pan, edge scroll, Escape (cancels active command mode before

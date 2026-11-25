@@ -1,7 +1,7 @@
 // Painterly ground texture and soft contact shadows.
 package main
 
-import rl "vendor:raylib"
+import rl "../gfx"
 import g "../game"
 import art "./art"
 

@@ -4,7 +4,7 @@
 package main
 
 import "core:fmt"
-import rl "vendor:raylib"
+import rl "../gfx"
 import ui "vinland:vui"
 import g "../game"
 

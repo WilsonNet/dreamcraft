@@ -1,7 +1,7 @@
 // Minimap: one 80x50 texture updated from simulation state, scaled into a clipped Quickshell card.
 package main
 
-import rl "vendor:raylib"
+import rl "../gfx"
 import g "../game"
 
 update_minimap_pixels :: proc() {

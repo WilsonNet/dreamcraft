@@ -4,7 +4,7 @@
 package art
 
 import "core:math"
-import rl "vendor:raylib"
+import rl "../../gfx"
 
 build_mamluk :: proc(enemy: bool, hero: bool = false) -> Mesh_Builder {
 	id := hero ? "mamluk_hero" : (enemy ? "mamluk_enemy" : "mamluk")

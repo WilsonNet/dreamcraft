@@ -1,7 +1,7 @@
 // Mouse, keyboard and camera input for the native client.
 package main
 
-import rl "vendor:raylib"
+import rl "../gfx"
 import g "../game"
 
 handle_input :: proc() {

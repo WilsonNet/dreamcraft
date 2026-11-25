@@ -3,7 +3,7 @@ package art
 
 import "core:math"
 import "core:testing"
-import rl "vendor:raylib"
+import rl "../../gfx"
 
 @(private)
 build_proc_mamluk :: proc(t: ^testing.T, enemy: bool, hero: bool = false) -> Mesh_Builder {

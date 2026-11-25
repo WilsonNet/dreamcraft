@@ -1,6 +1,6 @@
 # DreamCraft - Fantasy RTS (Odin)
 
-Spiritual successor to StarCraft: Brood War. Primary implementation: **Odin + raylib** in `odin/`. Deprecated prototypes
+Spiritual successor to StarCraft: Brood War. Primary implementation: **Odin + SDL3 GPU** (Metal / Vulkan, through the raylib-compatible `odin/gfx` layer) in `odin/`. Deprecated prototypes
 (`rust/`, `web-console/`, `warrior-glb/`, `reference.jpg`) live in `legacy/`.
 
 ## ⚠️ CRITICAL: Specs Files (Read First!)
@@ -34,6 +34,13 @@ The native client's UI is built with vinland-ui (`specs/09-ui-framework.md`). Ke
 to this repo (`../vinland-ui`) or set `VINLAND_UI=/path`; the scripts pass
 `-collection:vinland=...`. Drive and inspect the HUD with the `ui_tree`, `ui_click` and `ui_stats`
 control commands.
+
+## Renderer: SDL3 GPU through `odin/gfx`
+
+The client renders with SDL3 GPU (Metal on macOS, Vulkan on Linux) through `odin/gfx`, a
+raylib-compatible layer (`specs/11-renderer-port.md`). Requires SDL3 (`brew install sdl3`).
+Shaders live in `odin/gfx/shaders` as MSL and SPIR-V: change both, rebuild the `.spv` with
+`glslc`. `--bench=N` measures uncapped frame time; `-define:GFX_TRACE=true` adds replay timings.
 
 ## Development Commands
 
@@ -108,7 +115,7 @@ Always work on the **Dev** version (`DEV - ` window prefix) while developing and
 
 ```
 odin/
-├── game/        # pure simulation: no raylib, no allocation
+├── game/        # pure simulation: no renderer imports, no allocation
 │   ├── config.odin      # constants, fixed grid positions
 │   ├── fixed.odin       # Q16.16 math
 │   ├── grid.odin        # obstacle + fog bitsets
@@ -122,7 +129,8 @@ odin/
 │   ├── validation.odin  # runtime invariant checker
 │   ├── hash.odin        # deterministic state hash
 │   └── *_test.odin      # unit tests
-├── client/      # raylib 3D renderer, input, HUD, minimap, VFX, shaders, in-game Model Editor
+├── gfx/         # raylib-compatible API on SDL3 GPU (see specs/11-renderer-port.md)
+├── client/      # 3D renderer, input, HUD, minimap, VFX, in-game Model Editor
 │   ├── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props + spec/, edit/, models/
 │   └── svg/     # zero-dependency SVG parser + 4x4 SSAA rasterizer (icons.odin, assets/icons/*.svg)
 ├── tools/
@@ -233,8 +241,8 @@ Skills live in `.agents/skills/` (symlinked from `.opencode/skills/` and
 
 | Skill | Purpose |
 |-------|---------|
-| **odin** | Odin patterns, allocators, testing, raylib, control server |
-| **camera-mouse** | Dota/SC2 camera grip & edge pan, macOS raylib cursor gotchas, live mouse probe |
+| **odin** | Odin patterns, allocators, testing, gfx (SDL3 GPU), control server |
+| **camera-mouse** | Dota/SC2 camera grip & edge pan, macOS cursor/focus gotchas, live mouse probe |
 | **art-direction** | Toriyama/DQ character look, palette, watercolour shading |
 | **bevy** | Legacy Bevy reference only |
 | **herdr** | Herdr workspace, tab, pane, and background session management |

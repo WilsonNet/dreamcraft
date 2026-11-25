@@ -2,7 +2,7 @@
 package main
 
 import "core:math"
-import rl "vendor:raylib"
+import rl "../gfx"
 import edit "./art/edit"
 
 editor_mesh_bounds :: proc() -> (center: [3]f32, radius: f32) {

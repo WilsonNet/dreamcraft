@@ -1,6 +1,6 @@
 ---
 name: camera-mouse
-description: Dota 2 / StarCraft 2 mouse camera movement (1:1 Camera Grip, isometric edge pan, wheel zoom, minimap scrub), macOS raylib/GLFW cursor tracking fixes, and the live mouse/OS validation workflow. Use when editing camera controls, mouse input, or validating window cursor behavior.
+description: Dota 2 / StarCraft 2 mouse camera movement (1:1 Camera Grip, isometric edge pan, wheel zoom, minimap scrub), macOS cursor/focus tracking fixes (SDL3 via odin/gfx), and the live mouse/OS validation workflow. Use when editing camera controls, mouse input, or validating window cursor behavior.
 ---
 
 # Camera & Mouse Movement Skill
@@ -37,7 +37,17 @@ Covers DreamCraft's isometric camera movement in `odin/client/` (`camera3d.odin`
 
 ---
 
-## macOS Raylib / GLFW Pitfalls
+## macOS Pitfalls (SDL3 through `odin/gfx`)
+
+0. **Focus and posted events:** macOS 26+ often leaves terminal-launched apps inactive, and an
+   inactive window gets no mouse-moved or key events. `gfx` activates the app at launch and
+   samples the OS cursor every frame (like GLFW), so `CGEventPost` drivers work. Movement is
+   only reported when the cursor actually moves, so a window opening under a resting cursor
+   does not arm edge scrolling. The probe test disarms with one unfocused step first,
+   because a really focused window can arm from the resting cursor between commands.
+
+Historical notes from the raylib/GLFW client, still enforced by `update_cursor_inside()`:
+
 
 1. **`rl.IsCursorOnScreen()` stays `false` when a window spawns under the cursor:**
    - Raylib's `IsCursorOnScreen()` only updates inside GLFW's `NSTrackingArea` `mouseEntered:` / `mouseExited:` callbacks.

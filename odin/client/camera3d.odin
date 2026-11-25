@@ -2,7 +2,7 @@
 package main
 
 import "core:math"
-import rl "vendor:raylib"
+import rl "../gfx"
 import g "../game"
 
 CAMERA_ORTHO_HEIGHT :: f32(20)

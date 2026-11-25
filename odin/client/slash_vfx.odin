@@ -7,8 +7,8 @@ package main
 
 import "core:c"
 import "core:math"
-import rl "vendor:raylib"
-import rlgl "vendor:raylib/rlgl"
+import rl "../gfx"
+import rlgl "../gfx/rlgl"
 import g "../game"
 import art "./art"
 

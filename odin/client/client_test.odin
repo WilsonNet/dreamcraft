@@ -3,7 +3,7 @@ package main
 
 import "core:math"
 import "core:testing"
-import rl "vendor:raylib"
+import rl "../gfx"
 import g "../game"
 
 @(test)

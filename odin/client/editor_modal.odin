@@ -4,7 +4,7 @@ package main
 import "core:fmt"
 import "core:math"
 import "core:strconv"
-import rl "vendor:raylib"
+import rl "../gfx"
 import edit "./art/edit"
 
 handle_editor_hotkeys :: proc(mouse: rl.Vector2) {

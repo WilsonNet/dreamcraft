@@ -1,7 +1,7 @@
 // Model Editor viewport picking, Elm UI message handler, and cursor state.
 package main
 
-import rl "vendor:raylib"
+import rl "../gfx"
 import art "./art"
 import edit "./art/edit"
 

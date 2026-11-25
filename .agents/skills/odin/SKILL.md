@@ -1,6 +1,6 @@
 ---
 name: odin
-description: Odin language patterns, allocators, testing, raylib 3D client, HTTP control server, and WASM builds. Use when writing, building, testing, or debugging Odin code in odin/.
+description: Odin language patterns, allocators, testing, SDL3 GPU 3D client (raylib-compatible gfx layer), HTTP control server, and WASM builds. Use when writing, building, testing, or debugging Odin code in odin/.
 ---
 
 # Odin Skill
@@ -67,7 +67,25 @@ my_test :: proc(t: ^testing.T) {
 - Allocation guard: run 1000 ticks under an allocator that returns
   `.Out_Of_Memory` and assert zero calls.
 
-## Raylib Gotchas
+## gfx (raylib-compatible API on SDL3 GPU)
+
+- `odin/gfx` re-implements the raylib subset the client uses on SDL3 (window, input) and the
+  SDL3 GPU API (Metal on macOS, Vulkan elsewhere); client files `import rl "../gfx"`, so the
+  raylib names and semantics below still apply. See `specs/11-renderer-port.md`.
+- Draws are recorded and replayed in one command buffer at `EndDrawing`. Reading pixels
+  back (`LoadImageFromTexture`, `LoadImageFromScreen`) flushes first.
+- `UpdateMeshBuffer` may run several times per frame on one mesh (slash VFX): each call is a
+  new version for the draws that follow it.
+- Render textures keep GL's bottom-up rows: keep negative source heights and `flip_y` as
+  with raylib.
+- `LoadShader(nil, "unit.fs")` picks an embedded program by its historical file name; shaders
+  live in `gfx/shaders` (MSL + SPIR-V). New uniforms go in the program table in
+  `gfx/shader.odin` and in both shader versions.
+- The cursor is sampled from the OS each frame like GLFW (posted CGEvents included); the app
+  activates itself at launch (macOS 26+ leaves terminal-launched apps inactive).
+- `--bench=N` prints uncapped frame times; `-define:GFX_TRACE=true` adds replay timings.
+
+## raylib-API Gotchas
 
 - Bindings use `cstring`: string literals convert automatically, runtime
   strings do not. Keep a fixed buffer, `fmt.bprintf`, append `\0`, then
@@ -95,7 +113,7 @@ my_test :: proc(t: ^testing.T) {
 - Grid center mapping: `x = gx + .5 - GRID_W/2`, `z = gy + .5 - GRID_H/2`.
 - Picking: `GetScreenToWorldRay` then intersect `y=0`.
 - Selection/health bars: `GetWorldToScreen`.
-- Ground (`ground_tex.odin`, `ground.{vs,fs}`): `1280×800` albedo + `80×50` fog
+- Ground (`ground_tex.odin`, `gfx/shaders/ground.*`): `1280×800` albedo + `80×50` fog
   texture bound via `MaterialMapIndex.METALNESS` (`texture1`) for bilinear FBM mist.
 - Trees & units (`client/art/`): procedural oak/pine trees, boulders, ferns, and
   26-bone CPU-skinned Mamluk meshes; props pass vertex `uv.y < 0.0` (skipped AO/rim).
@@ -114,7 +132,7 @@ my_test :: proc(t: ^testing.T) {
 - `client/vui_host.odin` (Basin tokens, icon masks, agent commands), `client/hud_basin.odin`
   (battlefield console, overlays, pause, F1 window), `client/editor_vui.odin` (picker/editor).
 - Build HUD with `vui_frame(dt)` after `update_camera`; `vui_render()` is the last draw of
-  the frame (one GL submit through `vinland:vui/gl`).
+  the frame (recorded into the game's command buffer through `vinland:vui/sdlgpu`).
 - World clicks check `ui_pointer_captured()`; decorative absolute overlays need
   `pointer-events-none` (positioned elements hit-test above in-flow siblings).
 - No per-frame class strings for moving geometry: use `ui.style()` / `ui.last_style()`.
@@ -145,7 +163,7 @@ node test_wasm.mjs
   escape literal braces as `{{` and `}}`.
 - u64 hashes should cross the JS boundary as strings (JS numbers lose
   precision above 2^53).
-- No Emscripten or raylib web lib needed; render into an RGBA framebuffer.
+- No Emscripten or web graphics library needed; render into an RGBA framebuffer.
 
 ## Replay
 
@@ -215,24 +233,24 @@ node test_wasm.mjs
 
 ## Project Rules
 
-- Keep `game` free of raylib/HTTP imports.
+- Keep `game` free of renderer/HTTP imports.
 - Fixed tick order in `game/sim.odin`; determinism depends on it.
 - Validate after every tick (`VALIDATE_EACH_TICK`).
 - Functions ≤ 50 lines, files ≤ 420 lines.
 - Update `specs/` and this skill after a task.
 
-## Procedural Models And Custom Shaders (raylib 6)
+## Procedural Models And Custom Shaders (gfx)
 
 - `rl.Matrix` here is `#row_major matrix[4,4]f32`, not the C struct: read
   translation as `m[0][3]`, identity as `rl.Matrix(1)`. `MatrixMultiply` is
   deprecated; compose with `a * b` (wrap it in `xf_mul` for intent).
 - `rl.Color` is `distinct [4]u8`: `.r/.g/.b/.a` swizzle, literal
   `rl.Color{10,20,30,255}`. `Vector3` is `[3]f32` with `.x/.y/.z`.
-- `UnloadMesh` frees mesh arrays with `RL_FREE`. If you hand it slices you
+- `UnloadMesh` frees mesh arrays with `free`. If you hand it slices you
   allocated, allocate them with `rl.MemAlloc` or you will crash.
-- A custom shader gets `mvp`, `matModel`, `matView`, `matProjection` and the
-  default attributes (`vertexPosition`, `vertexNormal`, `vertexColor`,
-  `vertexTexCoord`) resolved by name. Use `gl_Position = mvp * vec4(pos,1)`.
+- Every program shares one uniform block (`mvp`, `matModel`, `colDiffuse`, `fb`, then the
+  program's own uniforms as vec4 slots; `gfx/shaders/README.md`). Attributes: location 0
+  position, 1 texcoord, 2 normal, 3 colour.
 - Pack per-vertex material data: `vertexColor.a` = baked AO,
   `texcoord.xy` = (metalness, glow). One draw call per character.
 - `UpdateMeshBuffer(mesh, 0, ...)` = positions, `2` = normals, `1` = UVs,

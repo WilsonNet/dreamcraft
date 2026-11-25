@@ -10,7 +10,7 @@ package main
 import "core:fmt"
 import "core:os"
 import "core:strings"
-import rl "vendor:raylib"
+import rl "../gfx"
 import art "./art"
 
 SHEET_SIZE :: 900

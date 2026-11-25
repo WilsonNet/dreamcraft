@@ -2,7 +2,7 @@
 package main
 
 import "core:math"
-import rl "vendor:raylib"
+import rl "../gfx"
 import g "../game"
 
 cell_hash_u32 :: proc(x, y, salt: i32) -> u32 {

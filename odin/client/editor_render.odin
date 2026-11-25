@@ -2,7 +2,7 @@
 package main
 
 import "core:math"
-import rl "vendor:raylib"
+import rl "../gfx"
 
 PICKER_TEX_W :: 520
 PICKER_TEX_H :: 440

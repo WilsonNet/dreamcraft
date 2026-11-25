@@ -2,7 +2,7 @@
 
 ## Vision
 
-A fantasy RTS — spiritual successor to StarCraft: Brood War. Current renderer is native raylib; long-term targets are web/WebGPU, deterministic sync, and low-latency networking.
+A fantasy RTS — spiritual successor to StarCraft: Brood War. Current renderer is native SDL3 GPU (Metal / Vulkan, `specs/11-renderer-port.md`); long-term targets are web/WebGPU, deterministic sync, and low-latency networking.
 
 ## Core Features
 
@@ -37,7 +37,8 @@ capacity arrays.
 - [x] Fixed command queue (128 entries) validated on push and execute
 - [x] Runtime invariant checker (`validate_game`) after every tick
 - [x] State hash for deterministic replay tests
-- [x] Native raylib 6.2 client: world, fog, units, paths, HUD, minimap
+- [x] Native client: world, fog, units, paths, HUD, minimap (raylib 6.2 originally, SDL3 GPU since the renderer port)
+- [x] Renderer port to SDL3 GPU (`specs/11-renderer-port.md`): Metal on macOS, Vulkan on Linux, raylib removed
 - [x] Native full 3D isometric renderer + watercolour post shader
 - [x] Procedural Mamluk melee unit modelled, rigged and skinned in Odin (`odin/client/art/`)
 - [x] Kinetic-chain idle/walk/attack clips with S-wave cape/sash/plume, turn banking, and stop-settle cushion
@@ -207,7 +208,7 @@ Primary implementation:
 
 ```
 odin/
-├── game/           # pure deterministic simulation (no raylib, no allocation)
+├── game/           # pure deterministic simulation (no renderer, no allocation)
 │   ├── config.odin     # constants and fixed-capacity limits
 │   ├── fixed.odin      # Q16.16 fixed point
 │   ├── grid.odin       # obstacles + fog bitsets
@@ -220,7 +221,8 @@ odin/
 │   ├── sim.odin        # fixed system order
 │   ├── validation.odin # runtime invariants
 │   └── hash.odin       # deterministic state hash
-├── client/          # raylib native rendering, input, HUD, minimap, VFX, in-game Model Editor
+├── gfx/             # raylib-compatible API on SDL3 GPU, game shaders
+├── client/          # native rendering, input, HUD, minimap, VFX, in-game Model Editor
 │   ├── art/         # procedural Mamluk/trees/props + spec/, edit/, models/ two-way .odin pipeline
 │   └── svg/         # zero-dependency SVG parser + 4x4 SSAA anti-aliased rasterizer (icons.odin)
 ├── tools/
@@ -247,7 +249,7 @@ bevy-docs/           # Bevy engine reference (gitignored)
 
 ### Tech Stack
 - **Simulation**: Odin (Q16.16 fixed point, fixed 60 Hz tick)
-- **Rendering**: raylib 6.2 native 3D + procedural meshes + watercolour shaders
+- **Rendering**: SDL3 GPU (Metal / Vulkan) native 3D + procedural meshes + watercolour shaders
 - **Layer split**: pure `game` package, `client` renderer, `control` API
 - **Testing**: `core:testing`, allocation guard, headless JSONL, HTTP smoke
 - **Interactive testing**: `bin/dreamcraft --control` (live screenshot + commands)
@@ -258,7 +260,7 @@ bevy-docs/           # Bevy engine reference (gitignored)
 1. **Additional Unit Types** - Gatherer, Scout, Melee, Ranged
 2. **Resource System** - Gold collection
 3. **Multiplayer** - WebTransport networking
-4. **WebGPU renderer** - replace canvas/raylib with GPU pipeline
+4. **WebGPU renderer** - replace the web canvas with a GPU pipeline
 
 ## Level Design Principles
 
