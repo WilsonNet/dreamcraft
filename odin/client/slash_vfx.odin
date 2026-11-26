@@ -98,7 +98,8 @@ draw_slashes_3d :: proc() {
 		if visual.attack <= 0 {
 			continue
 		}
-		t := 1.0 - visual.attack / art.ANIM_ATTACK_SECONDS
+		atk_dur := max(art.anim_clip_duration(.Attack, units.team[i] == .Enemy, units.kind[i] == .Hero), 0.05)
+		t := 1.0 - visual.attack / atk_dur
 		if t < 0.28 || t > 0.68 {
 			continue
 		}

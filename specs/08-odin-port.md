@@ -30,8 +30,8 @@ Measured on this machine (Apple Silicon):
 odin/
 ├── game/        # pure simulation, imports no rendering libraries
 ├── gfx/         # raylib-compatible API on SDL3 GPU (Metal / Vulkan)
-├── client/      # 3D isometric renderer, input, HUD, minimap, shaders, VFX, Model Editor
-│   ├── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props, spec/, edit/, models/
+├── client/      # 3D isometric renderer, input, HUD, minimap, shaders, VFX, Model & Animation Editors
+│   ├── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props, spec/, edit/, anim_edit/, models/, anims/
 │   └── svg/     # zero-dependency SVG parser + 4x4 SSAA anti-aliased rasterizer (icons.odin)
 ├── tools/
 │   └── mesh_cli/# Playwright-style Cooperative Mesh CLI (bin/dreamcraft-mesh)

@@ -57,7 +57,7 @@ capacity arrays.
 - [x] HTTP control API replacing Bevy BRP MCP
   - [x] `GET /state`, `/units`, `/fog`, `/screenshot`, `/camera`, `/health`
   - [x] `POST /command`: move, patrol, patrol_to, attack, attack_move, stop, run, reset, verify,
-        select, spawn, kill, set_hp, teleport, reload_models, open_picker, open_editor, close_editor, pause_menu, toggle_help, open_help, close_help
+        select, spawn, kill, set_hp, teleport, reload_models, open_picker, open_editor, close_editor, reload_anims, open_anim_picker, open_anim_editor, close_anim_editor, pause_menu, toggle_help, open_help, close_help
   - [x] `POST /mouse` + `odin/tests/camera_mouse_check.py` live mouse & OS camera validation tool
   - [x] Every response carries `valid` + `validation`
 - [x] In-game 3D Model Picker & Model Editor (`Esc -> Model Editor` or `--editor[=<model>]`):
@@ -65,13 +65,18 @@ capacity arrays.
   - [x] Blender Edit Mode workflow (`1/2/3`, `G/R/S` + XYZ gizmo + numeric input, `E` Extrude, `I` Inset, `Ctrl+R` Loop Cut, `K` Knife, `F` Fill, `M`/`Alt+M` Merge, `X` Delete/Dissolve, `B` Box, `L` Linked, `Alt+Click` Loop, `Alt+Z` X-Ray, X-Mirror, `Ctrl+Z/Shift+Z`)
   - [x] `Mat_Kind` swatch painter, 26-bone `Bone_Id` rigging, Rest/Idle/Walk/Attack pose & Hero/Unit/Enemy palette preview, Watercolour toggle
   - [x] Two-way Git-friendly `.odin` chunk persistence (`client/art/models/<id>/{v_NNN,f_NNN,asset}.odin` + `manifest.odin`) & `Ctrl+S` live hot-reload back into game
+- [x] In-game 3D Animation Picker & Blender-style Graph Editor (`Esc -> Animation Editor` or `--anim-editor[=<clip>]`):
+  - [x] Edit all 9 catalog clips (`idle`, `walk`, `attack`, `hero_*`, `enemy_*`) with `base_fallback` fork-on-save
+  - [x] Blender-style **F-Curve Graph Editor** + **Dopesheet** dock (`Curves`/`Dopesheet` tabs, `Tall` expand, RGB X/Y/Z cubic Bezier splines, `Clamp`/`Auto`/`Align`/`Free`/`Vec` handles, direct node & handle dragging, `V`/`T`/`Home` hotkeys, Wheel/MMB zoom & pan)
+  - [x] 3D 25-bone rig skeleton & XYZ rotation ring gizmo (`R` modal rotate, `G` root offset move, `Y=0` foot grounding, L↔R mirror/flip, onion skinning, live slash VFX preview)
+  - [x] Two-way Git-friendly `.odin` chunk persistence (`client/art/anims/<id>/{k_NNN,clip}.odin` + `manifest.odin`) + `Ctrl+S` immediate live hot-reload & 0.5s external disk watcher
 - [x] Playwright-style Cooperative Mesh CLI (`odin/tools/mesh_cli/` -> `bin/dreamcraft-mesh`): `list`, `extract`, `info`, positive/negative `assert` (`!`, `--expect-fail`), `do`/`edit` inline ops & `--notify=<port>` hot-reload without saved script files
 - [x] Pure-Odin Vector SVG Renderer & Icon Atlas (`client/svg/`, `assets/icons/*.svg`, `client/icons.odin`): `<path>`/`<rect>`/`<circle>`/`<ellipse>`/`<line>`/`<poly*>` + `<g>`/transform + 4x4 SSAA fills & smooth strokes for HUD command card, Pause Menu, hero crests, & Model Editor toolbars
 - [x] vinland-ui HUD (`specs/09-ui-framework.md`): battlefield bottom console in the "Saint Louis Basin" world (hammered brass, bitumen, silver interlace, lapis medallions with gold-inlay armed state), pause and defeat arches, F1 window, world nameplates, Model Picker and Model Editor chrome, embedded over raylib via `vinland:vui/raylib` (replaced the in-tree `odin/ui/` framework)
 - [x] Agent UI loop: `ui_tree`, `ui_click`, `ui_stats` control commands; `/camera` exposes the live minimap rect
 - [ ] Renderer port to SDL3 GPU (Metal / Vulkan) sharing VUI's device (`specs/11-renderer-port.md`)
-- [x] View-conditional **F1 Shortcut Window** (`client/shortcuts.odin`) with clickable `? F1` badges across Battlefield, Pause Menu, Model Picker, and Model Editor (plus focused Grab/Rotate/Scale/Loop Cut/Knife active modal sheet)
-- [x] 131 unit/integration tests (69 game, 13 control, 17 art, 9 art/edit, 5 svg, 6 mesh_cli, 12 client)
+- [x] View-conditional **F1 Shortcut Window** (`client/shortcuts.odin`) with clickable `? F1` badges across Battlefield, Pause Menu, Model Picker, Model Editor, Animation Picker, and Animation Editor (plus active modal sheets)
+- [x] 139 unit/integration tests (69 game, 13 control, 20 art, 9 art/edit, 5 art/anim_edit, 5 svg, 6 mesh_cli, 12 client)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator

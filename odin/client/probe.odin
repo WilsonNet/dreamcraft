@@ -62,6 +62,7 @@ Camera_Snapshot :: struct {
 	probe_active:     bool    `json:"probe_active"`,
 	app_mode:         string  `json:"app_mode"`,
 	editor_model:     string  `json:"editor_model"`,
+	editor_clip:      string  `json:"editor_clip"`,
 	help_open:        bool    `json:"help_open"`,
 	minimap:          [4]f32  `json:"minimap"`, // live HUD rect: x, y, w, h (logical px)
 }
@@ -214,6 +215,7 @@ capture_camera_snapshot :: proc(_: rawptr) -> ([]byte, bool) {
 		probe_active     = app.probe.active,
 		app_mode         = app_mode_name(app.mode),
 		editor_model     = app.editor.mesh_loaded ? app.editor.mesh.id : "",
+		editor_clip      = app.anim_ed.clip_loaded ? app.anim_ed.clip.id : "",
 		help_open        = app.help_open,
 		minimap          = {app.minimap_rect.x, app.minimap_rect.y, app.minimap_rect.width, app.minimap_rect.height},
 	}
@@ -303,6 +305,8 @@ app_mode_name :: proc(m: App_Mode) -> string {
 	case .Pause_Menu:   return "Pause_Menu"
 	case .Model_Picker: return "Model_Picker"
 	case .Model_Editor: return "Model_Editor"
+	case .Anim_Picker:  return "Anim_Picker"
+	case .Anim_Editor:  return "Anim_Editor"
 	}
 	return "Game"
 }
@@ -326,6 +330,22 @@ handle_client_command :: proc(_: rawptr, cmd: control.Command) -> (msg: string, 
 	case "close_editor":
 		editor_close_to_game()
 		return "Closed Model Editor", true, true
+	case "reload_anims":
+		art.reload_all_anim_clips_from_disk()
+		if app.mode == .Anim_Editor && app.anim_ed.clip_loaded && !app.anim_ed.clip.dirty {
+			_ = anim_editor_open_clip(app.anim_ed.clip.id, false)
+		}
+		return "Reloaded custom .odin animations", true, true
+	case "open_anim_picker":
+		anim_editor_open_picker()
+		return "Opened Animation Picker", true, true
+	case "open_anim_editor":
+		id := cmd.model != "" ? cmd.model : "idle"
+		loaded := anim_editor_open_clip(id, false)
+		return loaded ? fmt.tprintf("Opened Animation Editor: %s", id) : fmt.tprintf("Unknown clip: %s", id), loaded, true
+	case "close_anim_editor":
+		anim_editor_close_to_game()
+		return "Closed Animation Editor", true, true
 	case "pause_menu":
 		editor_close_to_game()
 		app.menu_open = true

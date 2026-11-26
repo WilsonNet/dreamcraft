@@ -156,7 +156,7 @@ handle_editor_ui_msg :: proc(msg: UI_Msg, arg: i32, mouse: rl.Vector2) {
 	ed := &app.editor
 	#partial switch msg {
 	case .Ed_Mode, .Ed_Undo, .Ed_Redo, .Ed_Mirror, .Ed_Wire, .Ed_XRay, .Ed_Floor_Y,
-	     .Ed_Pose, .Ed_Team, .Ed_Shader, .Ed_Models, .Ed_Reset, .Ed_Save, .Ed_Game:
+	     .Ed_Pose, .Ed_Team, .Ed_Shader, .Ed_Models, .Ed_Anims, .Ed_Reset, .Ed_Save, .Ed_Game:
 		handle_editor_topbar_msg(msg, arg)
 	case .Ed_Tool:
 		handle_editor_tool_msg(int(arg), mouse)
@@ -212,6 +212,7 @@ handle_editor_topbar_msg :: proc(msg: UI_Msg, arg: i32) {
 		editor_rebuild_preview_gpu()
 	case .Ed_Shader: ed.use_watercolor = !ed.use_watercolor
 	case .Ed_Models: editor_open_picker()
+	case .Ed_Anims:  anim_editor_open_picker()
 	case .Ed_Reset:  _ = editor_reset_to_procedural()
 	case .Ed_Save:   _ = editor_save_and_hot_reload()
 	case .Ed_Game:

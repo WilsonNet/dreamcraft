@@ -11,6 +11,8 @@ App_Mode :: enum u8 {
 	Pause_Menu,
 	Model_Picker,
 	Model_Editor,
+	Anim_Picker,
+	Anim_Editor,
 }
 
 Editor_Tool :: enum u8 {

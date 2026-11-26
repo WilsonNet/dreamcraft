@@ -54,10 +54,9 @@ inspecting the vinland-ui HUD (see `specs/09-ui-framework.md`):
 | `{"cmd":"ui_tree","value":40}` | `msg` holds a JSON list of elements: kind, class, text (`t`), rect |
 | `{"cmd":"ui_click","text":"Resume Battle"}` | Clicks the first visible element containing the text with the synthetic mouse |
 | `{"cmd":"ui_stats"}` | Nodes, instances, batches, build/render ms, pointer capture |
-| `{"cmd":"pause_menu"}`, `open_picker`, `open_editor` (+ `model`), `close_editor`, `open_help`, `close_help` | Jump to a screen |
+| `{"cmd":"pause_menu"}`, `open_picker`, `open_editor` (+ `model`), `close_editor`, `open_anim_picker`, `open_anim_editor` (+ `model`), `close_anim_editor`, `reload_models`, `reload_anims`, `open_help`, `close_help` | Jump to a screen or reload `.odin` art assets |
 
-`GET /camera` includes `minimap: [x, y, w, h]`, the live minimap rect, so tests click it without
-hard-coding layout.
+`GET /camera` includes `minimap: [x, y, w, h]`, `editor_model`, and `editor_clip` so tests inspect live state without hard-coding layout.
 
 ## Diagnostics
 

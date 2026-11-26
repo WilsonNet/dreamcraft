@@ -13,6 +13,14 @@ draw_frame :: proc() {
 		draw_editor_frame()
 		return
 	}
+	if app.mode == .Anim_Picker {
+		draw_anim_picker_frame()
+		return
+	}
+	if app.mode == .Anim_Editor {
+		draw_anim_editor_frame()
+		return
+	}
 	update_fog_texture()
 	set_unit_shader_uniforms(f32(rl.GetTime()))
 	rl.BeginTextureMode(app.pixel)

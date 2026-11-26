@@ -9,6 +9,9 @@ Help_View :: enum u8 {
 	Model_Picker,
 	Editor_Mesh,
 	Editor_Modal,
+	Anim_Picker,
+	Anim_Editor,
+	Anim_Modal,
 }
 
 Shortcut_Item :: struct {
@@ -172,10 +175,49 @@ MODAL_KNIFE_GROUPS := [1]Shortcut_Group{{title = "Active knife tool shortcuts", 
 @(private)
 MODAL_OTHER_GROUPS := [1]Shortcut_Group{{title = "Active tool", items = MODAL_OTHER_ITEMS[:]}}
 
+@(private)
+ANIM_PICKER_ITEMS := [?]Shortcut_Item{
+	{"Up / Down", "Select previous or next animation clip"},
+	{"LMB tab", "Filter: All, Base, Hero or Enemy"},
+	{"Enter", "Edit clip: saved .odin override or baked procedural"},
+	{"LMB", "Edit procedural: fresh bake from Odin pose math"},
+	{"Esc", "Back to the battlefield"},
+}
+@(private)
+ANIM_PICKER_GROUPS := [1]Shortcut_Group{{title = "Animation picker navigation", items = ANIM_PICKER_ITEMS[:]}}
+
+@(private)
+ANIM_EDIT_ITEMS := [?]Shortcut_Item{
+	{"LMB bone / tree", "Select 25-bone rig joint in 3D or hierarchy"},
+	{"R / Gizmo ring", "Modal rotate bone (X/Y/Z axis, numeric deg, Ctrl 5d)"},
+	{"G / Root arrows", "Modal move root offset (Y=0 grounds feet)"},
+	{"Drag Curves/Handles", "Move F-curve key (Shift=Y lock) or Bezier handle (Alt=Free)"},
+	{"V / T / Home", "Cycle handle mode / Cycle interp / Fit graph view"},
+	{"Wheel / MMB Graph", "Zoom Y (Ctrl+Wheel X) / Pan F-curve graph"},
+	{"Space / I / X / Ctrl+S", "Play / +Key / -Key / Save .odin & hot-reload live"},
+}
+@(private)
+ANIM_EDIT_GROUPS := [1]Shortcut_Group{{title = "Animation editor shortcuts", items = ANIM_EDIT_ITEMS[:]}}
+
+@(private)
+ANIM_MODAL_ITEMS := [?]Shortcut_Item{
+	{"Mouse / 0-9 / - / .", "Rotate or move interactively or type exact value"},
+	{"X / Y / Z", "Lock X, Y or Z axis"},
+	{"Ctrl (hold)", "Snap 5 deg rotation / 0.02m root offset"},
+	{"LMB / Enter", "Confirm pose edit"},
+	{"RMB / Esc", "Cancel and restore previous pose"},
+}
+@(private)
+ANIM_MODAL_GROUPS := [1]Shortcut_Group{{title = "Active pose transform", items = ANIM_MODAL_ITEMS[:]}}
+
 active_help_view :: proc() -> Help_View {
 	if app.mode == .Model_Picker { return .Model_Picker }
 	if app.mode == .Model_Editor {
 		return app.editor.modal_active ? .Editor_Modal : .Editor_Mesh
+	}
+	if app.mode == .Anim_Picker { return .Anim_Picker }
+	if app.mode == .Anim_Editor {
+		return app.anim_ed.modal_active ? .Anim_Modal : .Anim_Editor
 	}
 	if app.menu_open || app.mode == .Pause_Menu { return .Pause_Menu }
 	return .Battlefield
@@ -194,6 +236,12 @@ help_sheet_for_view :: proc(view: Help_View) -> Shortcut_Sheet {
 		return Shortcut_Sheet{.Editor_Mesh, "Model Editor", editor_mode_tag(), .Mode_Face, EDITOR_MESH_GROUPS[:]}
 	case .Editor_Modal:
 		return editor_modal_sheet()
+	case .Anim_Picker:
+		return Shortcut_Sheet{.Anim_Picker, "Animation Picker", "9 clips", .Pose, ANIM_PICKER_GROUPS[:]}
+	case .Anim_Editor:
+		return Shortcut_Sheet{.Anim_Editor, "Animation Editor", "25-bone rig", .Pose, ANIM_EDIT_GROUPS[:]}
+	case .Anim_Modal:
+		return Shortcut_Sheet{.Anim_Modal, "POSE TRANSFORM", "ACTIVE MODAL", .Tool_Rotate, ANIM_MODAL_GROUPS[:]}
 	}
 	return Shortcut_Sheet{.Battlefield, "BATTLEFIELD SHORTCUTS", "TUTORIAL LEVEL 1", .Hero_Crest, BATTLEFIELD_GROUPS[:]}
 }

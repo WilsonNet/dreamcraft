@@ -186,6 +186,9 @@ compose_editor_topbar :: proc(w: f32) {
 		if chip_button(compact ? "" : "Models", false, icon_tex(.Models)) {
 			handle_editor_ui_msg(.Ed_Models, 0, {})
 		}
+		if chip_button(compact ? "" : "Anims", false, icon_tex(.Pose)) {
+			handle_editor_ui_msg(.Ed_Anims, 0, {})
+		}
 		if chip_button(compact ? "" : "Reset", false, icon_tex(.Reset)) {
 			handle_editor_ui_msg(.Ed_Reset, 0, {})
 		}

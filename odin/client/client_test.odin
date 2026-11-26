@@ -228,4 +228,20 @@ shortcut_help_is_conditional_per_view :: proc(t: ^testing.T) {
 	testing.expect_value(t, active_help_view(), Help_View.Editor_Modal)
 	s4 := help_sheet_for_view(active_help_view())
 	testing.expect_value(t, s4.icon, Icon_Id.Tool_Loop_Cut)
+
+	app.mode = .Anim_Picker
+	testing.expect_value(t, active_help_view(), Help_View.Anim_Picker)
+	s5 := help_sheet_for_view(active_help_view())
+	testing.expect_value(t, s5.icon, Icon_Id.Pose)
+
+	app.mode = .Anim_Editor
+	app.anim_ed.modal_active = false
+	testing.expect_value(t, active_help_view(), Help_View.Anim_Editor)
+	s6 := help_sheet_for_view(active_help_view())
+	testing.expect_value(t, len(s6.groups), 1)
+
+	app.anim_ed.modal_active = true
+	testing.expect_value(t, active_help_view(), Help_View.Anim_Modal)
+	s7 := help_sheet_for_view(active_help_view())
+	testing.expect_value(t, s7.icon, Icon_Id.Tool_Rotate)
 }

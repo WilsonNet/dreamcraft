@@ -189,8 +189,10 @@ update_unit_visual :: proc(index: int, dt: f32) {
 		}
 	}
 	visual.clock += dt
+	enemy := units.team[index] == .Enemy
+	hero := units.kind[index] == .Hero
 	if units.cooldown[index] > visual.prev_cooldown {
-		visual.attack = art.ANIM_ATTACK_SECONDS
+		visual.attack = art.anim_clip_duration(.Attack, enemy, hero)
 	}
 	visual.prev_cooldown = units.cooldown[index]
 	if visual.attack > 0 {
@@ -301,24 +303,26 @@ angle_toward :: proc(target, origin: g.Grid_Pos, fallback: f32) -> f32 {
 @(private)
 unit_pose :: proc(index: int) -> art.Pose {
 	visual := &app.visuals[index]
+	enemy := app.game.units.team[index] == .Enemy
+	hero := app.game.units.kind[index] == .Hero
 	offset := f32(index) * 0.37
-	idle_phase := math_mod(visual.clock + offset, art.ANIM_IDLE_SECONDS) / art.ANIM_IDLE_SECONDS
+	idle_dur := max(art.anim_clip_duration(.Idle, enemy, hero), 0.05)
+	idle_phase := math_mod(visual.clock + offset, idle_dur) / idle_dur
 	idle_pose: art.Pose
-	art.pose_idle(idle_phase, &idle_pose)
-	art.pose_secondary(idle_phase, 0.16, &idle_pose)
+	art.eval_unit_idle(idle_phase, enemy, hero, &idle_pose)
 
 	pose := idle_pose
 	if visual.move_blend > 0.001 {
 		b := visual.move_blend * visual.move_blend * (3.0 - 2.0 * visual.move_blend)
 		walk_pose: art.Pose
-		art.pose_walk(visual.walk_phase, &walk_pose)
-		art.pose_secondary(visual.walk_phase, 1.0, &walk_pose)
+		art.eval_unit_walk(visual.walk_phase, enemy, hero, &walk_pose)
 		pose = art.pose_lerp(&idle_pose, &walk_pose, b)
 	}
 	apply_visual_dynamics(visual, &pose)
 	if visual.attack > 0 {
-		t := 1.0 - visual.attack / art.ANIM_ATTACK_SECONDS
-		art.pose_attack(t, &pose)
+		atk_dur := max(art.anim_clip_duration(.Attack, enemy, hero), 0.05)
+		t := 1.0 - visual.attack / atk_dur
+		art.eval_unit_attack(t, enemy, hero, &pose)
 	}
 	return pose
 }

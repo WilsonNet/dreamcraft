@@ -16,6 +16,14 @@ handle_input :: proc() {
 		handle_editor_input()
 		return
 	}
+	if app.mode == .Anim_Picker {
+		handle_anim_picker_input()
+		return
+	}
+	if app.mode == .Anim_Editor {
+		handle_anim_editor_input()
+		return
+	}
 	mouse := input_mouse_pos()
 
 	if input_left_pressed() {
@@ -79,7 +87,7 @@ handle_keyboard :: proc() {
 }
 
 update_cursor :: proc() {
-	if app.help_open || app.mode == .Model_Picker {
+	if app.help_open || app.mode == .Model_Picker || app.mode == .Anim_Picker {
 		if !app.cursor_initialized || app.last_cursor != .DEFAULT {
 			rl.SetMouseCursor(.DEFAULT)
 			app.last_cursor = .DEFAULT
@@ -89,6 +97,10 @@ update_cursor :: proc() {
 	}
 	if app.mode == .Model_Editor {
 		editor_update_cursor()
+		return
+	}
+	if app.mode == .Anim_Editor {
+		anim_editor_update_cursor()
 		return
 	}
 	next := rl.MouseCursor.DEFAULT

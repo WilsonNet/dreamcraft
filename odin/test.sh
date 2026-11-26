@@ -15,6 +15,9 @@ odin test client/art -vet -strict-style
 echo "== unit tests: art/edit =="
 odin test client/art/edit -vet -strict-style
 
+echo "== unit tests: art/anim_edit =="
+odin test client/art/anim_edit -vet -strict-style
+
 echo "== unit tests: svg =="
 odin test client/svg -vet -strict-style
 

@@ -172,6 +172,10 @@ compose_active_ui :: proc(w, h: f32) {
 			compose_model_picker(w, h)
 		case .Model_Editor:
 			compose_model_editor(w, h)
+		case .Anim_Picker:
+			compose_anim_picker(w, h)
+		case .Anim_Editor:
+			compose_anim_editor(w, h)
 		}
 		if app.help_open {
 			compose_help_window(w, h)
@@ -594,6 +598,9 @@ compose_pause_menu :: proc() {
 				}
 				if plaque_button("Model Editor", .Lapis, "", icon_tex(.Models)) {
 					handle_hud_ui_msg(.Pause_Editor)
+				}
+				if plaque_button("Animation Editor", .Lapis, "", icon_tex(.Pose)) {
+					handle_hud_ui_msg(.Pause_Anim_Editor)
 				}
 				if plaque_button("Retry Level", .Carnelian, "", icon_tex(.Reset)) {
 					handle_hud_ui_msg(.Pause_Retry)

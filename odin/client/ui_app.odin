@@ -14,6 +14,7 @@ UI_Msg :: enum u32 {
 	Hud_Select_Hero,
 	Pause_Resume,
 	Pause_Editor,
+	Pause_Anim_Editor,
 	Pause_Retry,
 	Help_Toggle,
 	Help_Close,
@@ -33,6 +34,7 @@ UI_Msg :: enum u32 {
 	Ed_Team,
 	Ed_Shader,
 	Ed_Models,
+	Ed_Anims,
 	Ed_Reset,
 	Ed_Save,
 	Ed_Game,
@@ -45,6 +47,51 @@ UI_Msg :: enum u32 {
 	Ed_Exit_Save,
 	Ed_Exit_Discard,
 	Ed_Exit_Cancel,
+	Anim_Picker_Tab,
+	Anim_Picker_Row,
+	Anim_Picker_Back,
+	Anim_Picker_Edit_Proc,
+	Anim_Picker_Edit_Clip,
+	Anim_Play_Toggle,
+	Anim_Prev_Kf,
+	Anim_Next_Kf,
+	Anim_Speed,
+	Anim_Undo,
+	Anim_Redo,
+	Anim_Toggle_Bones,
+	Anim_Toggle_XRay,
+	Anim_Toggle_Onion,
+	Anim_Toggle_Mirror,
+	Anim_Toggle_AutoKey,
+	Anim_Team,
+	Anim_Shader,
+	Anim_Models,
+	Anim_Clips,
+	Anim_Reset,
+	Anim_Save,
+	Anim_Game,
+	Anim_Tool,
+	Anim_Select_Bone,
+	Anim_Zero_Bone,
+	Anim_Ground_Y0,
+	Anim_Flip_LR,
+	Anim_Add_Key,
+	Anim_Dup_Key,
+	Anim_Del_Key,
+	Anim_Copy_Pose,
+	Anim_Paste_Pose,
+	Anim_Interp,
+	Anim_Toggle_Loop,
+	Anim_Toggle_Additive,
+	Anim_Dock_Tab,
+	Anim_Dock_Tall,
+	Anim_Curve_Target,
+	Anim_Curve_Axis,
+	Anim_Curve_Handle,
+	Anim_Curve_Fit,
+	Anim_Exit_Save,
+	Anim_Exit_Discard,
+	Anim_Exit_Cancel,
 }
 
 @(private)
@@ -74,6 +121,8 @@ handle_hud_ui_msg :: proc(msg: UI_Msg) {
 		app.menu_open = false
 	case .Pause_Editor:
 		editor_open_picker()
+	case .Pause_Anim_Editor:
+		anim_editor_open_picker()
 	case .Pause_Retry:
 		retry_level()
 	case .Help_Toggle:

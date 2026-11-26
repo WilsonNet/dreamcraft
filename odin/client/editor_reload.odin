@@ -38,10 +38,12 @@ editor_rebuild_preview_gpu :: proc() {
 
 editor_update_pose_matrices :: proc(dt: f32) {
 	ed := &app.editor
+	enemy := ed.preview_team == .Enemy
+	hero := ed.preview_team == .Hero
 	if ed.pose_playing && ed.pose_kind != .Rest {
-		dur := f32(art.ANIM_IDLE_SECONDS)
-		if ed.pose_kind == .Walk { dur = f32(art.ANIM_WALK_SECONDS) * 2.0 }
-		if ed.pose_kind == .Attack { dur = f32(art.ANIM_ATTACK_SECONDS) }
+		dur := art.anim_clip_duration(.Idle, enemy, hero)
+		if ed.pose_kind == .Walk { dur = art.anim_clip_duration(.Walk, enemy, hero) }
+		if ed.pose_kind == .Attack { dur = art.anim_clip_duration(.Attack, enemy, hero) }
 		ed.pose_phase = math_mod(ed.pose_phase + dt / max(dur, f32(0.1)), 1.0)
 	}
 	if !ed.mesh.skinned || ed.pose_kind == .Rest {
@@ -54,15 +56,12 @@ editor_update_pose_matrices :: proc(dt: f32) {
 	switch ed.pose_kind {
 	case .Rest:
 	case .Idle:
-		art.pose_idle(ed.pose_phase, &pose)
-		art.pose_secondary(ed.pose_phase, 0.16, &pose)
+		art.eval_unit_idle(ed.pose_phase, enemy, hero, &pose)
 	case .Walk:
-		art.pose_walk(ed.pose_phase, &pose)
-		art.pose_secondary(ed.pose_phase, 1.0, &pose)
+		art.eval_unit_walk(ed.pose_phase, enemy, hero, &pose)
 	case .Attack:
-		art.pose_idle(0.25, &pose)
-		art.pose_attack(ed.pose_phase, &pose)
-		art.pose_secondary(0.25, 0.20, &pose)
+		art.eval_unit_idle(0.25, enemy, hero, &pose)
+		art.eval_unit_attack(ed.pose_phase, enemy, hero, &pose)
 	}
 	ed.pose_mats = art.pose_matrices(&pose, rl.Matrix(1))
 }
@@ -185,5 +184,12 @@ reload_live_game_models :: proc() {
 	if app.mode == .Model_Picker && app.editor.picker_idx >= 0 && app.editor.picker_idx < len(art.MODEL_CATALOG) {
 		app.editor.picker_preview_id = ""
 		editor_ensure_picker_preview(art.MODEL_CATALOG[app.editor.picker_idx].id)
+	}
+	if app.anim_ed.preview_model.loaded {
+		anim_editor_rebuild_preview_model()
+	}
+	if app.anim_ed.picker_preview.loaded {
+		unload_unit_model(&app.anim_ed.picker_preview)
+		anim_editor_ensure_picker_preview(app.anim_ed.picker_idx)
 	}
 }

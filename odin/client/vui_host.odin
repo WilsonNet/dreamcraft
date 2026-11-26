@@ -17,18 +17,20 @@ import vicons "vinland:vui/icons/game"
 import vmat "vinland:vui/materials"
 
 Vui_Host :: struct {
-	ctx:          ui.Context,
-	r:            vsg.Renderer,
-	ready:        bool,
-	gi:           vicons.Game_Icons,
-	draw:         ^ui.Draw_List,
-	minimap_img:  ui.Image_Id,
-	picker_img:   ui.Image_Id,
-	minimap_id:   ui.Id,
-	portrait_img: ui.Image_Id,
-	icon_masks:   [dynamic]rl.Texture2D,
-	frame_ms:     f32, // CPU: build + layout + paint
-	render_ms:    f32, // CPU: upload + draw recording inside the frame's command buffer
+	ctx:              ui.Context,
+	r:                vsg.Renderer,
+	ready:            bool,
+	gi:               vicons.Game_Icons,
+	draw:             ^ui.Draw_List,
+	minimap_img:      ui.Image_Id,
+	picker_img:       ui.Image_Id,
+	anim_picker_img:  ui.Image_Id,
+	minimap_id:       ui.Id,
+	anim_timeline_id: ui.Id,
+	portrait_img:     ui.Image_Id,
+	icon_masks:       [dynamic]rl.Texture2D,
+	frame_ms:         f32, // CPU: build + layout + paint
+	render_ms:        f32, // CPU: upload + draw recording inside the frame's command buffer
 }
 
 vh: Vui_Host
@@ -86,6 +88,7 @@ vui_init :: proc() {
 	vh.ready = vsg.init(&vh.r, rl.device(), rl.color_format(), rl.depth_format())
 	vh.minimap_img = ui.image_register_external(&vh.ctx, rl.texture_handle(app.minimap), int(app.minimap.width), int(app.minimap.height), nearest = true)
 	vh.picker_img = ui.image_register_external(&vh.ctx, 0, 1, 1, flip_y = true)
+	vh.anim_picker_img = ui.image_register_external(&vh.ctx, 0, 1, 1, flip_y = true)
 	vh.portrait_img = ui.image_register_external(&vh.ctx, 0, 1, 1, flip_y = true)
 	if !vh.ready {
 		fmt.eprintln("dreamcraft: VUI GPU renderer failed to initialise; HUD disabled")
@@ -175,6 +178,10 @@ vui_frame :: proc(dt: f32) {
 		t := app.editor.picker_rect_tex.texture
 		ui.image_external_update(&vh.ctx, vh.picker_img, rl.texture_handle(t), int(t.width), int(t.height))
 	}
+	if app.mode == .Anim_Picker && app.anim_ed.picker_rect_tex.id > 0 {
+		t := app.anim_ed.picker_rect_tex.texture
+		ui.image_external_update(&vh.ctx, vh.anim_picker_img, rl.texture_handle(t), int(t.width), int(t.height))
+	}
 	t0 := time.tick_now()
 	ui.begin_frame(&vh.ctx, vui_input(), {w, h}, scale, rl.GetTime())
 	compose_active_ui(w, h)
@@ -196,6 +203,12 @@ vui_frame :: proc(dt: f32) {
 		r := ui.rect_of(vh.minimap_id)
 		if r.w > 0 {
 			app.minimap_rect = {r.x, r.y, r.w, r.h}
+		}
+	}
+	if app.mode == .Anim_Editor && vh.anim_timeline_id != 0 {
+		r := ui.rect_of(vh.anim_timeline_id)
+		if r.w > 0 {
+			app.anim_ed.timeline_rect = {r.x, r.y, r.w, r.h}
 		}
 	}
 }
