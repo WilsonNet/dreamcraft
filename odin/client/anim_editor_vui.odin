@@ -79,7 +79,7 @@ compose_anim_bone_rail :: proc() {
 		}
 		compose_selection_presets()
 		if ed.rig_mode != .Bones {
-			ui.text("Motion Ctrls (12)", "text-[11px] font-bold uppercase tracking-wider text-brass-hi")
+			ui.text(fmt.tprintf("Motion Ctrls (%d)", art_rig.CTRL_COUNT), "text-[11px] font-bold uppercase tracking-wider text-brass-hi")
 			if ui.div("flex min-h-0 grow flex-col gap-0.5 overflow-y-auto rounded-[6px] bg-bitumen-deep p-1 ring-1 ring-brass-lo/70") {
 				compose_ctrl_list_rows()
 			}

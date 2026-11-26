@@ -93,3 +93,18 @@ head_aim_and_chest_cape_controls_distribute_rotations :: proc(t: ^testing.T) {
 	rig_apply_rotate_delta(&kf, .Cape_Ctrl, &base2, {0.4, 0, 0}, false)
 	testing.expect(t, abs(kf.rot[int(spec.Bone_Id.Cape_3)][0] - 0.18) < 1e-4)
 }
+
+@(test)
+sword_tip_aims_blade_and_follows_arm_ik :: proc(t: ^testing.T) {
+	kf := anim_edit.Edit_Keyframe{time = 0}
+	rig := Rig_Targets{pin_feet = true}
+	rig_sync_from_kf(&rig, &kf)
+
+	tgt := [3]f32{0.15, 1.38, 1.02}
+	rig_apply_translate(&rig, &kf, .Sword_Tip, tgt, false)
+
+	fk := eval_fk_matrices(&kf.rot, kf.root_offset)
+	tip := mat4_point(fk[int(spec.Bone_Id.Hand_R)], sword_tip_rest_pos())
+	err := linalg.length(tip - tgt)
+	testing.expectf(t, err < 0.005, "tip=%v tgt=%v rest=%v err=%v", tip, tgt, sword_tip_rest_pos(), err)
+}

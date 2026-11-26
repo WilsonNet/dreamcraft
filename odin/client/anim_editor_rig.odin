@@ -39,6 +39,8 @@ anim_draw_rig_3d :: proc() {
 
 	head_p := anim_bone_posed_head(&ed.pose_mats, .Head)
 	rl.DrawLine3D(head_p, rl.Vector3(ed.rig.pos[.Head_Aim]), rl.Color{165, 224, 245, 165})
+	hand_r := anim_bone_posed_head(&ed.pose_mats, .Hand_R)
+	rl.DrawLine3D(hand_r, rl.Vector3(ed.rig.pos[.Sword_Tip]), rl.Color{235, 226, 170, 185})
 
 	for i in 0 ..< art_rig.CTRL_COUNT {
 		c := art_rig.Control_Id(i)
@@ -65,6 +67,7 @@ ctrl_color :: proc(ed: ^Anim_Editor_State, c: art_rig.Control_Id) -> rl.Color {
 	if ed.selected_ctrls[ci] {
 		return c == ed.selected_ctrl ? rl.Color{255, 224, 96, 255} : rl.Color{242, 186, 68, 235}
 	}
+	if c == .Sword_Tip { return rl.Color{235, 226, 170, 245} }
 	side := art_rig.CONTROLS[c].side
 	if side < 0 { return rl.Color{92, 168, 255, 225} }
 	if side > 0 { return rl.Color{240, 108, 92, 225} }
@@ -139,7 +142,12 @@ anim_draw_ctrl_gizmo_3d :: proc() {
 	}
 	rad := anim_world_per_px() * 52.0
 	for axis in 0 ..< 3 {
-		draw_gizmo_ring(pivot, axis, rad, gizmo_axis_color(ed, axis))
+		col := gizmo_axis_color(ed, axis)
+		draw_gizmo_ring(pivot, axis, rad, col)
+		if ed.gizmo_hover == axis || ed.gizmo_drag_axis == axis {
+			draw_gizmo_ring(pivot, axis, rad * 0.96, col)
+			draw_gizmo_ring(pivot, axis, rad * 1.04, col)
+		}
 	}
 }
 
@@ -170,7 +178,7 @@ anim_ctrl_gizmo_hit_test :: proc(mouse: rl.Vector2) -> (axis: int, is_rot: bool)
 	if !show_rot {
 		o2d := rl.GetWorldToScreen(pivot, ed.camera)
 		wlen := anim_world_per_px() * 68.0
-		best, best_d2 := -1, f32(144.0)
+		best, best_d2 := -1, f32(256.0)
 		for ax in 0 ..< 3 {
 			t2d := rl.GetWorldToScreen(pivot + GIZMO_AXES[ax] * wlen, ed.camera)
 			d2, t := seg_dist_sq_2d(mouse, o2d, t2d)
@@ -182,7 +190,7 @@ anim_ctrl_gizmo_hit_test :: proc(mouse: rl.Vector2) -> (axis: int, is_rot: bool)
 		return best, false
 	}
 	rad := anim_world_per_px() * 52.0
-	best, best_d2 := -1, f32(100.0)
+	best, best_d2 := -1, f32(256.0)
 	for ax in 0 ..< 3 {
 		for s in 0 ..< GIZMO_RING_SEGS {
 			a0 := f32(s) * math.TAU / f32(GIZMO_RING_SEGS)
@@ -212,6 +220,7 @@ anim_start_ctrl_modal :: proc(op: Anim_Tool, lock: edit.Axis_Lock, mouse: rl.Vec
 	for i in 0 ..< art_rig.CTRL_COUNT {
 		ed.modal_base_ctrl_pos[i] = ed.rig.pos[art_rig.Control_Id(i)]
 	}
+	ed.modal_restore_tool = ed.tool
 	ed.tool = op
 	ed.modal_active = true
 	ed.modal_op = op
@@ -231,10 +240,10 @@ apply_anim_ctrl_modal :: proc(mouse: rl.Vector2) {
 	kf := &ed.clip.keyframes[clamp(ed.selected_kf, 0, len(ed.clip.keyframes) - 1)]
 
 	if ed.modal_op == .Rotate {
-		ang := has_num ? num_val * math.PI / 180.0 : dpx.x * 0.012
-		if ctrl { ang = math.round(ang / (5.0 * math.PI / 180.0)) * (5.0 * math.PI / 180.0) }
-		ed.modal_angle = ang
 		axis_idx := ed.axis_lock == .Y ? 1 : (ed.axis_lock == .Z ? 2 : 0)
+		ci := ed.selected_ctrl != .COUNT ? int(ed.selected_ctrl) : 0
+		ang := compute_anim_rotate_angle(rl.Vector3(ed.modal_base_ctrl_pos[ci]), axis_idx, mouse, has_num, num_val, ctrl)
+		ed.modal_angle = ang
 		drot := [3]f32{}
 		drot[axis_idx] = ang
 		kf.rot = ed.modal_base_all_rot

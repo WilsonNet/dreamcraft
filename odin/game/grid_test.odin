@@ -77,8 +77,9 @@ fog_reveal_clamps_at_edges :: proc(t: ^testing.T) {
 
 @(test)
 fog_coverage_starts_partial :: proc(t: ^testing.T) {
-	game: Game
-	game_init(&game)
+	game := new(Game)
+	defer free(game)
+	game_init(game)
 	coverage := fog_coverage_percent(&game.fog)
 	testing.expect(t, coverage > 80.0)
 	testing.expect(t, coverage < 100.0)

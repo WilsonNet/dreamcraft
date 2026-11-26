@@ -26,33 +26,34 @@ Runner :: struct {
 }
 
 main :: proc() {
-	runner: Runner
+	runner := new(Runner)
+	defer free(runner)
 	g.game_init(&runner.game)
 
 	if path, ok := find_arg(os.args, "--script"); ok {
 		if record_path, record_ok := find_arg(os.args, "--record"); record_ok {
-			if !recording_start(&runner, record_path) {
+			if !recording_start(runner, record_path) {
 				os.exit(2)
 			}
 		}
-		code := run_script(&runner, path)
-		recording_finish(&runner)
+		code := run_script(runner, path)
+		recording_finish(runner)
 		os.exit(code)
 	}
 	if ticks, ok := find_ticks(os.args); ok {
 		if record_path, record_ok := find_arg(os.args, "--record"); record_ok {
-			if !recording_start(&runner, record_path) {
+			if !recording_start(runner, record_path) {
 				os.exit(2)
 			}
 		}
 		g.sim_run(&runner.game, ticks)
 		result := control.execute(&runner.game, control.Command{cmd = "status"})
 		write_result(&result)
-		recording_finish(&runner)
+		recording_finish(runner)
 		return
 	}
 	if path, ok := find_arg(os.args, "--replay"); ok {
-		code := run_script(&runner, path)
+		code := run_script(runner, path)
 		os.exit(code)
 	}
 	if port, ok := find_serve_port(os.args); ok {
@@ -63,15 +64,15 @@ main :: proc() {
 		runner.paused = has_arg(os.args, "--paused")
 	}
 	if record_path, record_ok := find_arg(os.args, "--record"); record_ok && runner.record == nil {
-		if !recording_start(&runner, record_path) {
+		if !recording_start(runner, record_path) {
 			os.exit(2)
 		}
 	}
 	defer if runner.serving {
 		control.server_close(&runner.server)
 	}
-	run_polling(&runner)
-	recording_finish(&runner)
+	run_polling(runner)
+	recording_finish(runner)
 }
 
 find_arg :: proc(args: []string, name: string) -> (value: string, ok: bool) {

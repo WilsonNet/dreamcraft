@@ -189,7 +189,7 @@ anim_draw_overlays_3d :: proc() {
 	if ed.rig_mode != .Bones {
 		anim_draw_rig_3d()
 	}
-	if anim_is_rig_active() {
+	if anim_gizmo_uses_rig() {
 		anim_draw_ctrl_gizmo_3d()
 	} else {
 		anim_draw_gizmo_3d()
@@ -327,6 +327,10 @@ anim_draw_gizmo_3d :: proc() {
 	for axis in 0 ..< 3 {
 		col := gizmo_axis_color(ed, axis)
 		draw_gizmo_ring(pivot, axis, radius, col)
+		if ed.gizmo_hover == axis || ed.gizmo_drag_axis == axis {
+			draw_gizmo_ring(pivot, axis, radius * 0.96, col)
+			draw_gizmo_ring(pivot, axis, radius * 1.04, col)
+		}
 	}
 }
 

@@ -16,6 +16,7 @@ anim_select_bone_only :: proc(b: art.Bone_Id) {
 	ed.selected_bones = {}
 	ed.selected_bones[int(b)] = true
 	ed.selected_bone = b
+	ed.gizmo_on_bone = true
 	ed.curve_is_root = b == .Root
 	anim_curves_fit_view()
 }
@@ -38,6 +39,7 @@ anim_toggle_bone_select :: proc(b: art.Bone_Id) {
 		ed.selected_bones[bi] = true
 		ed.selected_bone = b
 	}
+	ed.gizmo_on_bone = true
 	ed.curve_is_root = ed.selected_bone == .Root
 	anim_curves_fit_view()
 }
@@ -63,6 +65,7 @@ anim_select_bone_chain :: proc(root_b: art.Bone_Id, additive: bool) {
 		}
 	}
 	ed.selected_bone = root_b
+	ed.gizmo_on_bone = true
 	ed.curve_is_root = root_b == .Root
 	anim_curves_fit_view()
 }
@@ -99,6 +102,7 @@ anim_select_ctrl_only :: proc(c: art_rig.Control_Id) {
 	if c != .COUNT {
 		ed.selected_ctrls[int(c)] = true
 		ed.selected_ctrl = c
+		ed.gizmo_on_bone = false
 		ed.selected_bone = art_rig.CONTROLS[c].bone
 		ed.curve_is_root = c == .COG
 		anim_curves_fit_view()
@@ -124,6 +128,7 @@ anim_toggle_ctrl_select :: proc(c: art_rig.Control_Id) {
 		ed.selected_ctrls[ci] = true
 		ed.selected_ctrl = c
 	}
+	ed.gizmo_on_bone = false
 	ed.selected_bone = art_rig.CONTROLS[ed.selected_ctrl].bone
 	ed.curve_is_root = ed.selected_ctrl == .COG
 	anim_curves_fit_view()
@@ -172,7 +177,7 @@ anim_apply_selection_preset :: proc(preset_idx: int, additive: bool) {
 	ctrls: []art_rig.Control_Id
 	C_SPINE := [?]art_rig.Control_Id{.COG, .Chest_Ctrl, .Head_Aim}
 	C_LARM  := [?]art_rig.Control_Id{.Hand_IK_L, .Pole_Elbow_L}
-	C_RARM  := [?]art_rig.Control_Id{.Hand_IK_R, .Pole_Elbow_R}
+	C_RARM  := [?]art_rig.Control_Id{.Hand_IK_R, .Pole_Elbow_R, .Sword_Tip}
 	C_LLEG  := [?]art_rig.Control_Id{.Foot_IK_L, .Pole_Knee_L}
 	C_RLEG  := [?]art_rig.Control_Id{.Foot_IK_R, .Pole_Knee_R}
 	C_CAPE  := [?]art_rig.Control_Id{.Cape_Ctrl}

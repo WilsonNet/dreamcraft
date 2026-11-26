@@ -146,6 +146,7 @@ anim_start_modal :: proc(op: Anim_Tool, lock: edit.Axis_Lock, mouse: rl.Vector2)
 	ed.modal_base_rot = kf.rot[int(ed.selected_bone)]
 	ed.modal_base_all_rot = kf.rot
 	ed.modal_base_root = kf.root_offset
+	ed.modal_restore_tool = ed.tool
 	ed.tool = op
 	ed.modal_active = true
 	ed.modal_op = op
@@ -177,7 +178,7 @@ update_anim_active_modal :: proc(mouse: rl.Vector2) {
 		ed.modal_active = false
 		ed.modal_is_ctrl = false
 		ed.gizmo_drag_axis = -1
-		ed.tool = .Select
+		ed.tool = ed.modal_restore_tool
 		ed.clip.dirty = true
 	}
 }
@@ -191,7 +192,7 @@ cancel_anim_modal :: proc() {
 	ed.modal_active = false
 	ed.modal_is_ctrl = false
 	ed.gizmo_drag_axis = -1
-	ed.tool = .Select
+	ed.tool = ed.modal_restore_tool
 }
 
 @(private)
@@ -228,10 +229,10 @@ apply_anim_modal_edit :: proc(mouse: rl.Vector2) {
 	kf := &ed.clip.keyframes[clamp(ed.selected_kf, 0, len(ed.clip.keyframes) - 1)]
 
 	if ed.modal_op == .Rotate {
-		ang := has_num ? num_val * math.PI / 180.0 : dpx.x * 0.012
-		if ctrl { ang = math.round(ang / (5.0 * math.PI / 180.0)) * (5.0 * math.PI / 180.0) }
-		ed.modal_angle = ang
 		axis_idx := ed.axis_lock == .Y ? 1 : (ed.axis_lock == .Z ? 2 : 0)
+		pivot := anim_bone_posed_head(&ed.pose_mats, ed.selected_bone)
+		ang := compute_anim_rotate_angle(pivot, axis_idx, mouse, has_num, num_val, ctrl)
+		ed.modal_angle = ang
 		for bi in 0 ..< art.BONE_COUNT {
 			if !ed.selected_bones[bi] { continue }
 			rot := ed.modal_base_all_rot[bi]
@@ -251,6 +252,36 @@ apply_anim_modal_edit :: proc(mouse: rl.Vector2) {
 	}
 	anim_edit.recompute_clip_handles(&ed.clip)
 	ed.clip.dirty = true
+}
+
+// Computes signed rotation angle from ring circular drag, edge-on tangent drag, or numeric deg.
+compute_anim_rotate_angle :: proc(pivot: rl.Vector3, axis_idx: int, mouse: rl.Vector2, has_num: bool, num_val: f32, ctrl: bool) -> f32 {
+	ed := &app.anim_ed
+	ang: f32
+	if has_num {
+		ang = num_val * math.PI / 180.0
+	} else if ed.gizmo_drag_axis >= 0 {
+		p2 := rl.GetWorldToScreen(pivot, ed.camera)
+		cam_fwd := rl.Vector3Normalize(ed.camera.target - ed.camera.position)
+		axis_v := GIZMO_AXES[axis_idx]
+		facing := rl.Vector3DotProduct(axis_v, cam_fwd)
+		v0 := ed.modal_start_mouse - p2
+		v1 := mouse - p2
+		if abs(facing) > 0.28 && (v0.x * v0.x + v0.y * v0.y) > 64.0 && (v1.x * v1.x + v1.y * v1.y) > 64.0 {
+			raw := math.atan2(v0.x * v1.y - v0.y * v1.x, v0.x * v1.x + v0.y * v1.y)
+			ang = facing < 0 ? -raw : raw
+		} else {
+			a2 := rl.GetWorldToScreen(pivot + axis_v * 0.25, ed.camera) - p2
+			alen := math.sqrt(a2.x * a2.x + a2.y * a2.y)
+			t2 := alen > 1e-3 ? rl.Vector2{-a2.y / alen, a2.x / alen} : rl.Vector2{1, 0}
+			d := mouse - ed.modal_start_mouse
+			ang = (d.x * t2.x + d.y * t2.y) * 0.015
+		}
+	} else {
+		ang = (mouse.x - ed.modal_start_mouse.x) * 0.012
+	}
+	if ctrl { ang = math.round(ang / (5.0 * math.PI / 180.0)) * (5.0 * math.PI / 180.0) }
+	return ang
 }
 
 @(private)

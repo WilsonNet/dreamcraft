@@ -16,6 +16,7 @@ Control_Id :: enum u8 {
 	Foot_IK_R,
 	Pole_Knee_L,
 	Pole_Knee_R,
+	Sword_Tip,
 	COUNT,
 }
 
@@ -52,6 +53,7 @@ CONTROLS := [Control_Id]Control_Def {
 	.Foot_IK_R    = {id = .Foot_IK_R, name = "Foot R", bone = .Foot_R, shape = .Foot_Box, can_move = true, can_rotate = true, side = 1},
 	.Pole_Knee_L  = {id = .Pole_Knee_L, name = "Knee L", bone = .Shin_L, shape = .Pole_Diamond, can_move = true, can_rotate = false, side = -1},
 	.Pole_Knee_R  = {id = .Pole_Knee_R, name = "Knee R", bone = .Shin_R, shape = .Pole_Diamond, can_move = true, can_rotate = false, side = 1},
+	.Sword_Tip    = {id = .Sword_Tip, name = "Sword Tip", bone = .Hand_R, shape = .Aim_Cross, can_move = true, can_rotate = true, side = 1},
 	.COUNT        = {},
 }
 

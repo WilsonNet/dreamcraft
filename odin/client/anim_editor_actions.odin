@@ -66,6 +66,7 @@ zero_ctrl_driven_bones :: proc(kf: ^anim_edit.Edit_Keyframe, ctrl: art_rig.Contr
 	case .Cape_Ctrl:    zero_pair(kf, {.Cape_1, .Cape_2, .Cape_3}, false)
 	case .Hand_IK_L, .Pole_Elbow_L: zero_pair(kf, {.Arm_L, .Forearm_L, .Hand_L}, mirror)
 	case .Hand_IK_R, .Pole_Elbow_R: zero_pair(kf, {.Arm_R, .Forearm_R, .Hand_R}, mirror)
+	case .Sword_Tip:               zero_pair(kf, {.Arm_R, .Forearm_R, .Hand_R}, false)
 	case .Foot_IK_L, .Pole_Knee_L:  zero_pair(kf, {.Thigh_L, .Shin_L, .Foot_L}, mirror)
 	case .Foot_IK_R, .Pole_Knee_R:  zero_pair(kf, {.Thigh_R, .Shin_R, .Foot_R}, mirror)
 	case .COUNT:
@@ -221,7 +222,9 @@ handle_anim_ui_msg :: proc(msg: UI_Msg, arg: i32) {
 	case .Anim_Save:          _ = anim_editor_save_and_hot_reload()
 	case .Anim_Game:
 		if ed.clip.dirty { ed.confirm_exit_open = true } else { anim_editor_close_to_game() }
-	case .Anim_Tool:          ed.tool = Anim_Tool(clamp(int(arg), 0, 2))
+	case .Anim_Tool:
+		next := Anim_Tool(clamp(int(arg), 0, 2))
+		ed.tool = ed.tool == next ? .Select : next
 	case .Anim_Select_Bone:
 		b := art.Bone_Id(clamp(int(arg), 0, art.BONE_COUNT - 1))
 		if rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyDown(.RIGHT_SHIFT) { anim_toggle_bone_select(b) } else { anim_select_bone_only(b) }
@@ -230,18 +233,23 @@ handle_anim_ui_msg :: proc(msg: UI_Msg, arg: i32) {
 	case .Anim_Select_Ctrl:
 		c := art_rig.Control_Id(clamp(int(arg), 0, art_rig.CTRL_COUNT - 1))
 		if rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyDown(.RIGHT_SHIFT) { anim_toggle_ctrl_select(c) } else { anim_select_ctrl_only(c) }
-	case .Anim_Select_Preset:
-		shift := rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyDown(.RIGHT_SHIFT)
-		if arg == 6 {
-			if anim_is_rig_active() { anim_select_all_ctrls() } else { anim_select_all_bones() }
-		} else if arg == 7 {
-			anim_select_bone_chain(ed.selected_bone, shift)
-		} else {
-			anim_apply_selection_preset(int(arg), shift)
-		}
+	case .Anim_Select_Preset:  anim_exec_select_preset(arg)
 	case .Anim_Select_All_Kfs: anim_select_all_kfs(true)
 	case:
 		handle_anim_key_and_curve_msg(msg, arg)
+	}
+}
+
+@(private)
+anim_exec_select_preset :: proc(arg: i32) {
+	ed := &app.anim_ed
+	shift := rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyDown(.RIGHT_SHIFT)
+	if arg == 6 {
+		if anim_is_rig_active() { anim_select_all_ctrls() } else { anim_select_all_bones() }
+	} else if arg == 7 {
+		anim_select_bone_chain(ed.selected_bone, shift)
+	} else {
+		anim_apply_selection_preset(int(arg), shift)
 	}
 }
 

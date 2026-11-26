@@ -23,6 +23,7 @@ rig_sync_from_pose :: proc(rig: ^Rig_Targets, rot: ^[BONE_COUNT][3]f32, root_off
 	head_pos := mat4_point(fk[int(spec.Bone_Id.Head)], art.BONES[.Head].head)
 	head_fwd := linalg.normalize(mat4_dir(fk[int(spec.Bone_Id.Head)], {0, 0, 1}))
 	rig.pos[.Head_Aim] = head_pos + head_fwd * 0.55
+	rig.pos[.Sword_Tip] = mat4_point(fk[int(spec.Bone_Id.Hand_R)], sword_tip_rest_pos())
 	rig.initialized = true
 }
 
@@ -81,14 +82,17 @@ rig_apply_translate :: proc(
 			solve_moved_control(rig, kf, pair, m_pos - m_old)
 		}
 	}
-	rig.pos[.Chest_Ctrl] = eval_fk_bone_head(&kf.rot, kf.root_offset, .Chest)
-	rig.pos[.Cape_Ctrl] = eval_fk_bone_head(&kf.rot, kf.root_offset, .Cape_2)
+	rig.pos[.Chest_Ctrl] = eval_fk_point(&kf.rot, kf.root_offset, .Chest, art.BONES[.Chest].head)
+	rig.pos[.Cape_Ctrl] = eval_fk_point(&kf.rot, kf.root_offset, .Cape_2, art.BONES[.Cape_2].head)
+	if ctrl != .Sword_Tip {
+		rig.pos[.Sword_Tip] = eval_fk_point(&kf.rot, kf.root_offset, .Hand_R, sword_tip_rest_pos())
+	}
 }
 
 @(private)
-eval_fk_bone_head :: proc(rot: ^[BONE_COUNT][3]f32, root_offset: [3]f32, b: spec.Bone_Id) -> [3]f32 {
+eval_fk_point :: proc(rot: ^[BONE_COUNT][3]f32, root_offset: [3]f32, b: spec.Bone_Id, pt: [3]f32) -> [3]f32 {
 	fk := eval_fk_matrices(rot, root_offset)
-	return mat4_point(fk[int(b)], art.BONES[b].head)
+	return mat4_point(fk[int(b)], pt)
 }
 
 @(private)
@@ -110,6 +114,8 @@ solve_moved_control :: proc(rig: ^Rig_Targets, kf: ^anim_edit.Edit_Keyframe, ctr
 		solve_two_bone_ik(&kf.rot, kf.root_offset, .Arm_R, .Forearm_R, .Hand_R, rig.pos[.Hand_IK_R], rig.pos[.Pole_Elbow_R], {0, 0, -1})
 	case .Head_Aim:
 		solve_aim_chain(&kf.rot, kf.root_offset, rig.pos[.Head_Aim])
+	case .Sword_Tip:
+		rig.pos[.Hand_IK_R] = solve_sword_tip_ik(&kf.rot, kf.root_offset, rig.pos[.Sword_Tip], rig.pos[.Pole_Elbow_R])
 	}
 }
 
@@ -147,7 +153,7 @@ apply_single_ctrl_rot :: proc(kf: ^anim_edit.Edit_Keyframe, ctrl: Control_Id, ba
 		kf.rot[int(spec.Bone_Id.Cape_1)] = base_rot[int(spec.Bone_Id.Cape_1)] + d * 0.35
 		kf.rot[int(spec.Bone_Id.Cape_2)] = base_rot[int(spec.Bone_Id.Cape_2)] + d * 0.40
 		kf.rot[int(spec.Bone_Id.Cape_3)] = base_rot[int(spec.Bone_Id.Cape_3)] + d * 0.45
-	case .Hand_IK_L, .Hand_IK_R, .Foot_IK_L, .Foot_IK_R:
+	case .Hand_IK_L, .Hand_IK_R, .Foot_IK_L, .Foot_IK_R, .Sword_Tip:
 		bi := int(CONTROLS[ctrl].bone)
 		kf.rot[bi] = base_rot[bi] + d
 	}

@@ -5,7 +5,6 @@ import "core:math"
 import rl "../gfx"
 import art "./art"
 import anim_edit "./art/anim_edit"
-import art_rig "./art/anim_rig"
 import edit "./art/edit"
 
 handle_anim_editor_input :: proc() {
@@ -68,15 +67,17 @@ update_anim_hover :: proc(mouse: rl.Vector2, in_vp, in_tl: bool) {
 	if !in_vp || !ed.clip_loaded || ed.cam_orbit_drag || ed.cam_pan_drag {
 		return
 	}
-	if anim_is_rig_active() {
-		if ed.gizmo_drag_axis < 0 {
+	if ed.gizmo_drag_axis < 0 {
+		if anim_gizmo_uses_rig() {
 			ed.gizmo_hover, _ = anim_ctrl_gizmo_hit_test(mouse)
+		} else {
+			ed.gizmo_hover = anim_gizmo_hit_test(mouse)
 		}
+	}
+	if anim_is_rig_active() {
 		if c, ok := anim_pick_ctrl(mouse); ok {
 			ed.hover_ctrl = int(c)
 		}
-	} else if ed.gizmo_drag_axis < 0 {
-		ed.gizmo_hover = anim_gizmo_hit_test(mouse)
 	}
 	if ed.rig_mode != .Rig && ed.hover_ctrl < 0 {
 		if b, ok := anim_pick_bone(mouse); ok {
@@ -107,20 +108,10 @@ update_anim_vp_box :: proc(mouse: rl.Vector2) -> bool {
 handle_anim_viewport_left_press :: proc(mouse: rl.Vector2) {
 	ed := &app.anim_ed
 	shift := rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyDown(.RIGHT_SHIFT)
-	if anim_is_rig_active() {
+	if anim_gizmo_uses_rig() {
 		if ax, is_rot := anim_ctrl_gizmo_hit_test(mouse); ax >= 0 {
 			lock := ax == 0 ? edit.Axis_Lock.X : (ax == 1 ? edit.Axis_Lock.Y : edit.Axis_Lock.Z)
 			anim_start_ctrl_modal(is_rot ? .Rotate : .Move_Root, lock, mouse)
-			return
-		}
-		if c, ok := anim_pick_ctrl(mouse); ok {
-			if shift { anim_toggle_ctrl_select(c) } else { anim_select_ctrl_only(c) }
-			def := art_rig.CONTROLS[c]
-			if ed.tool == .Rotate && def.can_rotate {
-				anim_start_ctrl_modal(.Rotate, .None, mouse)
-			} else if ed.tool == .Move_Root && def.can_move {
-				anim_start_ctrl_modal(.Move_Root, .None, mouse)
-			}
 			return
 		}
 	} else if ax := anim_gizmo_hit_test(mouse); ax >= 0 {
@@ -129,10 +120,15 @@ handle_anim_viewport_left_press :: proc(mouse: rl.Vector2) {
 		anim_start_modal(op, lock, mouse)
 		return
 	}
+	if anim_is_rig_active() {
+		if c, ok := anim_pick_ctrl(mouse); ok {
+			if shift { anim_toggle_ctrl_select(c) } else { anim_select_ctrl_only(c) }
+			return
+		}
+	}
 	if ed.rig_mode != .Rig {
 		if b, ok := anim_pick_bone(mouse); ok {
 			if shift { anim_toggle_bone_select(b) } else { anim_select_bone_only(b) }
-			if ed.tool == .Rotate { anim_start_modal(.Rotate, .None, mouse) }
 			return
 		}
 	}
@@ -162,7 +158,7 @@ anim_gizmo_hit_test :: proc(mouse: rl.Vector2) -> int {
 	pivot := anim_bone_posed_head(&ed.pose_mats, ed.selected_bone)
 	radius := anim_world_per_px() * 54.0
 	best := -1
-	best_d2 := f32(100.0)
+	best_d2 := f32(256.0)
 	for axis in 0 ..< 3 {
 		for s in 0 ..< GIZMO_RING_SEGS {
 			a0 := f32(s) * math.TAU / f32(GIZMO_RING_SEGS)

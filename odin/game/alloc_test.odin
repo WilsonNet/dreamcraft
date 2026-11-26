@@ -23,20 +23,22 @@ probe_alloc :: proc(
 
 @(test)
 simulation_does_not_allocate :: proc(t: ^testing.T) {
+	game := new(Game)
+	defer free(game)
+
 	probe: Alloc_Probe
 	old_context := context
 	context.allocator = runtime.Allocator{procedure = probe_alloc, data = &probe}
 	defer context = old_context
 
-	game: Game
-	game_init(&game)
-	player, _ := game_player_handle(&game)
+	game_init(game)
+	player, _ := game_player_handle(game)
 	command_push(&game.commands, Command{kind = .Move, actor = player, position = {20, 25}}, &game.units, &game.grid)
-	sim_run(&game, 500)
+	sim_run(game, 500)
 	command_push(&game.commands, Command{kind = .Patrol, actor = player, position = {20, 25}, point_b = {30, 25}}, &game.units, &game.grid)
-	sim_run(&game, 500)
-	_ = game_hash(&game)
+	sim_run(game, 500)
+	_ = game_hash(game)
 
 	testing.expect_value(t, probe.calls, 0)
-	testing.expect_value(t, validate_game(&game), Validation_Error.None)
+	testing.expect_value(t, validate_game(game), Validation_Error.None)
 }

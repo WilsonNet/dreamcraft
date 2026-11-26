@@ -9,9 +9,10 @@ import g "../game"
 
 @(test)
 control_status_reports_valid_state :: proc(t: ^testing.T) {
-	game: g.Game
-	g.game_init(&game)
-	result := execute(&game, Command{cmd = "status"})
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
+	result := execute(game, Command{cmd = "status"})
 	testing.expect(t, result.ok)
 	testing.expect(t, result.valid)
 	testing.expect_value(t, result.validation, "ok")
@@ -21,74 +22,79 @@ control_status_reports_valid_state :: proc(t: ^testing.T) {
 
 @(test)
 control_goto_run_verify_flow :: proc(t: ^testing.T) {
-	game: g.Game
-	g.game_init(&game)
-	result := execute(&game, Command{cmd = "goto", x = 10, y = 25})
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
+	result := execute(game, Command{cmd = "goto", x = 10, y = 25})
 	testing.expect(t, result.ok)
-	result = execute(&game, Command{cmd = "run", ticks = 120})
+	result = execute(game, Command{cmd = "run", ticks = 120})
 	testing.expect(t, result.ok)
-	result = execute(&game, Command{cmd = "verify", verify = Verify{type = "player_at", x = 10, y = 25}})
+	result = execute(game, Command{cmd = "verify", verify = Verify{type = "player_at", x = 10, y = 25}})
 	testing.expect(t, result.ok)
 	testing.expect(t, result.valid)
 }
 
 @(test)
 control_spawn_attack_and_kill :: proc(t: ^testing.T) {
-	game: g.Game
-	g.game_init(&game)
-	enemy_index, _ := g.game_enemy_index(&game)
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
+	enemy_index, _ := g.game_enemy_index(game)
 	g.unit_destroy(&game.units, enemy_index)
 
-	result := execute(&game, Command{cmd = "spawn", team = "enemy", x = 5, y = 25, value = 30})
+	result := execute(game, Command{cmd = "spawn", team = "enemy", x = 5, y = 25, value = 30})
 	testing.expect(t, result.ok)
-	result = execute(&game, Command{cmd = "select_all"})
+	result = execute(game, Command{cmd = "select_all"})
 	testing.expect(t, result.ok)
-	result = execute(&game, Command{cmd = "attack", x = 5, y = 25})
+	result = execute(game, Command{cmd = "attack", x = 5, y = 25})
 	testing.expect(t, result.ok)
-	result = execute(&game, Command{cmd = "run", ticks = 130})
+	result = execute(game, Command{cmd = "run", ticks = 130})
 	testing.expect(t, result.ok)
-	result = execute(&game, Command{cmd = "verify", verify = Verify{type = "enemy_dead"}})
+	result = execute(game, Command{cmd = "verify", verify = Verify{type = "enemy_dead"}})
 	testing.expect(t, result.ok)
 	testing.expect(t, result.valid)
 }
 
 @(test)
 control_teleport_and_set_hp :: proc(t: ^testing.T) {
-	game: g.Game
-	g.game_init(&game)
-	result := execute(&game, Command{cmd = "teleport", x = 30, y = 23})
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
+	result := execute(game, Command{cmd = "teleport", x = 30, y = 23})
 	testing.expect(t, result.ok)
 	testing.expect_value(t, result.player_grid, [2]i32{30, 23})
-	result = execute(&game, Command{cmd = "set_hp", x = 30, y = 23, value = 42})
+	result = execute(game, Command{cmd = "set_hp", x = 30, y = 23, value = 42})
 	testing.expect(t, result.ok)
-	player, _ := g.game_player_index(&game)
+	player, _ := g.game_player_index(game)
 	testing.expect_value(t, game.units.hp[player], u16(42))
 	testing.expect(t, result.valid)
 }
 
 @(test)
 control_invalid_commands_do_not_corrupt_state :: proc(t: ^testing.T) {
-	game: g.Game
-	g.game_init(&game)
-	result := execute(&game, Command{cmd = "goto", x = 1000, y = -3})
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
+	result := execute(game, Command{cmd = "goto", x = 1000, y = -3})
 	testing.expect(t, !result.ok)
-	result = execute(&game, Command{cmd = "teleport", x = 8, y = 20})
+	result = execute(game, Command{cmd = "teleport", x = 8, y = 20})
 	testing.expect(t, !result.ok)
-	result = execute(&game, Command{cmd = "nonsense"})
+	result = execute(game, Command{cmd = "nonsense"})
 	testing.expect(t, !result.ok)
 	testing.expect(t, result.valid)
 }
 
 @(test)
 control_snapshot_and_units_encode :: proc(t: ^testing.T) {
-	game: g.Game
-	g.game_init(&game)
-	snapshot := make_snapshot(&game)
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
+	snapshot := make_snapshot(game)
 	testing.expect(t, snapshot.ok)
 	testing.expect(t, snapshot.valid)
 	testing.expect_value(t, snapshot.alive_units, 2)
 
-	data, err := encode_units(&game)
+	data, err := encode_units(game)
 	testing.expect(t, err == nil)
 	defer delete(data)
 	infos: []Unit_Info
@@ -117,11 +123,12 @@ control_snapshot_and_units_encode :: proc(t: ^testing.T) {
 
 @(test)
 control_fog_text_contains_player_and_size :: proc(t: ^testing.T) {
-	game: g.Game
-	g.game_init(&game)
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
 	g.fog_mark_explored(&game.fog, g.Grid_Pos{8, 20}, 0)
 	buffer: [g.GRID_CELLS + g.GRID_H]u8
-	length := fog_text(&game, buffer[:])
+	length := fog_text(game, buffer[:])
 	testing.expect_value(t, length, g.GRID_CELLS + g.GRID_H)
 	text := string(buffer[:length])
 	testing.expect(t, strings.contains(text, "P"))
@@ -142,11 +149,12 @@ control_http_parser :: proc(t: ^testing.T) {
 
 @(test)
 control_http_server_round_trip :: proc(t: ^testing.T) {
-	game: g.Game
-	g.game_init(&game)
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
 	server: Server
 	port := 17977
-	if !server_start(&server, &game, port) {
+	if !server_start(&server, game, port) {
 		testing.expect(t, false, "could not bind control test port")
 		return
 	}
@@ -179,9 +187,10 @@ control_http_server_round_trip :: proc(t: ^testing.T) {
 
 @(test)
 control_player_death_is_valid_game_over :: proc(t: ^testing.T) {
-	game: g.Game
-	g.game_init(&game)
-	result := execute(&game, Command{cmd = "kill", x = 2, y = 25})
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
+	result := execute(game, Command{cmd = "kill", x = 2, y = 25})
 	testing.expect(t, result.ok)
 	testing.expect(t, result.game_over)
 	testing.expect(t, result.valid)
@@ -200,35 +209,37 @@ control_http_keep_alive_parser :: proc(t: ^testing.T) {
 
 @(test)
 control_attack_move_and_patrol_to :: proc(t: ^testing.T) {
-	game: g.Game
-	g.game_init(&game)
-	enemy_index, _ := g.game_enemy_index(&game)
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
+	enemy_index, _ := g.game_enemy_index(game)
 	g.unit_destroy(&game.units, enemy_index)
 
-	testing.expect(t, execute(&game, Command{cmd = "spawn", team = "enemy", x = 6, y = 26, value = 30}).ok)
-	res := execute(&game, Command{cmd = "attack_move", x = 14, y = 25})
+	testing.expect(t, execute(game, Command{cmd = "spawn", team = "enemy", x = 6, y = 26, value = 30}).ok)
+	res := execute(game, Command{cmd = "attack_move", x = 14, y = 25})
 	testing.expect(t, res.ok)
-	_ = execute(&game, Command{cmd = "run", ticks = 350})
-	testing.expect(t, execute(&game, Command{cmd = "verify", verify = Verify{type = "enemy_dead"}}).ok)
-	testing.expect(t, execute(&game, Command{cmd = "verify", verify = Verify{type = "player_at", x = 14, y = 25}}).ok)
+	_ = execute(game, Command{cmd = "run", ticks = 350})
+	testing.expect(t, execute(game, Command{cmd = "verify", verify = Verify{type = "enemy_dead"}}).ok)
+	testing.expect(t, execute(game, Command{cmd = "verify", verify = Verify{type = "player_at", x = 14, y = 25}}).ok)
 
-	res = execute(&game, Command{cmd = "patrol_to", x = 20, y = 25})
+	res = execute(game, Command{cmd = "patrol_to", x = 20, y = 25})
 	testing.expect(t, res.ok)
-	_ = execute(&game, Command{cmd = "run", ticks = 220})
-	player, _ := g.game_player_index(&game)
+	_ = execute(game, Command{cmd = "run", ticks = 220})
+	player, _ := g.game_player_index(game)
 	testing.expect(t, game.units.patrol_active[player])
 	testing.expect(t, res.valid)
 }
 
 @(test)
 control_reports_campaign_discovery_and_aggro_delay :: proc(t: ^testing.T) {
-	game: g.Game
-	g.game_init(&game)
-	enemy_index, _ := g.game_enemy_index(&game)
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
+	enemy_index, _ := g.game_enemy_index(game)
 	g.unit_destroy(&game.units, enemy_index)
-	testing.expect(t, execute(&game, Command{cmd = "spawn", team = "enemy", x = 7, y = 25}).ok)
+	testing.expect(t, execute(game, Command{cmd = "spawn", team = "enemy", x = 7, y = 25}).ok)
 
-	res := execute(&game, Command{cmd = "run", ticks = 1})
+	res := execute(game, Command{cmd = "run", ticks = 1})
 	testing.expect(t, res.discovery_announced)
 	testing.expect_value(t, res.enemy_aggro_ticks, u16(g.ENEMY_AGGRO_DELAY_TICKS))
 	testing.expect(t, res.valid)

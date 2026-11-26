@@ -66,6 +66,8 @@ Anim_Editor_State :: struct {
 	playing:                bool,
 	play_speed:             f32,
 	tool:                   Anim_Tool,
+	modal_restore_tool:     Anim_Tool,
+	gizmo_on_bone:          bool,
 	modal_active:           bool,
 	modal_is_ctrl:          bool,
 	modal_op:               Anim_Tool,
@@ -160,6 +162,11 @@ Anim_Editor_State :: struct {
 
 anim_editor_dock_h :: proc() -> f32 {
 	return app.anim_ed.dock_tall ? ANIM_DOCK_TALL_H : ANIM_DOCK_NORMAL_H
+}
+
+anim_gizmo_uses_rig :: proc() -> bool {
+	ed := &app.anim_ed
+	return anim_is_rig_active() && !(ed.rig_mode == .Both && ed.gizmo_on_bone)
 }
 
 anim_editor_viewport_rect :: proc() -> rl.Rectangle {

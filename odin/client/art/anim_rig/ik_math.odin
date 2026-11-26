@@ -152,3 +152,35 @@ solve_aim_chain :: proc(rot: ^[BONE_COUNT][3]f32, root_offset: [3]f32, target_wo
 	rot[int(spec.Bone_Id.Neck)] = {pitch * 0.35, yaw * 0.35, 0}
 	rot[int(spec.Bone_Id.Head)] = {pitch * 0.65, yaw * 0.65, 0}
 }
+
+// Rest model-space tip of the Mamluk shamshir blade (matches mamluk_shamshir).
+sword_tip_rest_pos :: proc() -> [3]f32 {
+	m := linalg.matrix4_translate_f32({0.268, 0.835, 0.048}) *
+		linalg.matrix4_rotate_f32(0.14, {0, 1, 0}) *
+		linalg.matrix4_rotate_f32(1.38, {1, 0, 0}) *
+		linalg.matrix4_rotate_f32(-math.PI * 0.5, {0, 1, 0})
+	return mat4_point(m, {-0.244, 0.806, 0})
+}
+
+// Solves right arm IK + Hand_R wrist aim so the shamshir tip reaches target_world.
+solve_sword_tip_ik :: proc(rot: ^[BONE_COUNT][3]f32, root_offset: [3]f32, target_world, pole_world: [3]f32) -> [3]f32 {
+	fk := eval_fk_matrices(rot, root_offset)
+	blade_rest := sword_tip_rest_pos() - art.BONES[.Hand_R].head
+	blade_len := linalg.length(blade_rest)
+	wrist0 := mat4_point(fk[int(spec.Bone_Id.Hand_R)], art.BONES[.Hand_R].head)
+	dir := norm_or(target_world - wrist0, {0, 0, 1})
+	wrist_want := target_world - dir * blade_len
+
+	solve_two_bone_ik(rot, root_offset, .Arm_R, .Forearm_R, .Hand_R, wrist_want, pole_world, {0, 0, -1})
+
+	fk = eval_fk_matrices(rot, root_offset)
+	inv_forearm := linalg.inverse(fk[int(spec.Bone_Id.Forearm_R)])
+	tgt_local := mat4_point(inv_forearm, target_world)
+	want_local := tgt_local - art.BONES[.Hand_R].head
+	r_hand := rot_between_dirs(blade_rest, want_local)
+	rx, ry, rz := linalg.euler_angles_xyz_from_matrix3(r_hand)
+	rot[int(spec.Bone_Id.Hand_R)] = {rx, ry, rz}
+
+	fk = eval_fk_matrices(rot, root_offset)
+	return mat4_point(fk[int(spec.Bone_Id.Hand_R)], art.BONES[.Hand_R].head)
+}
