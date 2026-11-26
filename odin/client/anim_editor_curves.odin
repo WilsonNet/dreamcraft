@@ -86,6 +86,10 @@ draw_anim_curves_canvas :: proc(ctx: ^ui.Context, r: ui.Rect, _: rawptr) {
 		draw_curve_keys(ctx, r, ed.curve_active_axis, true)
 	}
 	draw_curve_playhead(ctx, r)
+	if ed.curve_box_active {
+		box := anim_editor_box_rect_2d(ed.curve_box_start, input_mouse_pos())
+		ui.draw_rect(ctx, {box.x, box.y, box.width, box.height}, ui.rgb(0xecd9a6, 0.14))
+	}
 }
 
 @(private)
@@ -141,12 +145,13 @@ draw_curve_keys :: proc(ctx: ^ui.Context, r: ui.Rect, ax: int, active: bool) {
 		val := anim_edit.channel_get_value(&kf, ed.curve_is_root, ed.selected_bone, ax)
 		pt := curve_to_screen(r, kf.time, val)
 		if pt.x < r.x - 16 || pt.x > r.x + r.w + 16 { continue }
-		is_sel := active && ki == ed.selected_kf
+		is_sel := anim_is_kf_selected(ki)
+		is_primary := active && ki == ed.selected_kf
 		is_hov := ed.curve_hover_kind == .Key && ed.curve_hover_kf == ki && ed.curve_hover_axis == ax
-		if is_sel && kf.interp == .Smooth && len(ed.clip.keyframes) > 1 {
+		if is_primary && kf.interp == .Smooth && len(ed.clip.keyframes) > 1 {
 			draw_selected_handles(ctx, r, &kf, ki, ax, pt)
 		}
-		rad: f32 = is_sel ? 5.2 : (is_hov ? 4.8 : 3.6)
+		rad: f32 = is_primary ? 5.2 : (is_sel ? 4.8 : (is_hov ? 4.8 : 3.6))
 		ui.draw_circle(ctx, pt, rad + 1.4, ui.rgb(0x0c0a08, 0.95))
 		ui.draw_circle(ctx, pt, rad, is_sel ? ui.rgb(0xecd9a6, 1) : (is_hov ? ui.rgb(0x6ee8ff, 1) : col))
 	}
@@ -255,6 +260,18 @@ dist2_pt :: proc(a: rl.Vector2, b: [2]f32) -> f32 {
 
 handle_anim_curves_input :: proc(mouse: rl.Vector2, in_tl: bool) -> bool {
 	ed := &app.anim_ed
+	if ed.curve_scale_active {
+		return handle_curve_scale_modal(mouse)
+	}
+	if ed.curve_box_active {
+		if !input_left_down() {
+			r := ui.Rect{ed.timeline_rect.x, ed.timeline_rect.y, ed.timeline_rect.width, ed.timeline_rect.height}
+			b := anim_editor_box_rect_2d(ed.curve_box_start, mouse)
+			anim_curve_box_select({b.x, b.y, b.width, b.height}, r, ed.curve_box_shift)
+			ed.curve_box_active = false
+		}
+		return true
+	}
 	if ed.curve_drag == .None {
 		if in_tl && ed.clip_loaded {
 			handle_curve_wheel_zoom(mouse)
@@ -283,28 +300,6 @@ handle_anim_curves_input :: proc(mouse: rl.Vector2, in_tl: bool) -> bool {
 }
 
 @(private)
-handle_curve_wheel_zoom :: proc(mouse: rl.Vector2) {
-	ed := &app.anim_ed
-	wheel := input_wheel_y()
-	if wheel == 0 {
-		return
-	}
-	r := ui.Rect{ed.timeline_rect.x, ed.timeline_rect.y, ed.timeline_rect.width, ed.timeline_rect.height}
-	mt, mv := screen_to_curve(r, {mouse.x, mouse.y})
-	factor := math.pow(f32(0.86), wheel)
-	ctrl := rl.IsKeyDown(.LEFT_CONTROL) || rl.IsKeyDown(.RIGHT_CONTROL)
-	if ctrl {
-		ed.curve_t_min = clamp(mt + (ed.curve_t_min - mt) * factor, -0.25, 0.95)
-		ed.curve_t_max = clamp(mt + (ed.curve_t_max - mt) * factor, ed.curve_t_min + 0.08, 1.25)
-		return
-	}
-	span := clamp((ed.curve_y_max - ed.curve_y_min) * factor, 0.12, 12.0)
-	ratio := (mv - ed.curve_y_min) / max(ed.curve_y_max - ed.curve_y_min, 1e-4)
-	ed.curve_y_min = mv - ratio * span
-	ed.curve_y_max = ed.curve_y_min + span
-}
-
-@(private)
 start_curve_left_drag :: proc(mouse: rl.Vector2) {
 	ed := &app.anim_ed
 	ed.playing = false
@@ -316,7 +311,15 @@ start_curve_left_drag :: proc(mouse: rl.Vector2) {
 		ed.curve_drag_undo = false
 		return
 	}
+	shift := rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyDown(.RIGHT_SHIFT)
 	if kind == .Key {
+		if shift {
+			anim_toggle_kf_select(ki)
+			return
+		}
+		if !anim_is_kf_selected(ki) {
+			anim_select_kf_only(ki)
+		}
 		ed.selected_kf = ki
 		ed.curve_active_axis = ax
 		ed.curve_drag = .Key
@@ -326,13 +329,20 @@ start_curve_left_drag :: proc(mouse: rl.Vector2) {
 		ed.curve_drag_start_mouse = mouse
 		ed.curve_drag_base_t = ed.clip.keyframes[ki].time
 		ed.curve_drag_base_v = anim_edit.channel_get_value(&ed.clip.keyframes[ki], ed.curve_is_root, ed.selected_bone, ax)
+		anim_capture_kf_drag_bases()
 		ed.playhead = ed.clip.keyframes[ki].time
 		return
 	}
-	ed.curve_drag = .Scrub
 	r := ui.Rect{ed.timeline_rect.x, ed.timeline_rect.y, ed.timeline_rect.width, ed.timeline_rect.height}
-	t, _ := screen_to_curve(r, {mouse.x, mouse.y})
-	ed.playhead = clamp(t, 0, 1)
+	if mouse.y <= r.y + CURVE_RULER_H {
+		ed.curve_drag = .Scrub
+		t, _ := screen_to_curve(r, {mouse.x, mouse.y})
+		ed.playhead = clamp(t, 0, 1)
+		return
+	}
+	ed.curve_box_active = true
+	ed.curve_box_start = mouse
+	ed.curve_box_shift = shift
 }
 
 @(private)
@@ -380,6 +390,11 @@ apply_curve_key_drag :: proc(ki, ax: int, mt, mv: f32) {
 		if !shift { new_t = math.round(new_t * 40.0) * 0.025 }
 		step := ed.curve_is_root ? f32(0.05) : f32(5.0 * math.PI / 180.0)
 		new_v = math.round(new_v / step) * step
+	}
+	if anim_selected_kf_count() > 1 {
+		anim_move_selected_kfs_dt(new_t - ed.curve_drag_base_t, new_v - ed.curve_drag_base_v, ax, false)
+		ed.playhead = ed.clip.keyframes[clamp(ed.selected_kf, 0, len(ed.clip.keyframes) - 1)].time
+		return
 	}
 	kf := &ed.clip.keyframes[ki]
 	if ed.curve_is_root {

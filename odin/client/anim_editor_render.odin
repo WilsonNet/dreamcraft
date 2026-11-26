@@ -183,10 +183,17 @@ anim_draw_overlays_3d :: proc() {
 	if ed.onion_skin && len(ed.clip.keyframes) > 1 {
 		anim_draw_onion_skin_3d()
 	}
-	if ed.show_bones {
+	if ed.show_bones && ed.rig_mode != .Rig {
 		anim_draw_skeleton_3d(&ed.pose_mats, false, {})
 	}
-	anim_draw_gizmo_3d()
+	if ed.rig_mode != .Bones {
+		anim_draw_rig_3d()
+	}
+	if anim_is_rig_active() {
+		anim_draw_ctrl_gizmo_3d()
+	} else {
+		anim_draw_gizmo_3d()
+	}
 }
 
 @(private)
@@ -247,7 +254,8 @@ anim_draw_skeleton_3d :: proc(mats: ^[art.BONE_COUNT]rl.Matrix, ghost: bool, gho
 		}
 		if !ghost {
 			jcol := bone_joint_color(ed, b)
-			rad: f32 = (b == ed.selected_bone || int(b) == ed.hover_bone) ? 0.032 : 0.020
+			sel := ed.selected_bones[i]
+			rad: f32 = (b == ed.selected_bone || int(b) == ed.hover_bone) ? 0.032 : (sel ? 0.027 : 0.020)
 			rl.DrawSphere(head, rad, jcol)
 		}
 	}
@@ -268,6 +276,9 @@ bone_line_color :: proc(ed: ^Anim_Editor_State, b: art.Bone_Id) -> rl.Color {
 	if b == ed.selected_bone {
 		return rl.Color{248, 206, 86, 255}
 	}
+	if ed.selected_bones[int(b)] {
+		return rl.Color{235, 178, 62, 240}
+	}
 	if int(b) == ed.hover_bone {
 		return rl.Color{110, 232, 255, 255}
 	}
@@ -278,6 +289,9 @@ bone_line_color :: proc(ed: ^Anim_Editor_State, b: art.Bone_Id) -> rl.Color {
 bone_joint_color :: proc(ed: ^Anim_Editor_State, b: art.Bone_Id) -> rl.Color {
 	if b == ed.selected_bone {
 		return rl.Color{255, 218, 96, 255}
+	}
+	if ed.selected_bones[int(b)] {
+		return rl.Color{240, 186, 68, 245}
 	}
 	if int(b) == ed.hover_bone {
 		return rl.Color{110, 232, 255, 255}
@@ -356,16 +370,19 @@ anim_draw_overlays_2d :: proc() {
 	rl.BeginScissorMode(i32(vp.x), i32(vp.y), i32(vp.width), i32(vp.height))
 	defer rl.EndScissorMode()
 
-	head := anim_bone_posed_head(&ed.pose_mats, ed.selected_bone)
-	sp := rl.GetWorldToScreen(head, ed.camera)
-	if rl.CheckCollisionPointRec(sp, vp) {
-		rl.DrawCircleLines(i32(sp.x), i32(sp.y), 7, rl.Color{255, 218, 96, 220})
+	if anim_is_rig_active() {
+		anim_draw_ctrl_overlays_2d(vp)
 	}
-	if ed.hover_bone >= 0 && ed.hover_bone != int(ed.selected_bone) {
-		hh := anim_bone_posed_head(&ed.pose_mats, art.Bone_Id(ed.hover_bone))
-		hsp := rl.GetWorldToScreen(hh, ed.camera)
-		if rl.CheckCollisionPointRec(hsp, vp) {
-			rl.DrawCircleLines(i32(hsp.x), i32(hsp.y), 6, rl.Color{110, 232, 255, 220})
+	if ed.rig_mode != .Rig && ed.show_bones {
+		for i in 0 ..< art.BONE_COUNT {
+			b := art.Bone_Id(i)
+			if !ed.selected_bones[i] && i != ed.hover_bone { continue }
+			sp := rl.GetWorldToScreen(anim_bone_posed_head(&ed.pose_mats, b), ed.camera)
+			if rl.CheckCollisionPointRec(sp, vp) {
+				col := i == ed.hover_bone ? rl.Color{110, 232, 255, 220} : (b == ed.selected_bone ? rl.Color{255, 218, 96, 220} : rl.Color{235, 178, 62, 185})
+				rl.DrawCircleLines(i32(sp.x), i32(sp.y), b == ed.selected_bone ? 7 : 5, col)
+			}
 		}
 	}
+	anim_draw_vp_box_2d()
 }

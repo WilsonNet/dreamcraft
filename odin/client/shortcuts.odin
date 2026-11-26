@@ -188,11 +188,11 @@ ANIM_PICKER_GROUPS := [1]Shortcut_Group{{title = "Animation picker navigation", 
 
 @(private)
 ANIM_EDIT_ITEMS := [?]Shortcut_Item{
-	{"LMB bone / tree", "Select 25-bone rig joint in 3D or hierarchy"},
-	{"R / Gizmo ring", "Modal rotate bone (X/Y/Z axis, numeric deg, Ctrl 5d)"},
-	{"G / Root arrows", "Modal move root offset (Y=0 grounds feet)"},
-	{"Drag Curves/Handles", "Move F-curve key (Shift=Y lock) or Bezier handle (Alt=Free)"},
-	{"V / T / Home", "Cycle handle mode / Cycle interp / Fit graph view"},
+	{"LMB / Shift+LMB / Drag", "Select / multiselect Motion Controls, bones, or box marquee"},
+	{"A / Alt+A / L", "Select All (context) / Single / Bone descendant chain"},
+	{"G / R / Gizmo", "Move IK/COG target or Rotate selected controls/bones (X/Y/Z)"},
+	{"Shift+Drag / Box / S", "Multiselect graph/dopesheet keys & drag or scale time (S)"},
+	{"V / T / Home", "Cycle Bezier handle / Cycle interp / Fit graph view"},
 	{"Wheel / MMB Graph", "Zoom Y (Ctrl+Wheel X) / Pan F-curve graph"},
 	{"Space / I / X / Ctrl+S", "Play / +Key / -Key / Save .odin & hot-reload live"},
 }

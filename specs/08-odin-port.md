@@ -31,7 +31,8 @@ odin/
 ├── game/        # pure simulation, imports no rendering libraries
 ├── gfx/         # raylib-compatible API on SDL3 GPU (Metal / Vulkan)
 ├── client/      # 3D isometric renderer, input, HUD, minimap, shaders, VFX, Model & Animation Editors
-│   ├── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props, spec/, edit/, anim_edit/, models/, anims/
+│   ├── art/     # procedural Mamluk mesh, 26-bone rig, anims, trees, props, spec/, edit/, anim_edit/, anim_rig/, models/, anims/
+│   │            # (anim_rig/ is editor-only IK/COG solver writing FK keyframes; never imported by runtime, game/, headless/, or web/)
 │   └── svg/     # zero-dependency SVG parser + 4x4 SSAA anti-aliased rasterizer (icons.odin)
 ├── tools/
 │   └── mesh_cli/# Playwright-style Cooperative Mesh CLI (bin/dreamcraft-mesh)

@@ -4,6 +4,7 @@ package main
 import "core:fmt"
 import art "./art"
 import anim_edit "./art/anim_edit"
+import art_rig "./art/anim_rig"
 import spec "./art/spec"
 import ui "vinland:vui"
 
@@ -33,7 +34,9 @@ compose_anim_topbar :: proc(w: f32) {
 		if chip_button("", false, icon_tex(.Undo)) { handle_anim_ui_msg(.Anim_Undo, 0) }
 		if chip_button("", false, icon_tex(.Redo)) { handle_anim_ui_msg(.Anim_Redo, 0) }
 		divider()
-		if chip_button("Bones", ed.show_bones, icon_tex(.Pose)) { handle_anim_ui_msg(.Anim_Toggle_Bones, 0) }
+		rig_lbl := ed.rig_mode == .Rig ? "Rig" : (ed.rig_mode == .Bones ? "Bones" : "Both")
+		if chip_button(rig_lbl, ed.rig_mode != .Bones, icon_tex(.Pose)) { handle_anim_ui_msg(.Anim_Rig_Mode, 0) }
+		if chip_button(compact ? "Pin" : "Pin Feet", ed.rig.pin_feet) { handle_anim_ui_msg(.Anim_Pin_Feet, 0) }
 		if chip_button("X-Ray", ed.xray_bones, icon_tex(.XRay)) { handle_anim_ui_msg(.Anim_Toggle_XRay, 0) }
 		if chip_button("Onion", ed.onion_skin) { handle_anim_ui_msg(.Anim_Toggle_Onion, 0) }
 		if chip_button("Mirror", ed.mirror_lr, icon_tex(.Mirror_X)) { handle_anim_ui_msg(.Anim_Toggle_Mirror, 0) }
@@ -64,20 +67,63 @@ bone_tree_depth :: proc(b: art.Bone_Id) -> int {
 @(private)
 compose_anim_bone_rail :: proc() {
 	ed := &app.anim_ed
-	if ui.div(ui.cx("absolute top-[44px] bottom-[264px] left-0 flex w-[176px] flex-col gap-2 border-r-2 border-brass-lo p-2", BAR)) {
+	if ui.div(ui.cx("absolute top-[44px] bottom-[264px] left-0 flex w-[176px] flex-col gap-1.5 border-r-2 border-brass-lo p-2", BAR)) {
 		ui.style().inset[2] = anim_side_bottom_px()
 		if ui.div("grid grid-cols-2 gap-1") {
 			if chip_button("Rotate", ed.tool == .Rotate, icon_tex(.Tool_Rotate), "justify-center") { handle_anim_ui_msg(.Anim_Tool, 1) }
-			if chip_button("Root", ed.tool == .Move_Root, icon_tex(.Tool_Grab), "justify-center") { handle_anim_ui_msg(.Anim_Tool, 2) }
+			if chip_button(anim_is_rig_active() ? "Move" : "Root", ed.tool == .Move_Root, icon_tex(.Tool_Grab), "justify-center") { handle_anim_ui_msg(.Anim_Tool, 2) }
 			if chip_button("Zero", false, "", "justify-center") { handle_anim_ui_msg(.Anim_Zero_Bone, 0) }
 			if chip_button("Y=0", false, icon_tex(.Floor_Y), "justify-center") { handle_anim_ui_msg(.Anim_Ground_Y0, 0) }
 			if chip_button("Flip L/R", false, "", "justify-center") { handle_anim_ui_msg(.Anim_Flip_LR, 0) }
 			if chip_button("+Key", false, "", "justify-center") { handle_anim_ui_msg(.Anim_Add_Key, 0) }
 		}
-		ui.text("Skeleton (25)", "text-[11px] font-bold uppercase tracking-wider text-brass-hi")
-		if ui.div("flex min-h-0 grow flex-col gap-0.5 overflow-y-auto rounded-[6px] bg-bitumen-deep p-1 ring-1 ring-brass-lo/70") {
-			compose_bone_tree_rows()
+		compose_selection_presets()
+		if ed.rig_mode != .Bones {
+			ui.text("Motion Ctrls (12)", "text-[11px] font-bold uppercase tracking-wider text-brass-hi")
+			if ui.div("flex min-h-0 grow flex-col gap-0.5 overflow-y-auto rounded-[6px] bg-bitumen-deep p-1 ring-1 ring-brass-lo/70") {
+				compose_ctrl_list_rows()
+			}
 		}
+		if ed.rig_mode != .Rig {
+			ui.text("Skeleton (25)", "text-[11px] font-bold uppercase tracking-wider text-brass-hi")
+			if ui.div("flex min-h-0 grow flex-col gap-0.5 overflow-y-auto rounded-[6px] bg-bitumen-deep p-1 ring-1 ring-brass-lo/70") {
+				compose_bone_tree_rows()
+			}
+		}
+	}
+}
+
+@(private)
+compose_selection_presets :: proc() {
+	PRESETS := [8]string{"Spine", "L Arm", "R Arm", "L Leg", "R Leg", "Cape", "All", "Chain"}
+	if ui.div("grid grid-cols-4 gap-0.5") {
+		for lbl, i in PRESETS {
+			ui.push_id(i)
+			if chip_button(lbl, false, "", "h-5 justify-center px-1 text-[10px]") {
+				handle_anim_ui_msg(.Anim_Select_Preset, i32(i))
+			}
+			ui.pop_id()
+		}
+	}
+}
+
+@(private)
+compose_ctrl_list_rows :: proc() {
+	ed := &app.anim_ed
+	for ci in 0 ..< art_rig.CTRL_COUNT {
+		ui.push_id(ci)
+		c := art_rig.Control_Id(ci)
+		def := art_rig.CONTROLS[c]
+		prim := c == ed.selected_ctrl
+		sel := ed.selected_ctrls[ci]
+		cls := prim ? "flex h-6 shrink-0 items-center gap-1.5 rounded-[4px] bg-linear-to-r from-brass-hi to-[#7c5d2a] px-1.5 ring-1 ring-silver" : (sel ? "flex h-6 shrink-0 items-center gap-1.5 rounded-[4px] bg-brass-lo/45 px-1.5 ring-1 ring-brass" : "flex h-6 shrink-0 items-center gap-1.5 rounded-[4px] px-1.5 hover:bg-bitumen-raised")
+		dot := def.side < 0 ? "size-2 shrink-0 rounded-full bg-[#5ca8ff]" : (def.side > 0 ? "size-2 shrink-0 rounded-full bg-[#f06c5c]" : "size-2 shrink-0 rounded-full bg-brass-hi")
+		if ui.button_box(cls) {
+			ui.el(dot)
+			ui.text(def.name, prim ? "truncate text-[11px] font-extrabold text-[#2a1a08]" : "truncate text-[11px] font-bold text-silver")
+			if ui.clicked() { handle_anim_ui_msg(.Anim_Select_Ctrl, i32(ci)) }
+		}
+		ui.pop_id()
 	}
 }
 
@@ -89,18 +135,19 @@ compose_bone_tree_rows :: proc() {
 	for bi in 0 ..< art.BONE_COUNT {
 		ui.push_id(bi)
 		bone := art.Bone_Id(bi)
-		sel := bone == ed.selected_bone
+		prim := bone == ed.selected_bone
+		sel := ed.selected_bones[bi]
 		depth := min(bone_tree_depth(bone), 5)
 		keyed := false
 		if kf != nil {
 			r := kf.rot[bi]
 			keyed = abs(r[0]) + abs(r[1]) + abs(r[2]) > 0.001
 		}
-		cls := sel ? "flex h-6 shrink-0 items-center gap-1.5 rounded-[4px] bg-linear-to-r from-brass-hi to-[#7c5d2a] px-1.5 ring-1 ring-silver" : "flex h-6 shrink-0 items-center gap-1.5 rounded-[4px] px-1.5 hover:bg-bitumen-raised"
+		cls := prim ? "flex h-6 shrink-0 items-center gap-1.5 rounded-[4px] bg-linear-to-r from-brass-hi to-[#7c5d2a] px-1.5 ring-1 ring-silver" : (sel ? "flex h-6 shrink-0 items-center gap-1.5 rounded-[4px] bg-brass-lo/45 px-1.5 ring-1 ring-brass" : "flex h-6 shrink-0 items-center gap-1.5 rounded-[4px] px-1.5 hover:bg-bitumen-raised")
 		if ui.button_box(cls) {
 			ui.style().padding = {0, 6, 0, f32(6 + depth * 7)}
 			ui.el(keyed ? "size-1.5 shrink-0 rounded-full bg-brass-hi" : "size-1.5 shrink-0 rounded-full bg-silver-dim/30")
-			ui.text(spec.BONE_NAMES[bone], sel ? "truncate text-[11px] font-extrabold text-[#2a1a08]" : "truncate text-[11px] font-bold text-silver")
+			ui.text(spec.BONE_NAMES[bone], prim ? "truncate text-[11px] font-extrabold text-[#2a1a08]" : "truncate text-[11px] font-bold text-silver")
 			if ui.clicked() {
 				handle_anim_ui_msg(.Anim_Select_Bone, i32(bi))
 			}
@@ -168,6 +215,11 @@ compose_dock_header :: proc(w: f32) {
 			}
 		}
 		ui.el("grow")
+		sc := anim_selected_kf_count()
+		if sc > 1 {
+			ui.text(fmt.tprintf("%d KFs", sc), "rounded-sm bg-brass-lo/50 px-1.5 py-0.5 text-[11px] font-extrabold text-brass-hi")
+		}
+		if chip_button("All", len(ed.clip.keyframes) > 0 && sc == len(ed.clip.keyframes)) { handle_anim_ui_msg(.Anim_Select_All_Kfs, 0) }
 		if ed.dock_tab == .Curves {
 			if chip_button("Fit", false) { handle_anim_ui_msg(.Anim_Curve_Fit, 0) }
 		}
@@ -244,10 +296,10 @@ draw_anim_timeline_canvas :: proc(ctx: ^ui.Context, r: ui.Rect, _: rawptr) {
 		bi := int(ed.selected_bone)
 		for kf, i in ed.clip.keyframes {
 			kx := r.x + kf.time * r.w
-			sel := i == ed.selected_kf
+			sel := anim_is_kf_selected(i)
 			hov := i == ed.hover_kf
 			col := sel ? ui.rgb(0xecd9a6, 1) : (hov ? ui.rgb(0x6ee8ff, 1) : ui.rgb(0xcdb37c, 0.9))
-			draw_diamond(ctx, {kx, lane1_y}, sel ? 6.5 : 5.0, col)
+			draw_diamond(ctx, {kx, lane1_y}, i == ed.selected_kf ? 6.5 : (sel ? 5.8 : 5.0), col)
 			rot := kf.rot[bi]
 			bone_keyed := abs(rot[0]) + abs(rot[1]) + abs(rot[2]) > 0.001
 			if bone_keyed || sel {
@@ -255,6 +307,12 @@ draw_anim_timeline_canvas :: proc(ctx: ^ui.Context, r: ui.Rect, _: rawptr) {
 				draw_diamond(ctx, {kx, lane2_y}, sel ? 5.5 : 4.2, bcol)
 			}
 		}
+	}
+	if ed.curve_box_active {
+		mx := input_mouse_pos().x
+		lo := clamp(min(ed.curve_box_start.x, mx), r.x, r.x + r.w)
+		hi := clamp(max(ed.curve_box_start.x, mx), r.x, r.x + r.w)
+		ui.draw_rect(ctx, {lo, r.y + ruler_h, hi - lo, r.h - ruler_h}, ui.rgb(0xecd9a6, 0.16))
 	}
 	px := r.x + clamp(ed.playhead, 0, 1) * r.w
 	ui.draw_line(ctx, {px, r.y}, {px, r.y + r.h}, ui.rgb(0xecd9a6, 0.95), 2)

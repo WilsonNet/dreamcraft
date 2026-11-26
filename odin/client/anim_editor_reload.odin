@@ -57,6 +57,9 @@ anim_editor_eval_preview_pose :: proc() {
 	}
 	ed.current_pose = pose
 	ed.pose_mats = art.pose_matrices(&pose, rl.Matrix(1))
+	if !(ed.modal_active && ed.modal_is_ctrl) && !ed.slider_undo_armed {
+		anim_sync_rig_from_preview()
+	}
 }
 
 anim_editor_ground_feet_y0 :: proc() {

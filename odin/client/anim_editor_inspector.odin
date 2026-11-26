@@ -3,7 +3,9 @@ package main
 
 import "core:fmt"
 import "core:math"
+import art "./art"
 import anim_edit "./art/anim_edit"
+import art_rig "./art/anim_rig"
 import spec "./art/spec"
 import ui "vinland:vui"
 
@@ -17,6 +19,9 @@ compose_anim_inspector :: proc() {
 	}
 	if ui.div(ui.cx("absolute top-[44px] right-0 bottom-[264px] flex w-[280px] flex-col gap-2 overflow-y-auto border-l-2 border-brass-lo p-2.5", BAR)) {
 		ui.style().inset[2] = anim_side_bottom_px()
+		if anim_is_rig_active() && ed.selected_ctrl != .COUNT {
+			compose_anim_ctrl_card()
+		}
 		compose_anim_bone_card()
 		compose_anim_root_card()
 		compose_anim_keyframe_card()
@@ -47,9 +52,55 @@ anim_slider_row :: proc(label: string, val: ^f32, lo, hi: f32, fmt_str: string, 
 }
 
 @(private)
+compose_anim_ctrl_card :: proc() {
+	ed := &app.anim_ed
+	if !ed.rig.initialized { anim_sync_rig_from_preview() }
+	def := art_rig.CONTROLS[ed.selected_ctrl]
+	cnt := anim_selected_ctrl_count()
+	title := cnt > 1 ? fmt.tprintf("Ctrl · %s (+%d)", def.name, cnt - 1) : fmt.tprintf("Ctrl · %s", def.name)
+	if inspector_card(title) {
+		if def.id == .COG || def.id == .Foot_IK_L || def.id == .Foot_IK_R {
+			if chip_button("Pin Feet", ed.rig.pin_feet, extra = "absolute top-2.5 right-2.5 h-6") {
+				handle_anim_ui_msg(.Anim_Pin_Feet, 0)
+			}
+		}
+		if !def.can_move {
+			ui.text("Rotate control (R) or use bone sliders below", "text-[11px] font-bold text-silver-dim")
+			return
+		}
+		pos := ed.rig.pos[ed.selected_ctrl]
+		AXES := [3]string{"Pos X", "Pos Y", "Pos Z"}
+		for ax in 0 ..< 3 {
+			ui.push_id(ax)
+			lo: f32 = ax == 1 ? 0.0 : -1.2
+			hi: f32 = ax == 1 ? 2.2 : 1.2
+			old_v := pos[ax]
+			if anim_slider_row(AXES[ax], &pos[ax], lo, hi, "%.2fm") {
+				arm_slider_undo()
+				kf := anim_ensure_editable_kf()
+				d := [3]f32{}
+				d[ax] = pos[ax] - old_v
+				for i in 0 ..< art_rig.CTRL_COUNT {
+					if !ed.selected_ctrls[i] { continue }
+					c := art_rig.Control_Id(i)
+					if art_rig.CONTROLS[c].can_move {
+						anim_apply_rig_translate_clip(kf, c, ed.rig.pos[c] + d)
+					}
+				}
+				anim_edit.recompute_clip_handles(&ed.clip)
+				ed.clip.dirty = true
+			}
+			ui.pop_id()
+		}
+	}
+}
+
+@(private)
 compose_anim_bone_card :: proc() {
 	ed := &app.anim_ed
-	if inspector_card(fmt.tprintf("Bone · %s", spec.BONE_NAMES[ed.selected_bone])) {
+	cnt := anim_selected_bone_count()
+	title := cnt > 1 ? fmt.tprintf("Bone · %s (+%d)", spec.BONE_NAMES[ed.selected_bone], cnt - 1) : fmt.tprintf("Bone · %s", spec.BONE_NAMES[ed.selected_bone])
+	if inspector_card(title) {
 		if chip_button("Zero", false, extra = "absolute top-2.5 right-2.5 h-6") {
 			handle_anim_ui_msg(.Anim_Zero_Bone, 0)
 		}
@@ -65,9 +116,13 @@ compose_anim_bone_card :: proc() {
 			if anim_slider_row(AXES[ax], &deg[ax], -180, 180, "%.0f°") {
 				arm_slider_undo()
 				kf := anim_ensure_editable_kf()
-				rot := kf.rot[bi]
-				rot[ax] = deg[ax] * DEG_TO_RAD
-				anim_edit.clip_set_bone_rot(kf, ed.selected_bone, rot, ed.mirror_lr)
+				delta := deg[ax] * DEG_TO_RAD - kf.rot[bi][ax]
+				for i in 0 ..< art.BONE_COUNT {
+					if !ed.selected_bones[i] && i != bi { continue }
+					rot := kf.rot[i]
+					rot[ax] = clamp(rot[ax] + delta, -math.PI, math.PI)
+					anim_edit.clip_set_bone_rot(kf, art.Bone_Id(i), rot, ed.mirror_lr)
+				}
 				anim_edit.recompute_clip_handles(&ed.clip)
 				ed.clip.dirty = true
 			}
@@ -108,7 +163,9 @@ compose_anim_keyframe_card :: proc() {
 	n := len(ed.clip.keyframes)
 	idx := clamp(ed.selected_kf, 0, max(n - 1, 0))
 	t_val := n > 0 ? ed.clip.keyframes[idx].time : 0
-	if inspector_card(fmt.tprintf("Keyframe %d / %d", idx + 1, n)) {
+	sc := anim_selected_kf_count()
+	ktitle := sc > 1 ? fmt.tprintf("KF %d/%d (%d sel)", idx + 1, n, sc) : fmt.tprintf("Keyframe %d / %d", idx + 1, n)
+	if inspector_card(ktitle) {
 		ui.text(fmt.tprintf("t = %.3f", t_val), "absolute top-3 right-3 text-[12px] font-extrabold tabular-nums text-silver")
 		cur_interp := n > 0 ? ed.clip.keyframes[idx].interp : spec.Anim_Interp.Smooth
 		INTERPS := [5]string{"Smooth", "Lin", "In", "Out", "Step"}
