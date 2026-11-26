@@ -19,6 +19,10 @@ Snapshot :: struct {
 	waypoints_total: int `json:"waypoints_total"`,
 	fog_percent: f32 `json:"fog_percent"`,
 	alive_units: int `json:"alive_units"`,
+	player_units: int `json:"player_units"`,
+	enemy_units: int `json:"enemy_units"`,
+	neutral_units: int `json:"neutral_units"`,
+	rescued_count: int `json:"rescued_count"`,
 	selected: int `json:"selected"`,
 	command_count: int `json:"command_count"`,
 	command_rejected: u32 `json:"command_rejected"`,
@@ -49,6 +53,8 @@ Unit_Info :: struct {
 	attack_target: int `json:"attack_target"`,
 	discovered: bool `json:"discovered"`,
 	aggro_ticks: u16 `json:"aggro_ticks"`,
+	groups: u16 `json:"groups"`,
+	queued_orders: int `json:"queued_orders"`,
 }
 
 make_result :: proc(game: ^g.Game, ok: bool, msg: string) -> Result {
@@ -73,6 +79,10 @@ make_result :: proc(game: ^g.Game, ok: bool, msg: string) -> Result {
 		waypoints_total = view.waypoint_total,
 		fog_percent = view.fog_percent,
 		alive_units = view.alive_units,
+		player_units = view.player_units,
+		enemy_units = view.enemy_units,
+		neutral_units = view.neutral_units,
+		rescued_count = view.rescued_count,
 		selected = view.selected,
 		command_rejected = view.command_rejected,
 		hash = view.state_hash,
@@ -101,6 +111,10 @@ make_snapshot :: proc(game: ^g.Game) -> Snapshot {
 		waypoints_total = view.waypoint_total,
 		fog_percent = view.fog_percent,
 		alive_units = view.alive_units,
+		player_units = view.player_units,
+		enemy_units = view.enemy_units,
+		neutral_units = view.neutral_units,
+		rescued_count = view.rescued_count,
 		selected = view.selected,
 		command_count = view.command_count,
 		command_rejected = view.command_rejected,
@@ -146,6 +160,8 @@ encode_units :: proc(game: ^g.Game) -> (data: []byte, err: json.Marshal_Error) {
 		team := "enemy"
 		if units.team[i] == .Player {
 			team = "player"
+		} else if units.team[i] == .Neutral {
+			team = "neutral"
 		}
 		state := unit_state_string(units.state[i])
 		target := -1
@@ -179,6 +195,8 @@ encode_units :: proc(game: ^g.Game) -> (data: []byte, err: json.Marshal_Error) {
 			attack_target = target,
 			discovered = units.discovered[i],
 			aggro_ticks = units.aggro_timer[i],
+			groups = units.group_mask[i],
+			queued_orders = int(units.order_count[i]),
 		}
 		count += 1
 	}
@@ -217,7 +235,7 @@ fog_text :: proc(game: ^g.Game, buffer: []byte) -> int {
 				if units.team[i] == .Player {
 					ch = 'P'
 				} else if g.enemy_is_visible(game, i) {
-					ch = 'E'
+					ch = units.team[i] == .Neutral ? 'A' : 'E'
 				}
 			}
 			if offset < len(buffer) {

@@ -4,6 +4,13 @@
 // handles can never hit a recycled slot.
 package game
 
+Unit_Order :: struct {
+	kind:     Command_Kind,
+	position: Grid_Pos,
+	point_b:  Grid_Pos,
+	target:   Unit_Handle,
+}
+
 Units :: struct {
 	alive: [MAX_UNITS]bool,
 	generation: [MAX_UNITS]u32,
@@ -36,6 +43,9 @@ Units :: struct {
 	discovered: [MAX_UNITS]bool,
 	aggro_timer: [MAX_UNITS]u16,
 	selected: [MAX_UNITS]bool,
+	group_mask: [MAX_UNITS]u16,
+	order_queue: [MAX_UNITS][MAX_UNIT_ORDERS]Unit_Order,
+	order_count: [MAX_UNITS]u8,
 
 	free_slots: [MAX_UNITS]u16,
 	free_count: int,
@@ -177,6 +187,8 @@ unit_init_slot :: proc(units: ^Units, index: int, team: Team, position: Grid_Pos
 	units.discovered[index] = false
 	units.aggro_timer[index] = 0
 	units.selected[index] = false
+	units.group_mask[index] = 0
+	units.order_count[index] = 0
 }
 
 unit_destroy :: proc(units: ^Units, index: int) {
@@ -192,6 +204,8 @@ unit_destroy :: proc(units: ^Units, index: int) {
 		units.selected_count -= 1
 	}
 	units.selected[index] = false
+	units.group_mask[index] = 0
+	units.order_count[index] = 0
 	units.path_len[index] = 0
 	units.path_index[index] = 0
 	units.progress[index] = 0
@@ -203,14 +217,33 @@ unit_destroy :: proc(units: ^Units, index: int) {
 	units.aggro_timer[index] = 0
 	units.alive_count -= 1
 
-	for i in 0..<MAX_UNITS {
-		if units.alive[i] && units.attack_target[i] == handle {
-			units.attack_target[i] = INVALID_HANDLE
-		}
-	}
+	clear_target_references(units, handle)
 
 	units.free_slots[units.free_count] = u16(index)
 	units.free_count += 1
+}
+
+@(private)
+clear_target_references :: proc(units: ^Units, handle: Unit_Handle) {
+	for i in 0..<MAX_UNITS {
+		if !units.alive[i] {
+			continue
+		}
+		if units.attack_target[i] == handle {
+			units.attack_target[i] = INVALID_HANDLE
+		}
+		count := int(units.order_count[i])
+		write := 0
+		for q in 0..<count {
+			ord := units.order_queue[i][q]
+			if ord.kind == .Attack && ord.target == handle {
+				continue
+			}
+			units.order_queue[i][write] = ord
+			write += 1
+		}
+		units.order_count[i] = u8(write)
+	}
 }
 
 unit_is_player :: proc(units: ^Units, index: int) -> bool {

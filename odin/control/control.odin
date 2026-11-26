@@ -18,6 +18,7 @@ Command :: struct {
 	team: string `json:"team"`,
 	model: string `json:"model"`,
 	text: string `json:"text"`,
+	queued: bool `json:"queued"`,
 	verify: Verify `json:"verify"`,
 }
 
@@ -43,6 +44,10 @@ Result :: struct {
 	waypoints_total: int `json:"waypoints_total"`,
 	fog_percent: f32 `json:"fog_percent"`,
 	alive_units: int `json:"alive_units"`,
+	player_units: int `json:"player_units"`,
+	enemy_units: int `json:"enemy_units"`,
+	neutral_units: int `json:"neutral_units"`,
+	rescued_count: int `json:"rescued_count"`,
 	selected: int `json:"selected"`,
 	command_rejected: u32 `json:"command_rejected"`,
 	hash: u64 `json:"hash"`,
@@ -71,12 +76,16 @@ execute :: proc(game: ^g.Game, command: Command) -> Result {
 	case "select":
 		return select_unit(game, command)
 	case "select_all":
-		for i in 0..<g.MAX_UNITS {
-			if game.units.alive[i] && game.units.team[i] == .Player {
-				g.unit_select(&game.units, i, true)
-			}
-		}
+		_ = g.unit_select_all_player(&game.units)
 		return make_result(game, true, "Selected all player units")
+	case "deselect":
+		g.unit_clear_selection(&game.units)
+		return make_result(game, true, "Cleared selection")
+	case "group_assign", "group_add", "group_steal", "group_steal_add", "group_select":
+		return execute_group_command(game, command)
+	case "clear_enemies":
+		cleared := clear_team_units(game, .Enemy)
+		return make_result(game, true, fmt.tprintf("Cleared %d enemy units", cleared))
 	case "spawn":
 		return spawn_unit(game, command)
 	case "kill":
@@ -94,29 +103,29 @@ execute :: proc(game: ^g.Game, command: Command) -> Result {
 execute_unit_command :: proc(game: ^g.Game, command: Command) -> Result {
 	switch command.cmd {
 	case "goto", "move":
-		if g.game_issue_move(game, cell(command.x, command.y)) {
+		if g.game_issue_move(game, cell(command.x, command.y), command.queued) {
 			return make_result(game, true, fmt.tprintf("Moving to (%d,%d)", command.x, command.y))
 		}
 		return make_result(game, false, "No path or invalid destination")
 	case "patrol":
-		if g.game_issue_patrol(game, cell(command.x, command.y), cell(command.x2, command.y2)) {
+		if g.game_issue_patrol(game, cell(command.x, command.y), cell(command.x2, command.y2), command.queued) {
 			return make_result(game, true, "Patrol started")
 		}
 		return make_result(game, false, "Invalid patrol points")
 	case "patrol_to":
-		if g.game_issue_patrol_to(game, cell(command.x, command.y)) {
+		if g.game_issue_patrol_to(game, cell(command.x, command.y), command.queued) {
 			return make_result(game, true, fmt.tprintf("Patrol to (%d,%d)", command.x, command.y))
 		}
 		return make_result(game, false, "Invalid patrol destination")
 	case "attack":
 		if index, ok := g.unit_at(&game.units, cell(command.x, command.y), .Enemy); ok {
-			if g.game_issue_attack(game, g.unit_handle(&game.units, index)) {
+			if g.game_issue_attack(game, g.unit_handle(&game.units, index), command.queued) {
 				return make_result(game, true, "Attack ordered")
 			}
 		}
 		return make_result(game, false, "No enemy at target")
 	case "attack_move":
-		if g.game_issue_attack_move(game, cell(command.x, command.y)) {
+		if g.game_issue_attack_move(game, cell(command.x, command.y), command.queued) {
 			return make_result(game, true, fmt.tprintf("Attack-move to (%d,%d)", command.x, command.y))
 		}
 		return make_result(game, false, "Invalid attack-move destination")
@@ -127,6 +136,37 @@ execute_unit_command :: proc(game: ^g.Game, command: Command) -> Result {
 		return make_result(game, false, "Stop rejected")
 	}
 	return make_result(game, false, "Unknown unit command")
+}
+
+@(private)
+execute_group_command :: proc(game: ^g.Game, command: Command) -> Result {
+	slot := command.value
+	if slot < 0 || slot >= g.CONTROL_GROUP_COUNT {
+		return make_result(game, false, "Invalid group slot")
+	}
+	op := g.Group_Op.Recall
+	switch command.cmd {
+	case "group_assign":    op = .Assign
+	case "group_add":       op = .Add
+	case "group_steal":     op = .Steal_Assign
+	case "group_steal_add": op = .Steal_Add
+	case "group_select":    op = .Recall
+	}
+	count := g.group_apply(&game.units, slot, op)
+	return make_result(game, count > 0 || op == .Add || op == .Steal_Add, fmt.tprintf("Group %d count=%d", slot, count))
+}
+
+@(private)
+clear_team_units :: proc(game: ^g.Game, team: g.Team) -> int {
+	cleared := 0
+	for i in 0..<g.MAX_UNITS {
+		if game.units.alive[i] && game.units.team[i] == team {
+			g.unit_destroy(&game.units, i)
+			cleared += 1
+		}
+	}
+	g.game_update_game_over(game)
+	return cleared
 }
 
 cell :: proc(x, y: int) -> g.Grid_Pos {
@@ -146,6 +186,8 @@ spawn_unit :: proc(game: ^g.Game, command: Command) -> Result {
 	team := g.Team.Enemy
 	if command.team == "player" {
 		team = .Player
+	} else if command.team == "neutral" {
+		team = .Neutral
 	}
 	handle, ok := g.unit_spawn(&game.units, &game.grid, team, cell(command.x, command.y))
 	if !ok {
@@ -251,9 +293,28 @@ verify :: proc(game: ^g.Game, spec: Verify) -> Result {
 			return make_result(game, false, fmt.tprintf("Hash %d, expected %d", view.state_hash, spec.value))
 		}
 		return make_result(game, true, fmt.tprintf("Hash %d", view.state_hash))
+	case "player_count", "enemy_count", "neutral_count", "rescued_count", "selected_count", "group_count":
+		return verify_counts(game, spec)
 	case:
 		return make_result(game, false, fmt.tprintf("Unknown verify type: %s", spec.type))
 	}
+}
+
+@(private)
+verify_counts :: proc(game: ^g.Game, spec: Verify) -> Result {
+	actual := 0
+	switch spec.type {
+	case "player_count":   actual = g.unit_team_count(&game.units, .Player)
+	case "enemy_count":    actual = g.unit_team_count(&game.units, .Enemy)
+	case "neutral_count":  actual = g.unit_team_count(&game.units, .Neutral)
+	case "rescued_count":  actual = int(game.rescued_count)
+	case "selected_count": actual = game.units.selected_count
+	case "group_count":    actual = g.group_member_count(&game.units, spec.x)
+	}
+	if actual == spec.value {
+		return make_result(game, true, fmt.tprintf("%s == %d", spec.type, actual))
+	}
+	return make_result(game, false, fmt.tprintf("%s=%d, expected %d", spec.type, actual, spec.value))
 }
 
 validate_result :: proc(game: ^g.Game) -> Result {

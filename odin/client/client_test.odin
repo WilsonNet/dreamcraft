@@ -245,3 +245,46 @@ shortcut_help_is_conditional_per_view :: proc(t: ^testing.T) {
 	s7 := help_sheet_for_view(active_help_view())
 	testing.expect_value(t, s7.icon, Icon_Id.Tool_Rotate)
 }
+
+@(test)
+starcraft_selection_modifiers_and_subgroup_cycling :: proc(t: ^testing.T) {
+	app = {}
+	app.active_subgroup = .Hero
+	g.game_init(&app.game)
+	u := &app.game.units
+
+	h1, ok1 := g.unit_spawn(u, &app.game.grid, .Player, g.Grid_Pos{3, 25}, .Melee)
+	h2, ok2 := g.unit_spawn(u, &app.game.grid, .Player, g.Grid_Pos{4, 25}, .Melee)
+	testing.expect(t, ok1 && ok2)
+	s1, _ := g.unit_index(u, h1)
+	s2, _ := g.unit_index(u, h2)
+	hero, _ := g.game_player_index(&app.game)
+
+	// Select all player units and cycle Tab subgroup between Hero and Melee.
+	testing.expect_value(t, g.unit_select_all_player(u), 3)
+	sync_active_subgroup()
+	testing.expect_value(t, app.active_subgroup, g.Unit_Kind.Hero)
+	cycle_active_subgroup(false)
+	testing.expect_value(t, app.active_subgroup, g.Unit_Kind.Melee)
+	cycle_active_subgroup(false)
+	testing.expect_value(t, app.active_subgroup, g.Unit_Kind.Hero)
+
+	// Shift toggle deselects s1, then re-selects s1.
+	g.unit_toggle_select(u, s1)
+	testing.expect_value(t, u.selected_count, 2)
+	g.unit_toggle_select(u, s1)
+	testing.expect_value(t, u.selected_count, 3)
+
+	// Ctrl+Shift deselects Melee kind, leaving only Hero.
+	testing.expect_value(t, g.unit_deselect_kind(u, .Melee), 1)
+	testing.expect(t, u.selected[hero])
+
+	// Select all, then Ctrl+Click Melee filters selection to Melee only.
+	_ = g.unit_select_all_player(u)
+	testing.expect_value(t, g.unit_select_kind_only(u, .Melee), 2)
+	testing.expect(t, !u.selected[hero] && u.selected[s1] && u.selected[s2])
+
+	// Control group binding + match check.
+	testing.expect_value(t, g.group_apply(u, 0, .Assign), 2)
+	testing.expect(t, unit_matches_group(u, 0))
+}

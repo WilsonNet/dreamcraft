@@ -6,19 +6,26 @@
 |-------|--------|
 | Left Click | Select single unit |
 | Left Drag | Box select |
-| Right Click | Move selected units / Attack enemy |
+| `Shift` + Click / Drag | Add/remove unit toggle in selection / additive box select |
+| `Ctrl` + Click (or Double-Click) | Select all on-screen units of the same type (`Ctrl+Shift` toggles type) |
+| `Ctrl+Shift` + HUD Card | Filter out unit type from multi-unit selection grid (`Ctrl` filters to type, `Shift` removes unit) |
+| `Ctrl + 1..0` / `Shift + 1..0` | Bind control group / add selection to control group |
+| `Alt + 1..0` / `Alt+Shift + 1..0` | Steal selection to group (removing from others) / steal & add |
+| `1..0` / Double-tap `1..0` | Recall control group / center camera on group centroid |
+| `Tab` / `Shift+Tab` | Cycle active subgroup in multi-unit selection |
+| `F2` | Select all friendly player units |
+| Right Click | Move formation / Attack enemy (`Shift` queues waypoint order) |
 | Left Click on `[M] Move` button (or press `M`) | Enter Move command mode |
-| Left Click on terrain (while Move mode active) | Issue move order with green ground confirmation FX |
+| Left Click on terrain (while Move mode active) | Issue move order with green ground confirmation FX (`Shift` keeps mode active and queues) |
 | Left Click on `[A] Attack` button (or press `A`) | Enter StarCraft Attack-Move targeting mode |
-| Left Click on enemy / terrain (while Attack mode active) | Attack targeted enemy or Attack-Move to terrain with red confirmation FX |
+| Left Click on enemy / terrain (while Attack mode active) | Attack targeted enemy or Attack-Move to terrain with red confirmation FX (`Shift` queues) |
 | Left Click on `[P] Patrol` button (or press `P`) | Enter 1-click Patrol targeting mode |
-| Left Click on terrain (while Patrol mode active) | Start `current <-> clicked` patrol with cyan/amber loop FX |
-| Left Click on `[S] Stop` button (or press `S`) | Stop unit and clear Move/Attack/Patrol orders |
+| Left Click on terrain (while Patrol mode active) | Start `current <-> clicked` patrol with cyan/amber loop FX (`Shift` queues) |
+| Left Click on `[S] Stop` button (or press `S`) | Stop unit and clear Move/Attack/Patrol & queued orders |
 | Left Click / Drag on Minimap | Center and scrub main camera across map |
 | Middle Mouse Drag (or `Space` + Left Drag) | Dota 2 / SC2 Camera Grip: pull ground 1:1 under cursor |
 | Right Click on Enemy | Attack (move into melee range and deal damage) with red target lock FX |
 | Right Click on Ground | Move directly to location with SC2/AoE converging chevron confirmation FX |
-| Shift + Click | Add to selection |
 | F1 (or `? F1` UI badge) | Toggle view-conditional Shortcut Window (Battlefield, Pause Menu, Model Picker, Model Editor, or Active Modal tool) |
 | Escape | Close open Shortcut Window first, cancel active command mode, or toggle pause menu when idle |
 

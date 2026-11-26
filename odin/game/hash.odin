@@ -58,6 +58,9 @@ game_hash :: proc(game: ^Game) -> State_Hash {
 	hash_bool(&h, game.discovery_announced)
 	hash_u64(&h, game.discovery_tick)
 	hash_u64(&h, game.aggro_triggered_tick)
+	hash_u16(&h, game.rescued_count)
+	hash_u64(&h, game.last_rescue_tick)
+	hash_u16(&h, game.last_rescue_batch)
 	hash_bits(&h, &game.grid.obstacles)
 	hash_u16(&h, game.grid.obstacle_count)
 	hash_bits(&h, &game.fog.explored)
@@ -94,6 +97,7 @@ hash_commands :: proc(h: ^Hash_Builder, queue: ^Command_Queue) {
 		hash_u16(h, command.target.index)
 		hash_u32(h, command.target.generation)
 		hash_bool(h, command.from_current)
+		hash_bool(h, command.queued)
 	}
 }
 
@@ -142,5 +146,17 @@ hash_units :: proc(h: ^Hash_Builder, units: ^Units) {
 		hash_bool(h, units.discovered[i])
 		hash_u16(h, units.aggro_timer[i])
 		hash_bool(h, units.selected[i])
+		hash_u16(h, units.group_mask[i])
+		hash_byte(h, units.order_count[i])
+		for q in 0..<int(units.order_count[i]) {
+			ord := units.order_queue[i][q]
+			hash_byte(h, u8(ord.kind))
+			hash_i32(h, ord.position.x)
+			hash_i32(h, ord.position.y)
+			hash_i32(h, ord.point_b.x)
+			hash_i32(h, ord.point_b.y)
+			hash_u16(h, ord.target.index)
+			hash_u32(h, ord.target.generation)
+		}
 	}
 }

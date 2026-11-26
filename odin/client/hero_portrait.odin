@@ -6,7 +6,6 @@ package main
 import "core:math"
 import rl "../gfx"
 import ui "vinland:vui"
-import g "../game"
 
 PORTRAIT_PX :: 192
 
@@ -14,7 +13,7 @@ PORTRAIT_PX :: 192
 portrait: rl.RenderTexture2D
 
 render_hero_portrait :: proc() {
-	idx, ok := g.game_player_index(&app.game)
+	idx, ok := primary_display_unit()
 	if !ok {
 		return // keep the last frame; the HUD desaturates it
 	}

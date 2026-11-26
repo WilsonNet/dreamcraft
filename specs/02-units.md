@@ -251,11 +251,15 @@ The Odin port uses these current values (Campaign Tutorial Level 1):
 | Unit capacity | 256 slots (SoA pool) | 256 slots (SoA pool) |
 | Path capacity | 512 cells per unit | 512 cells per unit |
 
-In Campaign Mode (`game_reset`), the player controls **Liiroy, the Bold** (`Unit_Kind.Hero`) rather than a regular **Luk Soldier**.
+In Campaign Mode (`game_reset`), the player starts with **Liiroy, the Bold** (`Unit_Kind.Hero`) at `(2, 25)` and discovers two stranded squads of **Neutral** (`Team.Neutral`) allied **Luk Soldiers** (`ALLY_RESCUE_SPAWNS`: 3 near Waypoint 1 at `(19,23)`, `(19,27)`, `(21,25)` and 2 near Waypoint 3 at `(42,24)`, `(42,26)`). Approaching within `RESCUE_RADIUS` (`5` cells) rallies the whole squad (`RESCUE_CHAIN_RADIUS = 6`) to `Team.Player`, revealing fog around every allied unit and unlocking group tactics against three escalating enemy squads (`10` **Luk Soldiers** across groups of `2`, `3`, and `5`).
+
+### Multi-Unit Formation & Combat Surrounding
+- Group `Move`, `Attack_Move`, and `Patrol` orders fan selected units out into distinct walkable cells around the clicked target (`apply_formation_command`) instead of stacking them on one tile.
+- Multi-unit melee combat (`find_surround_cell`) picks unreserved walkable cells within `ATTACK_RANGE` around the target so squads naturally surround enemies.
 
 ### Event-Based Discovery Aggro (Campaign Mode)
 - Undiscovered enemy Luk Soldiers start unalerted (`discovered = false`, `aggro_timer = 0`).
-- When Liiroy enters an undiscovered enemy's 6-cell `VISION_RADIUS`, the enemy becomes `discovered = true`, receives a `240`-tick (`4.0 s`) `ENEMY_AGGRO_DELAY_TICKS` grace window, and sets `game.discovery_announced = true`.
-- During the grace window the enemy waits instead of chasing, displays a pulsing amber warning ring + `! SPOTTED Xs` countdown tag, and shows a flavored HUD announcement banner (*"HARK! AN ENEMY LUK SOLDIER SPOTTED! Strike first while they hesitate..."*).
-- Taking damage (`hp < hp_max`) clears `aggro_timer` immediately so the enemy retaliates at once; otherwise the enemy charges when `aggro_timer` reaches `0` (setting `aggro_triggered_tick` for the brief `"TO ARMS!"` banner).
+- When any player unit enters an undiscovered enemy's 6-cell `VISION_RADIUS`, the enemy and nearby squadmates within `SQUAD_ALERT_RADIUS` (`4` cells) become `discovered = true`, receive a `240`-tick (`4.0 s`) `ENEMY_AGGRO_DELAY_TICKS` grace window, and set `game.discovery_announced = true`.
+- During the grace window the enemy waits instead of chasing, displays a pulsing amber warning ring + `! SPOTTED Xs` countdown tag, and shows a flavored HUD announcement banner (*"The challenge horn(s) sound"*).
+- Taking damage (`hp < hp_max`) clears `aggro_timer` immediately on the unit and squadmates within `SQUAD_ALERT_RADIUS` so the squad retaliates together; otherwise enemies charge when `aggro_timer` reaches `0` (setting `aggro_triggered_tick` for the brief banner).
 - Unit references are generation handles (`{index, generation}`), not ECS entities.

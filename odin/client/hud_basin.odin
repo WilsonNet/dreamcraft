@@ -186,7 +186,8 @@ compose_active_ui :: proc(w, h: f32) {
 compose_battlefield_hud :: proc(w, h: f32) {
 	compose_top_cartouche()
 	compose_console(w)
-	compose_command_prompt()
+	bar_open := compose_control_group_bar()
+	compose_command_prompt(bar_open)
 	compose_campaign_banner()
 	compose_outcome_banner()
 	compose_selection_box()
@@ -250,7 +251,7 @@ compose_console :: proc(w: f32) {
 		}
 		compose_minimap_housing()
 		if ui.div("relative flex h-[150px] min-w-0 grow items-center gap-6 px-6 pt-[30px]") {
-			compose_hero_plate(w)
+			compose_selection_panel(w)
 			if w >= 1100 {
 				compose_march_strip()
 			}
@@ -444,7 +445,7 @@ compose_command_medallions :: proc() {
 }
 
 @(private)
-compose_command_prompt :: proc() {
+compose_command_prompt :: proc(bar_open: bool) {
 	if _, alive := g.game_player_index(&app.game); app.command_mode == .None || !alive || app.game.game_over || app.menu_open {
 		return
 	}
@@ -458,8 +459,9 @@ compose_command_prompt :: proc() {
 		verb, hint, dot = "Patrol", "Click the patrol endpoint", "bg-lapis-hi"
 	case .None:
 	}
-	// seated on the frieze beside the portrait crown, over the hero's column
-	if ui.div("absolute bottom-[146px] left-[448px]") {
+	// seated on the frieze beside the portrait crown, or stacked above the control-group bar
+	pos_cls := bar_open ? "absolute bottom-[188px] left-[448px]" : "absolute bottom-[146px] left-[448px]"
+	if ui.div(pos_cls) {
 		if ui.div(ui.cx("relative rounded-t-[14px] corner-t-bevel px-[6px] pt-[6px] shadow-[0_-4px_10px_rgba(0,0,0,0.6)]", PLATE)) {
 			if ui.div(ui.cx("relative flex items-center gap-4 rounded-t-[10px] corner-t-bevel px-5 py-2 whitespace-nowrap", WELL)) {
 				ui.el(ui.cx("size-2 rounded-full", dot))
@@ -478,26 +480,29 @@ compose_campaign_banner :: proc() {
 	}
 	aggro_ticks, grace_active, charge_active := active_campaign_alert()
 	if !grace_active && !charge_active {
+		compose_rescue_banner()
 		return
 	}
+	grace_count := grace_enemy_count_for(&app.game)
+	title := grace_active ? (grace_count > 1 ? fmt.tprintf("The challenge horns sound (%d)", grace_count) : "The challenge horn sounds") : "The Luk Soldiers charge"
 	if ui.div("absolute top-[44px] left-1/2 w-[560px] max-w-[calc(100%-32px)] -translate-x-1/2") {
 		if basin_panel("", "flex flex-col gap-2 px-5 py-3") {
 			if ui.div("flex items-center gap-3") {
 				ui.icon(vh.gi.khatam, grace_active ? "size-6 shrink-0 text-amber-alert" : "size-6 shrink-0 text-carnelian-hi")
-				ui.text(grace_active ? "The challenge horn sounds" : "The Luk Soldier charges", "grow font-display text-[22px] leading-none text-brass-hi")
+				ui.text(title, "grow font-display text-[22px] leading-none text-brass-hi")
 				if grace_active {
 					ui.text(fmt.tprintf("%.1f s", f32(aggro_ticks) / f32(g.TICKS_PER_SECOND)), "shrink-0 whitespace-nowrap text-[13px] font-extrabold tabular-nums text-amber-alert")
 				}
 			}
 			if grace_active {
-				ui.text("A Luk Soldier has seen Liiroy. Strike first while he hesitates: press A or right-click him.", "text-[13px] font-bold text-silver")
+				ui.text("Luk Soldiers have seen your vanguard. Strike first while they hesitate: press A or right-click.", "text-[13px] font-bold text-silver")
 				ratio := clamp(f32(aggro_ticks) / f32(g.ENEMY_AGGRO_DELAY_TICKS), 0, 1)
 				if ui.div("h-2 rounded-full bg-bitumen-deep ring-1 ring-brass-lo") {
 					ui.el("h-full rounded-full bg-linear-to-r from-[#9b6a1c] to-amber-alert")
 					ui.last_style().width = ui.pct(ratio * 100)
 				}
 			} else {
-				ui.text("Stand fast: Liiroy, the Bold meets the foe in battle.", "text-[13px] font-bold text-silver")
+				ui.text("Stand fast: the vanguard meets the Forty-Blades in battle.", "text-[13px] font-bold text-silver")
 			}
 		}
 	}
@@ -561,14 +566,19 @@ compose_world_overlays :: proc(w, h: f32) {
 			st.inset = {ui.px(screen.y - 10), {}, {}, ui.px(screen.x - plate_w / 2)}
 			st.width = ui.px(plate_w)
 			enemy := units.team[i] == .Enemy
+			neutral := units.team[i] == .Neutral
 			if enemy && units.discovered[i] && units.aggro_timer[i] > 0 {
 				secs := f32(units.aggro_timer[i]) / f32(g.TICKS_PER_SECOND)
 				ui.text(fmt.tprintf("Spotted %.1fs", secs), "rounded-full bg-bitumen/90 px-2 text-[12px] font-extrabold tabular-nums text-amber-alert ring-1 ring-amber-alert/70")
+			} else if neutral {
+				ui.text("Approach to Rally", "rounded-full bg-bitumen/90 px-2 text-[11px] font-extrabold text-[#48e0a8] ring-1 ring-[#48e0a8]/70")
 			}
-			ui.text(hero ? "Liiroy, the Bold" : "Luk Soldier", hero ? "text-[13px] font-extrabold whitespace-nowrap text-brass-hi text-shadow-sm text-shadow-black" : "text-[12px] font-bold whitespace-nowrap text-[#e6c9bf] text-shadow-sm text-shadow-black")
+			label := hero ? "Liiroy, the Bold" : (neutral ? "Stranded Ally" : "Luk Soldier")
+			name_cls := hero ? "text-[13px] font-extrabold whitespace-nowrap text-brass-hi text-shadow-sm text-shadow-black" : (neutral ? "text-[12px] font-bold whitespace-nowrap text-[#7ceec4] text-shadow-sm text-shadow-black" : (enemy ? "text-[12px] font-bold whitespace-nowrap text-[#e6c9bf] text-shadow-sm text-shadow-black" : "text-[12px] font-bold whitespace-nowrap text-[#b8d4f8] text-shadow-sm text-shadow-black"))
+			ui.text(label, name_cls)
 			pct := clamp(f32(units.hp[i]) / f32(max(units.hp_max[i], 1)), 0, 1)
 			if ui.div(hero ? "h-[7px] w-[46px] rounded-full bg-bitumen-deep p-px ring-1 ring-brass" : "h-[6px] w-[32px] rounded-full bg-bitumen-deep p-px ring-1 ring-brass-lo") {
-				fill := enemy ? "h-full rounded-full bg-carnelian-hi" : (pct <= 0.25 ? "h-full rounded-full bg-[#c25a46]" : "h-full rounded-full bg-linear-to-b from-carnelian-hi to-carnelian")
+				fill := enemy ? "h-full rounded-full bg-carnelian-hi" : (neutral ? "h-full rounded-full bg-[#48e0a8]" : (pct <= 0.25 ? "h-full rounded-full bg-[#c25a46]" : "h-full rounded-full bg-[#52c97a]"))
 				ui.el(fill)
 				ui.last_style().width = ui.pct(pct * 100)
 			}

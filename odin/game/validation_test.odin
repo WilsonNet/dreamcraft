@@ -153,3 +153,23 @@ validator_catches_aggro_corruption :: proc(t: ^testing.T) {
 	game.units.aggro_timer[enemy] = 10
 	testing.expect_value(t, validate_game(game), Validation_Error.UnitAggroInvalid)
 }
+
+@(test)
+validator_catches_group_mask_corruption :: proc(t: ^testing.T) {
+	game := new(Game)
+	defer free(game)
+	game_init(game)
+	enemy, _ := game_enemy_index(game)
+	game.units.group_mask[enemy] = 1
+	testing.expect_value(t, validate_game(game), Validation_Error.UnitGroupMaskInvalid)
+}
+
+@(test)
+validator_catches_order_queue_corruption :: proc(t: ^testing.T) {
+	game := new(Game)
+	defer free(game)
+	game_init(game)
+	player, _ := game_player_index(game)
+	game.units.order_count[player] = MAX_UNIT_ORDERS + 1
+	testing.expect_value(t, validate_game(game), Validation_Error.UnitOrderQueueInvalid)
+}

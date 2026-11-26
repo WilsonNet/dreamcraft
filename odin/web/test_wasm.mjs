@@ -82,8 +82,12 @@ assert.equal(s.game_over, true);
 assert.equal(s.valid, true);
 
 exports_.web_reset();
+const initialCount = units().length;
+const initialEnemies = units().filter((u) => u.team === "enemy").length;
+const initialNeutral = units().filter((u) => u.team === "neutral").length;
+assert.equal(initialNeutral, 5);
 assert.equal(exports_.web_spawn(1, 5, 25, 30), 1);
-assert.equal(units().length, 3);
+assert.equal(units().length, initialCount + 1);
 assert.equal(exports_.web_set_hp(5, 25, 1), 1);
 assert.equal(exports_.web_kill(5, 25), 1);
 assert.equal(state().valid, true);
@@ -93,10 +97,23 @@ exports_.web_reset();
 assert.equal(exports_.web_spawn(1, 7, 25, 30), 1);
 assert.equal(exports_.web_attack_move(12, 25), 1);
 exports_.web_run(220);
-assert.equal(units().filter((u) => u.team === "enemy").length, 1);
+assert.equal(units().filter((u) => u.team === "enemy").length, initialEnemies);
 s = state();
 assert.deepEqual(s.player_grid, [12, 25]);
 assert.equal(s.valid, true);
+
+// First-quest rescue & control group ops via web WASM exports.
+exports_.web_reset();
+assert.equal(exports_.web_move(20, 25), 1);
+exports_.web_run(350);
+s = state();
+assert.equal(s.rescued_count, 3);
+assert.equal(s.player_units, 4);
+assert.equal(exports_.web_select_all(), 4);
+assert.equal(exports_.web_group_op(0, 0), 4); // Assign slot 0
+assert.equal(exports_.web_select(2, 25, 0) >= 0, true);
+assert.equal(exports_.web_group_op(0, 4), 4); // Recall slot 0
+assert.equal(state().valid, true);
 
 exports_.web_reset();
 assert.equal(exports_.web_patrol_to(6, 25), 1);

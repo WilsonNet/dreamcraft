@@ -38,6 +38,7 @@ Command :: struct {
 	point_b: Grid_Pos,
 	target: Unit_Handle,
 	from_current: bool,
+	queued: bool,
 }
 
 Command_Queue :: struct {
@@ -121,6 +122,9 @@ Game :: struct {
 	discovery_announced: bool,
 	discovery_tick: u64,
 	aggro_triggered_tick: u64,
+	rescued_count: u16,
+	last_rescue_tick: u64,
+	last_rescue_batch: u16,
 }
 
 game_init :: proc(game: ^Game) {
@@ -139,9 +143,14 @@ game_reset :: proc(game: ^Game) {
 	player, ok := unit_spawn(&game.units, &game.grid, .Player, START_POS, .Hero)
 	assert(ok, "failed to spawn player hero")
 	_ = player
-	enemy, ok_enemy := unit_spawn(&game.units, &game.grid, .Enemy, ENEMY_START_POS, .Melee)
-	assert(ok_enemy, "failed to spawn enemy")
-	_ = enemy
+	for pos in ALLY_RESCUE_SPAWNS {
+		_, ok_ally := unit_spawn(&game.units, &game.grid, .Neutral, pos, .Melee)
+		assert(ok_ally, "failed to spawn stranded ally")
+	}
+	for pos in ENEMY_SQUAD_SPAWNS {
+		_, ok_enemy := unit_spawn(&game.units, &game.grid, .Enemy, pos, .Melee)
+		assert(ok_enemy, "failed to spawn enemy squad")
+	}
 
 	fog_begin_tick(&game.fog)
 	fog_reveal(&game.fog, START_POS, VISION_RADIUS)
@@ -155,10 +164,20 @@ game_update_game_over :: proc(game: ^Game) {
 }
 
 game_player_index :: proc(game: ^Game) -> (index: int, ok: bool) {
+	fallback := -1
 	for i in 0..<MAX_UNITS {
-		if game.units.alive[i] && game.units.team[i] == .Player {
+		if !game.units.alive[i] || game.units.team[i] != .Player {
+			continue
+		}
+		if game.units.kind[i] == .Hero {
 			return i, true
 		}
+		if fallback < 0 {
+			fallback = i
+		}
+	}
+	if fallback >= 0 {
+		return fallback, true
 	}
 	return 0, false
 }
@@ -188,28 +207,28 @@ game_enemy_index :: proc(game: ^Game) -> (index: int, ok: bool) {
 	return 0, false
 }
 
-game_issue_move :: proc(game: ^Game, position: Grid_Pos) -> bool {
-	command := Command{kind = .Move, position = position}
+game_issue_move :: proc(game: ^Game, position: Grid_Pos, queued := false) -> bool {
+	command := Command{kind = .Move, position = position, queued = queued}
 	return command_push(&game.commands, command, &game.units, &game.grid)
 }
 
-game_issue_attack :: proc(game: ^Game, target: Unit_Handle) -> bool {
-	command := Command{kind = .Attack, target = target}
+game_issue_attack :: proc(game: ^Game, target: Unit_Handle, queued := false) -> bool {
+	command := Command{kind = .Attack, target = target, queued = queued}
 	return command_push(&game.commands, command, &game.units, &game.grid)
 }
 
-game_issue_patrol :: proc(game: ^Game, a, b: Grid_Pos) -> bool {
-	command := Command{kind = .Patrol, position = a, point_b = b}
+game_issue_patrol :: proc(game: ^Game, a, b: Grid_Pos, queued := false) -> bool {
+	command := Command{kind = .Patrol, position = a, point_b = b, queued = queued}
 	return command_push(&game.commands, command, &game.units, &game.grid)
 }
 
-game_issue_patrol_to :: proc(game: ^Game, destination: Grid_Pos) -> bool {
-	command := Command{kind = .Patrol, point_b = destination, from_current = true}
+game_issue_patrol_to :: proc(game: ^Game, destination: Grid_Pos, queued := false) -> bool {
+	command := Command{kind = .Patrol, point_b = destination, from_current = true, queued = queued}
 	return command_push(&game.commands, command, &game.units, &game.grid)
 }
 
-game_issue_attack_move :: proc(game: ^Game, destination: Grid_Pos) -> bool {
-	command := Command{kind = .Attack_Move, position = destination}
+game_issue_attack_move :: proc(game: ^Game, destination: Grid_Pos, queued := false) -> bool {
+	command := Command{kind = .Attack_Move, position = destination, queued = queued}
 	return command_push(&game.commands, command, &game.units, &game.grid)
 }
 

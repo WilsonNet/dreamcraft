@@ -24,12 +24,16 @@ update_minimap_pixels :: proc() {
 		if !units.alive[i] {
 			continue
 		}
-		if units.team[i] == .Enemy && !g.enemy_is_visible(&app.game, i) {
+		if units.team[i] != .Player && !g.enemy_is_visible(&app.game, i) {
 			continue
 		}
 		color := rl.Color{70, 125, 235, 255}
-		if units.team[i] == .Enemy {
+		if units.kind[i] == .Hero {
+			color = rl.Color{135, 205, 255, 255}
+		} else if units.team[i] == .Enemy {
 			color = rl.Color{225, 70, 70, 255}
+		} else if units.team[i] == .Neutral {
+			color = rl.Color{72, 224, 168, 255}
 		}
 		set_minimap_pixel(units.position[i], color)
 	}

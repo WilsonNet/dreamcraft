@@ -21,7 +21,7 @@ web_refresh_state :: proc() -> i32 {
 	}
 	text := fmt.bprintf(
 		State_Buffer[:len(State_Buffer) - 1],
-		`{{"ok":true,"tick":%d,"player_grid":[%d,%d],"player_alive":%t,"enemy_grid":[%d,%d],"enemy_alive":%t,"level_complete":%t,"game_over":%t,"waypoint":%d,"waypoints_total":%d,"fog_percent":%.1f,"alive_units":%d,"selected":%d,"command_count":%d,"command_rejected":%d,"discovery_announced":%t,"enemy_aggro_ticks":%d,"hash":"%d","valid":%t,"validation":"%s"}}`,
+		`{{"ok":true,"tick":%d,"player_grid":[%d,%d],"player_alive":%t,"enemy_grid":[%d,%d],"enemy_alive":%t,"level_complete":%t,"game_over":%t,"waypoint":%d,"waypoints_total":%d,"fog_percent":%.1f,"alive_units":%d,"player_units":%d,"enemy_units":%d,"neutral_units":%d,"rescued_count":%d,"selected":%d,"command_count":%d,"command_rejected":%d,"discovery_announced":%t,"enemy_aggro_ticks":%d,"hash":"%d","valid":%t,"validation":"%s"}}`,
 		view.tick,
 		view.player_pos.x,
 		view.player_pos.y,
@@ -35,6 +35,10 @@ web_refresh_state :: proc() -> i32 {
 		view.waypoint_total,
 		view.fog_percent,
 		view.alive_units,
+		view.player_units,
+		view.enemy_units,
+		view.neutral_units,
+		view.rescued_count,
 		view.selected,
 		view.command_count,
 		view.command_rejected,
@@ -80,6 +84,8 @@ encode_web_unit :: proc(i: int, buf: []u8) -> int {
 	team := "enemy"
 	if units.team[i] == .Player {
 		team = "player"
+	} else if units.team[i] == .Neutral {
+		team = "neutral"
 	}
 	target := -1
 	if g.handle_is_valid(units.attack_target[i]) {
@@ -92,7 +98,7 @@ encode_web_unit :: proc(i: int, buf: []u8) -> int {
 	}
 	text := fmt.bprintf(
 		buf,
-		`{{"index":%d,"team":"%s","name":"%s","hero":%t,"position":[%d,%d],"world":[%.2f,%.2f],"progress":%.3f,"next":[%d,%d],"hp":%d,"hp_max":%d,"damage":%d,"armor":%d,"state":"%s","path_len":%d,"path_index":%d,"selected":%t,"patrol":%t,"attack_move":%t,"attack_target":%d,"discovered":%t,"aggro_ticks":%d,"visible":%t}}`,
+		`{{"index":%d,"team":"%s","name":"%s","hero":%t,"position":[%d,%d],"world":[%.2f,%.2f],"progress":%.3f,"next":[%d,%d],"hp":%d,"hp_max":%d,"damage":%d,"armor":%d,"state":"%s","path_len":%d,"path_index":%d,"selected":%t,"groups":%d,"patrol":%t,"attack_move":%t,"attack_target":%d,"discovered":%t,"aggro_ticks":%d,"visible":%t}}`,
 		i,
 		team,
 		g.unit_kind_name(units.kind[i]),
@@ -112,6 +118,7 @@ encode_web_unit :: proc(i: int, buf: []u8) -> int {
 		units.path_len[i],
 		units.path_index[i],
 		units.selected[i],
+		units.group_mask[i],
 		units.patrol_active[i],
 		units.attack_move_active[i],
 		target,
@@ -188,7 +195,7 @@ web_refresh_fog :: proc() -> i32 {
 				if units.team[i] == .Player {
 					ch = 'P'
 				} else if g.enemy_is_visible(&Game_State, i) {
-					ch = 'E'
+					ch = units.team[i] == .Neutral ? 'A' : 'E'
 				}
 			}
 			Fog_Buffer[offset] = ch

@@ -59,24 +59,55 @@ draw_paths_3d :: proc() {
 			continue
 		}
 		line_col, dot_col := path_colors(units, i)
+		tail := unit_ground(i) + rl.Vector3{0, 0.06, 0}
 		if g.unit_has_path(units, i) {
-			previous := unit_ground(i) + rl.Vector3{0, 0.06, 0}
 			drawn := 0
 			for p := int(units.path_index[i]); p < int(units.path_len[i]) && drawn < 24; p += 1 {
 				cell := g.cell_position(int(units.path[i][p]))
 				point := cell_center(cell) + rl.Vector3{0, 0.06, 0}
-				rl.DrawLine3D(previous, point, line_col)
+				rl.DrawLine3D(tail, point, line_col)
 				rl.DrawSphere(point, 0.055, dot_col)
-				previous = point
+				tail = point
 				drawn += 1
 			}
 		}
+		draw_queued_orders_3d(units, i, tail)
 		if units.patrol_active[i] {
 			a := cell_center(units.patrol_a[i]) + rl.Vector3{0, 0.04, 0}
 			b := cell_center(units.patrol_b[i]) + rl.Vector3{0, 0.04, 0}
 			rl.DrawCircle3D(a, 0.28, {1, 0, 0}, 90, rl.Color{90, 215, 250, 180})
 			rl.DrawCircle3D(b, 0.28, {1, 0, 0}, 90, rl.Color{255, 212, 92, 220})
 		}
+	}
+}
+
+@(private)
+draw_queued_orders_3d :: proc(units: ^g.Units, index: int, start_pos: rl.Vector3) {
+	count := int(units.order_count[index])
+	if count <= 0 {
+		return
+	}
+	prev := start_pos
+	for q in 0..<count {
+		ord := units.order_queue[index][q]
+		target_cell := ord.kind == .Patrol ? ord.point_b : ord.position
+		if ord.kind == .Attack {
+			if t_idx, ok := g.unit_index(units, ord.target); ok {
+				target_cell = units.position[t_idx]
+			} else {
+				continue
+			}
+		}
+		pt := cell_center(target_cell) + rl.Vector3{0, 0.07, 0}
+		col := rl.Color{110, 235, 145, 190}
+		if ord.kind == .Attack || ord.kind == .Attack_Move {
+			col = rl.Color{245, 110, 85, 195}
+		} else if ord.kind == .Patrol {
+			col = rl.Color{95, 215, 250, 195}
+		}
+		rl.DrawLine3D(prev, pt, col)
+		rl.DrawSphere(pt, 0.09, col)
+		prev = pt
 	}
 }
 

@@ -131,6 +131,8 @@ web_spawn :: proc(team: i32, x, y, hp: i32) -> i32 {
 	kind := g.Team.Enemy
 	if team == 0 {
 		kind = .Player
+	} else if team == 2 {
+		kind = .Neutral
 	}
 	handle, ok := g.unit_spawn(&Game_State.units, &Game_State.grid, kind, position(x, y))
 	if !ok {
@@ -183,6 +185,14 @@ web_teleport :: proc(x, y: i32) -> i32 {
 	g.unit_clear_path(&Game_State.units, player)
 	Game_State.units.state[player] = .Idle
 	return 1
+}
+
+@(export)
+web_group_op :: proc(slot, op: i32) -> i32 {
+	if op < 0 || op > i32(g.Group_Op.Recall) {
+		return 0
+	}
+	return i32(g.group_apply(&Game_State.units, int(slot), g.Group_Op(op)))
 }
 
 @(export)

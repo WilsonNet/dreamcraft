@@ -39,8 +39,7 @@ control_spawn_attack_and_kill :: proc(t: ^testing.T) {
 	game := new(g.Game)
 	defer free(game)
 	g.game_init(game)
-	enemy_index, _ := g.game_enemy_index(game)
-	g.unit_destroy(&game.units, enemy_index)
+	testing.expect(t, execute(game, Command{cmd = "clear_enemies"}).ok)
 
 	result := execute(game, Command{cmd = "spawn", team = "enemy", x = 5, y = 25, value = 30})
 	testing.expect(t, result.ok)
@@ -92,7 +91,10 @@ control_snapshot_and_units_encode :: proc(t: ^testing.T) {
 	snapshot := make_snapshot(game)
 	testing.expect(t, snapshot.ok)
 	testing.expect(t, snapshot.valid)
-	testing.expect_value(t, snapshot.alive_units, 2)
+	testing.expect_value(t, snapshot.alive_units, g.INITIAL_UNIT_COUNT)
+	testing.expect_value(t, snapshot.player_units, 1)
+	testing.expect_value(t, snapshot.neutral_units, len(g.ALLY_RESCUE_SPAWNS))
+	testing.expect_value(t, snapshot.enemy_units, len(g.ENEMY_SQUAD_SPAWNS))
 
 	data, err := encode_units(game)
 	testing.expect(t, err == nil)
@@ -108,17 +110,19 @@ control_snapshot_and_units_encode :: proc(t: ^testing.T) {
 		delete(infos)
 	}
 	testing.expect(t, unmarshal_err == nil)
-	testing.expect_value(t, len(infos), 2)
+	testing.expect_value(t, len(infos), g.INITIAL_UNIT_COUNT)
 	testing.expect_value(t, infos[0].team, "player")
 	testing.expect_value(t, infos[0].name, "Liiroy, the Bold")
 	testing.expect(t, infos[0].hero)
 	testing.expect_value(t, infos[0].hp_max, u16(g.HERO_MAX_HP))
 	testing.expect_value(t, infos[0].damage, u16(g.HERO_ATTACK_DAMAGE))
 	testing.expect_value(t, infos[0].armor, u16(g.HERO_ARMOR))
-	testing.expect_value(t, infos[1].name, "Luk Soldier")
-	testing.expect(t, !infos[1].hero)
-	testing.expect_value(t, infos[1].damage, u16(g.ATTACK_DAMAGE))
-	testing.expect_value(t, infos[1].armor, u16(g.BASE_ARMOR))
+	last := infos[len(infos) - 1]
+	testing.expect_value(t, last.team, "enemy")
+	testing.expect_value(t, last.name, "Luk Soldier")
+	testing.expect(t, !last.hero)
+	testing.expect_value(t, last.damage, u16(g.ATTACK_DAMAGE))
+	testing.expect_value(t, last.armor, u16(g.BASE_ARMOR))
 }
 
 @(test)
@@ -212,8 +216,7 @@ control_attack_move_and_patrol_to :: proc(t: ^testing.T) {
 	game := new(g.Game)
 	defer free(game)
 	g.game_init(game)
-	enemy_index, _ := g.game_enemy_index(game)
-	g.unit_destroy(&game.units, enemy_index)
+	testing.expect(t, execute(game, Command{cmd = "clear_enemies"}).ok)
 
 	testing.expect(t, execute(game, Command{cmd = "spawn", team = "enemy", x = 6, y = 26, value = 30}).ok)
 	res := execute(game, Command{cmd = "attack_move", x = 14, y = 25})
@@ -235,12 +238,36 @@ control_reports_campaign_discovery_and_aggro_delay :: proc(t: ^testing.T) {
 	game := new(g.Game)
 	defer free(game)
 	g.game_init(game)
-	enemy_index, _ := g.game_enemy_index(game)
-	g.unit_destroy(&game.units, enemy_index)
+	testing.expect(t, execute(game, Command{cmd = "clear_enemies"}).ok)
 	testing.expect(t, execute(game, Command{cmd = "spawn", team = "enemy", x = 7, y = 25}).ok)
 
 	res := execute(game, Command{cmd = "run", ticks = 1})
 	testing.expect(t, res.discovery_announced)
 	testing.expect_value(t, res.enemy_aggro_ticks, u16(g.ENEMY_AGGRO_DELAY_TICKS))
+	testing.expect(t, res.valid)
+}
+
+@(test)
+control_group_ops_and_rescue_flow :: proc(t: ^testing.T) {
+	game := new(g.Game)
+	defer free(game)
+	g.game_init(game)
+
+	testing.expect(t, execute(game, Command{cmd = "goto", x = 20, y = 25}).ok)
+	res := execute(game, Command{cmd = "run", ticks = 350})
+	testing.expect_value(t, res.rescued_count, 3)
+	testing.expect_value(t, res.player_units, 4)
+
+	testing.expect(t, execute(game, Command{cmd = "select_all"}).ok)
+	testing.expect(t, execute(game, Command{cmd = "group_assign", value = 0}).ok)
+	testing.expect(t, execute(game, Command{cmd = "verify", verify = Verify{type = "group_count", x = 0, value = 4}}).ok)
+	testing.expect(t, execute(game, Command{cmd = "deselect"}).ok)
+	testing.expect(t, execute(game, Command{cmd = "verify", verify = Verify{type = "selected_count", value = 0}}).ok)
+	testing.expect(t, execute(game, Command{cmd = "group_select", value = 0}).ok)
+	testing.expect(t, execute(game, Command{cmd = "verify", verify = Verify{type = "selected_count", value = 4}}).ok)
+	testing.expect(t, execute(game, Command{cmd = "select", x = 19, y = 23}).ok)
+	testing.expect(t, execute(game, Command{cmd = "group_steal", value = 1}).ok)
+	testing.expect(t, execute(game, Command{cmd = "verify", verify = Verify{type = "group_count", x = 0, value = 3}}).ok)
+	testing.expect(t, execute(game, Command{cmd = "verify", verify = Verify{type = "group_count", x = 1, value = 1}}).ok)
 	testing.expect(t, res.valid)
 }

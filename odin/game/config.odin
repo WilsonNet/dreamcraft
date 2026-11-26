@@ -49,6 +49,12 @@ HERO_REGEN_INTERVAL_TICKS :: 30 // +2 HP every 0.5s (+4 HP/s)
 HERO_REGEN_AMOUNT :: 2
 
 ENEMY_AGGRO_DELAY_TICKS :: 240 // 4.0s discovery grace before enemy charges
+RESCUE_RADIUS :: 5 // player approach radius to rally stranded allies
+RESCUE_CHAIN_RADIUS :: 6 // nearby neutral allies rally together as a squad
+SQUAD_ALERT_RADIUS :: 4 // nearby enemy squadmates alert & retaliate together
+CONTROL_GROUP_COUNT :: 10 // slots 0..9 (keys 1..9, 0)
+CONTROL_GROUP_VALID_MASK :: u16((1 << CONTROL_GROUP_COUNT) - 1)
+MAX_UNIT_ORDERS :: 8 // Shift-queued per-unit orders
 
 // Set to false for release builds with -define:VALIDATE_EACH_TICK=false.
 VALIDATE_EACH_TICK :: #config(VALIDATE_EACH_TICK, true)
@@ -64,6 +70,7 @@ Fixed_Vec :: struct {
 Team :: enum u8 {
 	Player,
 	Enemy,
+	Neutral,
 }
 
 Race :: enum u8 {
@@ -190,3 +197,23 @@ WAYPOINT_START := [WAYPOINT_COUNT]Grid_Pos{
 	{70, 25},
 	{77, 25},
 }
+
+// 5 stranded allies in 2 rescue squads along the march:
+//   Squad 1 ("Vanguard Survivors", 3 soldiers) near Waypoint 1 (20,25)
+//   Squad 2 ("Bridge Watch", 2 soldiers) near Waypoint 3 (40,23)
+ALLY_RESCUE_SPAWNS := [5]Grid_Pos{
+	{19, 23}, {19, 27}, {21, 25},
+	{42, 24}, {42, 26},
+}
+
+// 10 enemies in 3 escalating groups:
+//   Group 1 ("Forward Scouts", 2) between WP2 and WP3
+//   Group 2 ("Forty-Blades Ambush", 3) centered on ENEMY_START_POS (50,25)
+//   Group 3 ("Eastern Warband", 5) before WP6 / Goal
+ENEMY_SQUAD_SPAWNS := [10]Grid_Pos{
+	{33, 23}, {33, 27},
+	ENEMY_START_POS, {51, 24}, {51, 26},
+	{65, 23}, {65, 25}, {65, 27}, {66, 24}, {66, 26},
+}
+
+INITIAL_UNIT_COUNT :: 1 + len(ALLY_RESCUE_SPAWNS) + len(ENEMY_SQUAD_SPAWNS)

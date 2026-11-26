@@ -11,6 +11,9 @@ unit_movement :: proc(game: ^Game) {
 			if units.state[index] == .Moving {
 				units.state[index] = .Idle
 			}
+			if unit_is_idle_for_queue(units, index) && units.order_count[index] > 0 {
+				_ = dequeue_next_order(game, index)
+			}
 			continue
 		}
 		advance_unit(game, index, unit_move_step(units, index))
@@ -54,12 +57,13 @@ advance_unit :: proc(game: ^Game, index: int, distance: Fp) {
 	}
 
 	if units.path_index[index] >= units.path_len[index] {
-		complete_unit_path(units, index)
+		complete_unit_path(game, index)
 	}
 }
 
 @(private)
-complete_unit_path :: proc(units: ^Units, index: int) {
+complete_unit_path :: proc(game: ^Game, index: int) {
+	units := &game.units
 	units.path_index[index] = units.path_len[index]
 	units.progress[index] = 0
 	units.world[index] = grid_to_world(units.position[index])
@@ -70,10 +74,15 @@ complete_unit_path :: proc(units: ^Units, index: int) {
 		if !handle_is_valid(units.attack_target[index]) && cells_equal(units.position[index], units.attack_move_dest[index]) {
 			units.attack_move_active[index] = false
 			units.state[index] = .Idle
+		} else {
+			return
 		}
-		return
+	} else {
+		units.state[index] = .Idle
 	}
-	units.state[index] = .Idle
+	if unit_is_idle_for_queue(units, index) && units.order_count[index] > 0 {
+		_ = dequeue_next_order(game, index)
+	}
 }
 
 patrol_loop :: proc(game: ^Game) {

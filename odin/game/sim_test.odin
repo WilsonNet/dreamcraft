@@ -3,13 +3,24 @@ package game
 
 import "core:testing"
 
+destroy_all_team :: proc(game: ^Game, team: Team) {
+	for i in 0..<MAX_UNITS {
+		if game.units.alive[i] && game.units.team[i] == team {
+			unit_destroy(&game.units, i)
+		}
+	}
+}
+
 @(test)
 game_initializes_valid :: proc(t: ^testing.T) {
 	game := new(Game)
 	defer free(game)
 	game_init(game)
 	testing.expect_value(t, validate_game(game), Validation_Error.None)
-	testing.expect_value(t, game.units.alive_count, 2)
+	testing.expect_value(t, game.units.alive_count, INITIAL_UNIT_COUNT)
+	testing.expect_value(t, unit_team_count(&game.units, .Player), 1)
+	testing.expect_value(t, unit_team_count(&game.units, .Neutral), len(ALLY_RESCUE_SPAWNS))
+	testing.expect_value(t, unit_team_count(&game.units, .Enemy), len(ENEMY_SQUAD_SPAWNS))
 	testing.expect_value(t, game.units.selected_count, 0)
 	testing.expect_value(t, game.waypoints.current, 0)
 	testing.expect(t, !game.level_complete)
@@ -75,10 +86,10 @@ attack_command_kills_adjacent_enemy :: proc(t: ^testing.T) {
 	game := new(Game)
 	defer free(game)
 	game_init(game)
-	enemy_index, _ := game_enemy_index(game)
-	unit_destroy(&game.units, enemy_index)
+	destroy_all_team(game, .Enemy)
 	enemy, ok := unit_spawn(&game.units, &game.grid, .Enemy, Grid_Pos{5, 25})
 	testing.expect(t, ok)
+	enemy_index, _ := unit_index(&game.units, enemy)
 	game.units.hp[enemy_index] = 60
 
 	player, _ := game_player_handle(game)
@@ -103,8 +114,7 @@ patrol_loops_between_two_points :: proc(t: ^testing.T) {
 	game := new(Game)
 	defer free(game)
 	game_init(game)
-	enemy_index, _ := game_enemy_index(game)
-	unit_destroy(&game.units, enemy_index)
+	destroy_all_team(game, .Enemy)
 	player, _ := game_player_handle(game)
 
 	a := Grid_Pos{4, 25}
@@ -139,8 +149,7 @@ player_reaches_goal_and_completes_level :: proc(t: ^testing.T) {
 	game := new(Game)
 	defer free(game)
 	game_init(game)
-	enemy_index, _ := game_enemy_index(game)
-	unit_destroy(&game.units, enemy_index)
+	destroy_all_team(game, .Enemy)
 	testing.expect(t, sim_move_player(game, Grid_Pos{77, 25}, 3000))
 	testing.expect(t, game.level_complete)
 	position, _ := game_player_position(game)
@@ -152,8 +161,7 @@ waypoints_advance_when_reached :: proc(t: ^testing.T) {
 	game := new(Game)
 	defer free(game)
 	game_init(game)
-	enemy_index, _ := game_enemy_index(game)
-	unit_destroy(&game.units, enemy_index)
+	destroy_all_team(game, .Enemy)
 	for i in 0..<3 {
 		point := WAYPOINT_START[i]
 		testing.expectf(t, sim_move_player(game, point, 1000), "failed to reach waypoint %d", i)
@@ -319,8 +327,7 @@ attack_move_engages_enemy_and_resumes_to_destination :: proc(t: ^testing.T) {
 	game := new(Game)
 	defer free(game)
 	game_init(game)
-	enemy_idx, _ := game_enemy_index(game)
-	unit_destroy(&game.units, enemy_idx)
+	destroy_all_team(game, .Enemy)
 	eh, spawned := unit_spawn(&game.units, &game.grid, .Enemy, Grid_Pos{9, 27})
 	testing.expect(t, spawned)
 	if ei, ok := unit_index(&game.units, eh); ok {
@@ -345,8 +352,7 @@ patrol_to_engages_enemy_and_resumes_loop :: proc(t: ^testing.T) {
 	game := new(Game)
 	defer free(game)
 	game_init(game)
-	enemy_idx, _ := game_enemy_index(game)
-	unit_destroy(&game.units, enemy_idx)
+	destroy_all_team(game, .Enemy)
 	eh, spawned := unit_spawn(&game.units, &game.grid, .Enemy, Grid_Pos{7, 27})
 	testing.expect(t, spawned)
 	if ei, ok := unit_index(&game.units, eh); ok {
@@ -397,8 +403,7 @@ discovered_enemy_waits_before_aggro_and_announces :: proc(t: ^testing.T) {
 	game := new(Game)
 	defer free(game)
 	game_init(game)
-	enemy_idx, _ := game_enemy_index(game)
-	unit_destroy(&game.units, enemy_idx)
+	destroy_all_team(game, .Enemy)
 	eh, spawned := unit_spawn(&game.units, &game.grid, .Enemy, Grid_Pos{7, 25})
 	testing.expect(t, spawned)
 	ei, _ := unit_index(&game.units, eh)

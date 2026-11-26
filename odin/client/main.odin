@@ -54,6 +54,11 @@ App :: struct {
 	command_mode: Command_Mode,
 	dragging: bool,
 	drag_start: rl.Vector2,
+	active_subgroup: g.Unit_Kind,
+	last_click_time: f64,
+	last_click_unit: g.Unit_Handle,
+	last_group_tap_time: f64,
+	last_group_tap_slot: int,
 	minimap: rl.Texture2D,
 	minimap_pixels: [g.GRID_CELLS]rl.Color,
 	cmd_fx: [MAX_CMD_FX]Cmd_Fx,
@@ -199,6 +204,9 @@ init_world_assets :: proc() {
 	init_warrior_assets()
 	reset_warrior_visuals()
 	app.camera_follow = true
+	app.last_group_tap_slot = -1
+	app.last_click_unit = g.INVALID_HANDLE
+	app.active_subgroup = .Hero
 	app.zoom = DEFAULT_ZOOM
 	if zoom, ok := find_zoom(os.args); ok {
 		app.zoom = zoom

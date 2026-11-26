@@ -27,6 +27,8 @@ Validation_Error :: enum u8 {
 	AttackTargetSelf,
 	CooldownInvalid,
 	UnitAggroInvalid,
+	UnitGroupMaskInvalid,
+	UnitOrderQueueInvalid,
 	SelectedNotPlayer,
 	WaypointCountInvalid,
 	WaypointPositionInvalid,
@@ -154,10 +156,42 @@ validate_unit_orders :: proc(units: ^Units, grid: ^Grid, index: int) -> Validati
 	if units.aggro_timer[index] > ENEMY_AGGRO_DELAY_TICKS || (!units.discovered[index] && units.aggro_timer[index] != 0) {
 		return .UnitAggroInvalid
 	}
+	if units.team[index] != .Enemy && (units.discovered[index] || units.aggro_timer[index] != 0) {
+		return .UnitAggroInvalid
+	}
+	if (units.group_mask[index] & ~CONTROL_GROUP_VALID_MASK) != 0 || (units.team[index] != .Player && units.group_mask[index] != 0) {
+		return .UnitGroupMaskInvalid
+	}
+	if err := validate_unit_order_queue(units, grid, index); err != .None {
+		return err
+	}
 	if units.selected[index] && units.team[index] != .Player {
 		return .SelectedNotPlayer
 	}
 	return validate_attack_target(units, index)
+}
+
+@(private)
+validate_unit_order_queue :: proc(units: ^Units, grid: ^Grid, index: int) -> Validation_Error {
+	count := int(units.order_count[index])
+	if count > MAX_UNIT_ORDERS {
+		return .UnitOrderQueueInvalid
+	}
+	for q in 0..<count {
+		ord := units.order_queue[index][q]
+		switch ord.kind {
+		case .Move, .Attack_Move:
+			if !grid_is_walkable(grid, ord.position) {
+				return .UnitOrderQueueInvalid
+			}
+		case .Patrol:
+			if !grid_is_walkable(grid, ord.point_b) {
+				return .UnitOrderQueueInvalid
+			}
+		case .Attack, .Stop:
+		}
+	}
+	return .None
 }
 
 validate_unit_path :: proc(units: ^Units, grid: ^Grid, index: int) -> Validation_Error {
@@ -278,15 +312,28 @@ level_validate :: proc(grid: ^Grid, pf: ^Pathfinder) -> Validation_Error {
 	if err := validate_waypoints(&waypoints, grid); err != .None {
 		return err
 	}
-	if grid_is_blocked(grid, ENEMY_START_POS) {
-		return .UnitOnObstacle
+	scratch: [MAX_PATH]u16
+	for pos in ALLY_RESCUE_SPAWNS {
+		if !grid_is_walkable(grid, pos) {
+			return .UnitOnObstacle
+		}
+		if length, res := find_path(pf, grid, START_POS, pos, scratch[:]); res != .Found || length == 0 {
+			return .WaypointBlocked
+		}
+	}
+	for pos in ENEMY_SQUAD_SPAWNS {
+		if !grid_is_walkable(grid, pos) {
+			return .UnitOnObstacle
+		}
+		if length, res := find_path(pf, grid, START_POS, pos, scratch[:]); res != .Found || length == 0 {
+			return .WaypointBlocked
+		}
 	}
 	if grid_is_blocked(grid, Grid_Pos{GOAL_X + 1, GRID_H / 2}) {
 		return .WaypointBlocked
 	}
 
 	previous := START_POS
-	scratch: [MAX_PATH]u16
 	for point in WAYPOINT_START {
 		length, result := find_path(pf, grid, previous, point, scratch[:])
 		if result != .Found || length == 0 {
@@ -300,104 +347,4 @@ level_validate :: proc(grid: ^Grid, pf: ^Pathfinder) -> Validation_Error {
 @(private)
 start_blocked :: proc(grid: ^Grid) -> bool {
 	return grid_is_blocked(grid, START_POS)
-}
-
-validation_error_name :: proc(err: Validation_Error) -> string {
-	return validation_error_name_a(err)
-}
-
-@(private)
-validation_error_name_a :: proc(err: Validation_Error) -> string {
-	#partial switch err {
-	case .None:
-		return "none"
-	case .ObstacleCountMismatch:
-		return "obstacle count mismatch"
-	case .FogVisibleNotExplored:
-		return "fog: visible cell is not explored"
-	case .AliveCountMismatch:
-		return "alive count mismatch"
-	case .SelectedCountMismatch:
-		return "selected count mismatch"
-	case .FreeCountMismatch:
-		return "free slot count mismatch"
-	case .FreeSlotInvalid:
-		return "invalid free slot"
-	case .UnitGenerationZero:
-		return "unit generation is zero"
-	case .UnitPositionInvalid:
-		return "unit position out of bounds"
-	case .UnitOnObstacle:
-		return "unit stands on an obstacle"
-	case .UnitWorldOutOfBounds:
-		return "unit world position out of bounds"
-	case .UnitHealthInvalid:
-		return "unit health invalid"
-	case:
-		return validation_error_name_b(err)
-	}
-}
-
-@(private)
-validation_error_name_b :: proc(err: Validation_Error) -> string {
-	#partial switch err {
-	case .UnitPathTooLong:
-		return "unit path too long"
-	case .UnitPathIndexInvalid:
-		return "unit path index invalid"
-	case .UnitPathCellInvalid:
-		return "unit path cell invalid"
-	case .UnitPathBlocked:
-		return "unit path crosses an obstacle"
-	case .UnitPathNotAdjacent:
-		return "unit path has non-adjacent cells"
-	case .UnitPathDetached:
-		return "unit path is detached from unit position"
-	case .UnitStateInvalid:
-		return "unit state inconsistent with path"
-	case .UnitPatrolInvalid:
-		return "unit patrol state invalid"
-	case .UnitAttackMoveInvalid:
-		return "unit attack-move state invalid"
-	case .AttackTargetInvalid:
-		return "attack target handle is stale"
-	case .AttackTargetFriendly:
-		return "attack target is friendly"
-	case .AttackTargetSelf:
-		return "unit targets itself"
-	case .CooldownInvalid:
-		return "attack cooldown out of range"
-	case .UnitAggroInvalid:
-		return "unit aggro timer state invalid"
-	case:
-		return validation_error_name_c(err)
-	}
-}
-
-@(private)
-validation_error_name_c :: proc(err: Validation_Error) -> string {
-	#partial switch err {
-	case .SelectedNotPlayer:
-		return "enemy unit is selected"
-	case .WaypointCountInvalid:
-		return "waypoint count invalid"
-	case .WaypointPositionInvalid:
-		return "waypoint position invalid"
-	case .WaypointBlocked:
-		return "waypoint is blocked"
-	case .WaypointCurrentInvalid:
-		return "current waypoint index invalid"
-	case .CommandCountInvalid:
-		return "command count invalid"
-	case .CommandIndicesInvalid:
-		return "command queue indices invalid"
-	case .PlayerMissing:
-		return "player unit is missing"
-	case .UnitWorldMismatch:
-		return "unit world position does not match path state"
-	case .UnitPathStartInvalid:
-		return "unit path does not start at unit position"
-	case:
-		return "unknown validation error"
-	}
 }

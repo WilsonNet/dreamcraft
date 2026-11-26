@@ -9,6 +9,10 @@ State_View :: struct {
 	enemy_pos: Grid_Pos,
 	selected: int,
 	alive_units: int,
+	player_units: int,
+	enemy_units: int,
+	neutral_units: int,
+	rescued_count: int,
 	level_complete: bool,
 	game_over: bool,
 	discovery_announced: bool,
@@ -26,6 +30,10 @@ state_view :: proc(game: ^Game) -> State_View {
 		tick = game.tick,
 		selected = game.units.selected_count,
 		alive_units = game.units.alive_count,
+		player_units = unit_team_count(&game.units, .Player),
+		enemy_units = unit_team_count(&game.units, .Enemy),
+		neutral_units = unit_team_count(&game.units, .Neutral),
+		rescued_count = int(game.rescued_count),
 		level_complete = game.level_complete,
 		game_over = game.game_over,
 		discovery_announced = game.discovery_announced,
@@ -63,6 +71,10 @@ state_view_hash :: proc(view: ^State_View) -> State_Hash {
 	hash_i32(&h, view.enemy_pos.y)
 	hash_u32(&h, u32(view.selected))
 	hash_u32(&h, u32(view.alive_units))
+	hash_u32(&h, u32(view.player_units))
+	hash_u32(&h, u32(view.enemy_units))
+	hash_u32(&h, u32(view.neutral_units))
+	hash_u32(&h, u32(view.rescued_count))
 	hash_bool(&h, view.level_complete)
 	hash_bool(&h, view.game_over)
 	hash_bool(&h, view.discovery_announced)

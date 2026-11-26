@@ -33,31 +33,32 @@ Shortcut_Sheet :: struct {
 }
 
 @(private)
-BATTLEFIELD_ORDERS := [?]Shortcut_Item{
-	{"LMB / Shift+LMB", "Select unit / toggle selection"},
-	{"Left Drag", "Box select friendly units"},
-	{"Right Click", "Move to ground or attack enemy"},
-	{"M + Click", "Move order with ground FX"},
-	{"A + Click", "Attack-Move (auto-engages foes)"},
-	{"P + Click", "1-click Patrol loop"},
-	{"S", "Stop unit & clear current orders"},
+BATTLEFIELD_SELECTION := [?]Shortcut_Item{
+	{"LMB / Drag", "Select single unit / box select squad"},
+	{"Shift + LMB / Drag", "Add or remove unit from selection"},
+	{"Ctrl+LMB / 2x LMB", "Select all on-screen units of same type"},
+	{"Ctrl+Shift+LMB card", "Filter out unit type in HUD selection grid"},
+	{"Ctrl+1..0 / Shift+1..0", "Bind control group / add to control group"},
+	{"Alt+1..0 / Alt+Shift", "Steal units to group / steal & add"},
+	{"1..0 / 2x 1..0", "Recall control group / center camera"},
+	{"Tab / Shift+Tab / F2", "Cycle unit subgroups / Select all army"},
 }
 
 @(private)
-BATTLEFIELD_CAMERA := [?]Shortcut_Item{
+BATTLEFIELD_ORDERS := [?]Shortcut_Item{
+	{"Right Click", "Move formation or attack enemy"},
+	{"Shift + Order", "Queue Move / Attack / Patrol waypoints"},
+	{"M / A / P / S", "Move / Attack-Move / Patrol / Stop"},
 	{"MMB / Space+Drag", "1:1 Camera Grip terrain drag"},
-	{"WASD / Arrows", "Pan isometric camera"},
-	{"Screen Edge", "Edge pan along viewport borders"},
-	{"Mouse Wheel", "Smooth camera zoom"},
-	{"F", "Toggle Camera Follow / Free"},
-	{"Minimap Drag", "Jump or scrub main camera"},
+	{"WASD / Arrows / Edge", "Pan isometric camera"},
+	{"Wheel / F / Minimap", "Zoom / Camera Follow / Scrub minimap"},
 	{"Esc / F1", "Pause menu / Toggle help"},
 }
 
 @(private)
 BATTLEFIELD_GROUPS := [2]Shortcut_Group{
-	{title = "Units & orders", items = BATTLEFIELD_ORDERS[:]},
-	{title = "Camera & system", items = BATTLEFIELD_CAMERA[:]},
+	{title = "Selection & control groups", items = BATTLEFIELD_SELECTION[:]},
+	{title = "Orders & camera", items = BATTLEFIELD_ORDERS[:]},
 }
 
 @(private)

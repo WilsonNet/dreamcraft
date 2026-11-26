@@ -84,6 +84,7 @@ handle_keyboard :: proc() {
 		app.command_mode = .None
 		app.dragging = false
 	}
+	handle_control_group_keys()
 }
 
 update_cursor :: proc() {
@@ -149,16 +150,23 @@ handle_left_press :: proc(mouse: rl.Vector2) {
 		return
 	}
 
+	queued := input_shift_down()
 	switch app.command_mode {
 	case .Move:
-		issue_move_at(mouse)
-		app.command_mode = .None
+		issue_move_at(mouse, queued)
+		if !queued {
+			app.command_mode = .None
+		}
 	case .Attack:
-		issue_attack_or_move_at(mouse)
-		app.command_mode = .None
+		issue_attack_or_move_at(mouse, queued)
+		if !queued {
+			app.command_mode = .None
+		}
 	case .Patrol:
-		issue_patrol_at(mouse)
-		app.command_mode = .None
+		issue_patrol_at(mouse, queued)
+		if !queued {
+			app.command_mode = .None
+		}
 	case .None:
 		if input_space_down() {
 			start_camera_grip(mouse, true)
@@ -187,24 +195,24 @@ click_world_point :: proc(mouse: rl.Vector2, cell: g.Grid_Pos) -> rl.Vector3 {
 }
 
 @(private)
-issue_attack_or_move_at :: proc(mouse: rl.Vector2) {
+issue_attack_or_move_at :: proc(mouse: rl.Vector2, queued := false) {
 	if index, ok := unit_at_screen(mouse, .Enemy); ok && g.enemy_is_visible(&app.game, index) {
 		handle := g.unit_handle(&app.game.units, index)
-		if g.game_issue_attack(&app.game, handle) {
+		if g.game_issue_attack(&app.game, handle, queued) {
 			spawn_target_fx(handle, unit_ground(index))
 		}
 		return
 	}
 	cell := screen_to_grid(mouse)
-	if g.game_issue_attack_move(&app.game, cell) {
+	if g.game_issue_attack_move(&app.game, cell, queued) {
 		spawn_ground_fx(.Attack, click_world_point(mouse, cell))
 	}
 }
 
 @(private)
-issue_patrol_at :: proc(mouse: rl.Vector2) {
+issue_patrol_at :: proc(mouse: rl.Vector2, queued := false) {
 	cell := screen_to_grid(mouse)
-	if g.game_issue_patrol_to(&app.game, cell) {
+	if g.game_issue_patrol_to(&app.game, cell, queued) {
 		spawn_ground_fx(.Patrol, click_world_point(mouse, cell))
 	}
 }
@@ -234,36 +242,28 @@ handle_right_click :: proc(mouse: rl.Vector2) {
 		return
 	}
 	app.command_mode = .None
+	queued := input_shift_down()
 	if index, ok := unit_at_screen(mouse, .Enemy); ok {
 		if g.enemy_is_visible(&app.game, index) {
 			handle := g.unit_handle(&app.game.units, index)
-			if g.game_issue_attack(&app.game, handle) {
+			if g.game_issue_attack(&app.game, handle, queued) {
 				spawn_target_fx(handle, unit_ground(index))
 			}
 			return
 		}
 	}
-	issue_move_at(mouse)
+	issue_move_at(mouse, queued)
 }
 
-issue_move_at :: proc(mouse: rl.Vector2) {
+issue_move_at :: proc(mouse: rl.Vector2, queued := false) {
 	cell := screen_to_grid(mouse)
-	if g.game_issue_move(&app.game, cell) {
+	if g.game_issue_move(&app.game, cell, queued) {
 		spawn_ground_fx(.Move, click_world_point(mouse, cell))
 	}
 }
 
 select_click :: proc(mouse: rl.Vector2) {
-	additive := rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyDown(.RIGHT_SHIFT)
-	if index, ok := unit_at_screen(mouse, .Player); ok {
-		if additive {
-			g.unit_select(&app.game.units, index, true)
-		} else {
-			g.unit_select_only(&app.game.units, index)
-		}
-	} else if !additive {
-		g.unit_clear_selection(&app.game.units)
-	}
+	select_click_starcraft(mouse)
 }
 
 unit_at_screen :: proc(mouse: rl.Vector2, team: g.Team) -> (index: int, ok: bool) {
@@ -285,24 +285,7 @@ unit_at_screen :: proc(mouse: rl.Vector2, team: g.Team) -> (index: int, ok: bool
 }
 
 select_box :: proc(start, finish: rl.Vector2) {
-	min_x := min(start.x, finish.x)
-	max_x := max(start.x, finish.x)
-	min_y := min(start.y, finish.y)
-	max_y := max(start.y, finish.y)
-	additive := rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyDown(.RIGHT_SHIFT)
-	if !additive {
-		g.unit_clear_selection(&app.game.units)
-	}
-	for i in 0..<g.MAX_UNITS {
-		units := &app.game.units
-		if !units.alive[i] || units.team[i] != .Player {
-			continue
-		}
-		point := rl.GetWorldToScreen(unit_ground(i) + rl.Vector3{0, 0.9, 0}, app.camera)
-		if point.x >= min_x && point.x <= max_x && point.y >= min_y && point.y <= max_y {
-			g.unit_select(units, i, true)
-		}
-	}
+	select_box_starcraft(start, finish)
 }
 
 handle_minimap_click :: proc(mouse: rl.Vector2) {
@@ -324,5 +307,8 @@ retry_level :: proc() {
 	app.menu_open = false
 	app.command_mode = .None
 	app.dragging = false
+	app.active_subgroup = .Hero
+	app.last_click_unit = g.INVALID_HANDLE
+	app.last_group_tap_slot = -1
 	reset_camera()
 }

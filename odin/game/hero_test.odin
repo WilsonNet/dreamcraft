@@ -31,8 +31,7 @@ hero_armor_reduces_damage_and_passive_regen_heals :: proc(t: ^testing.T) {
 	defer free(game)
 	game_init(game)
 
-	enemy_idx, _ := game_enemy_index(game)
-	unit_destroy(&game.units, enemy_idx)
+	destroy_all_team(game, .Enemy)
 	player, _ := game_player_index(game)
 
 	eh, spawned := unit_spawn(&game.units, &game.grid, .Enemy, Grid_Pos{3, 25})

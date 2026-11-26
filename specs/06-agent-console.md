@@ -165,8 +165,8 @@ Endpoints:
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/health` | liveness |
-| GET | `/state` | tick, player/enemy, discovery_announced, enemy_aggro_ticks, fog %, hash, valid, validation |
-| GET | `/units` | unit list with name, hero, team, position, HP, damage, armor, state, path, target, discovered, aggro_ticks |
+| GET | `/state` | tick, player/enemy, `player_units`, `enemy_units`, `neutral_units`, `rescued_count`, discovery_announced, enemy_aggro_ticks, fog %, hash, valid, validation |
+| GET | `/units` | unit list with name, hero, team (`player`/`enemy`/`neutral`), position, HP, damage, armor, state, path, target, `groups`, `queued_orders`, discovered, aggro_ticks |
 | GET | `/fog` | 80×50 ASCII map |
 | GET | `/screenshot` | live PNG (client only) |
 | GET | `/camera` | live camera, zoom, focus, cursor, `app_mode`, `editor_model`, `help_open`, edge-pan & grip state (client only) |
@@ -178,8 +178,8 @@ Mouse & camera validation tool (`odin/tests/camera_mouse_check.py`):
 - `--mode os`: drives real macOS CoreGraphics mouse events (`mouseMoved`, `leftMouseDown/Up`, `otherMouseDown/Dragged/Up`, scroll wheel) over a live `dreamcraft-dev` window and verifies camera movement via `GET /camera`.
 
 Commands: `status`, `goto`, `patrol`, `patrol_to`, `attack`, `attack_move`, `stop`, `run`, `reset`,
-`verify`, `select`, `select_all`, `spawn`, `kill`, `set_hp`, `teleport`, and client-only
-`reload_models`, `open_picker`, `open_editor`, `close_editor`, `pause_menu`, `toggle_help`, `open_help`, `close_help` (`model` specifies asset ID).
+`verify`, `select`, `select_all`, `deselect`, `group_assign`, `group_add`, `group_steal`, `group_steal_add`, `group_select`, `clear_enemies`, `spawn`, `kill`, `set_hp`, `teleport`, and client-only
+`reload_models`, `open_picker`, `open_editor`, `close_editor`, `pause_menu`, `toggle_help`, `open_help`, `close_help` (`model` specifies asset ID). Unit commands accept `"queued": true` for Shift-queued waypoints; `verify` also supports `player_count`, `enemy_count`, `neutral_count`, `rescued_count`, `selected_count`, and `group_count`.
 
 Playwright-style Cooperative Mesh CLI (`odin/tools/mesh_cli/` -> `odin/bin/dreamcraft-mesh` / `odin/bin/dreamcraft-mesh-dev`):
 - Zero saved scripts: inline CLI args or stdin (`-`) operate on any of the 12 catalog models in chunked `.odin` format (`client/art/models/<id>/`), with `--root=`, `--json`, `--dry-run`, `--expect-fail`, and `--notify=<port>` (`POST /command {"cmd":"reload_models"}`).

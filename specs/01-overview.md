@@ -52,12 +52,14 @@ capacity arrays.
 - [x] Replay files: `--record`, `--replay`, hash verification
 - [x] StarCraft-style `Attack_Move` (`A` / Attack button) and fixed 1-click `Patrol` (`P` / Patrol button) with enemy auto-acquisition along the route and automatic leg resumption after combat
 - [x] Campaign hero **`Liiroy, the Bold`** (`Unit_Kind.Hero`: `500 HP`, `5` armor, `35` dmg, `40`-tick cooldown, `180` speed, `+4 HP/s` regen, `HERO_SCALE = 0.84`, royal-cobalt & gilded trim, gold aura ring & health bar) replaces the regular player **Luk Soldier** (`Unit_Kind.Melee`) in campaign mode
+- [x] First-quest multi-unit rescue & escalating enemy squads: `5` stranded `.Neutral` **Luk Soldiers** (`Squad 1` near WP1, `Squad 2` near WP3) rally to `.Player` when approached (`RESCUE_RADIUS = 5`, `RESCUE_CHAIN_RADIUS = 6`) with tutorial banners and emerald rings, facing `10` enemies across `3` escalating squads (`2`, `3`, `5`) with `SQUAD_ALERT_RADIUS = 4` shared discovery/retaliation
+- [x] StarCraft-style group selection, control groups (`1..0`), and modifier toolkit (`selection_groups.odin`, `hud_groups.odin`): `Shift` add/remove toggle & box-add & Shift-queued orders (`MAX_UNIT_ORDERS = 8`), `Ctrl+Click` / double-click on-screen type selection, `Ctrl+Shift+Click` HUD card filtering, `Ctrl+1..0` assign, `Shift+1..0` add, `Alt+1..0` steal, `Alt+Shift+1..0` steal+add, double-tap `1..0` center camera, `Tab`/`Shift+Tab` subgroup cycling, `F2` select all army, plus multi-unit formation spreading (`commands.odin`) and melee combat surrounding (`combat_sim.odin`)
 - [x] Event-based campaign discovery aggro delay (`ENEMY_AGGRO_DELAY_TICKS = 240` / `4.0 s`): newly spotted enemy Luk Soldiers pause and show a flavored warning banner & `! SPOTTED` countdown ring until the timer expires or they take damage
 - [x] StarCraft 2 / Age of Empires 3D ground command FX (`command_fx.odin`): inward-converging chevrons, pulse rings, target lock rings, live cursor preview, and state-colored paths
 - [x] HTTP control API replacing Bevy BRP MCP
   - [x] `GET /state`, `/units`, `/fog`, `/screenshot`, `/camera`, `/health`
   - [x] `POST /command`: move, patrol, patrol_to, attack, attack_move, stop, run, reset, verify,
-        select, spawn, kill, set_hp, teleport, reload_models, open_picker, open_editor, close_editor, reload_anims, open_anim_picker, open_anim_editor, close_anim_editor, pause_menu, toggle_help, open_help, close_help
+        select, select_all, deselect, group_assign, group_add, group_steal, group_steal_add, group_select, clear_enemies, spawn, kill, set_hp, teleport, reload_models, open_picker, open_editor, close_editor, reload_anims, open_anim_picker, open_anim_editor, close_anim_editor, pause_menu, toggle_help, open_help, close_help (supports `"queued": true` on unit orders)
   - [x] `POST /mouse` + `odin/tests/camera_mouse_check.py` live mouse & OS camera validation tool
   - [x] Every response carries `valid` + `validation`
 - [x] In-game 3D Model Picker & Model Editor (`Esc -> Model Editor` or `--editor[=<model>]`):
@@ -78,7 +80,7 @@ capacity arrays.
 - [x] Agent UI loop: `ui_tree`, `ui_click`, `ui_stats` control commands; `/camera` exposes the live minimap rect
 - [ ] Renderer port to SDL3 GPU (Metal / Vulkan) sharing VUI's device (`specs/11-renderer-port.md`)
 - [x] View-conditional **F1 Shortcut Window** (`client/shortcuts.odin`) with clickable `? F1` badges across Battlefield, Pause Menu, Model Picker, Model Editor, Animation Picker, and Animation Editor (plus active modal sheets)
-- [x] 139 unit/integration tests (69 game, 13 control, 20 art, 9 art/edit, 5 art/anim_edit, 5 svg, 6 mesh_cli, 12 client)
+- [x] 154 unit/integration tests (77 game, 14 control, 20 art, 9 art/edit, 5 art/anim_edit, 5 art/anim_rig, 5 svg, 6 mesh_cli, 13 client, plus headless/replay/web/http smoke)
 - [x] Web WASM smoke test in Node
 - [x] Game-over state is valid and explicit (`game_over`)
 - [x] Zero-allocation simulation test under a failing allocator

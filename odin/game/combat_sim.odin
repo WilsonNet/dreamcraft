@@ -51,12 +51,21 @@ attack_movement :: proc(game: ^Game) {
 	auto_acquire_targets(game)
 	units := &game.units
 	for index in 0..<MAX_UNITS {
-		if !units.alive[index] || !handle_is_valid(units.attack_target[index]) {
+		if !units.alive[index] {
+			continue
+		}
+		if !handle_is_valid(units.attack_target[index]) {
+			if unit_is_idle_for_queue(units, index) && units.order_count[index] > 0 {
+				_ = dequeue_next_order(game, index)
+			}
 			continue
 		}
 		target_index, ok := unit_index(units, units.attack_target[index])
 		if !ok {
 			units.attack_target[index] = INVALID_HANDLE
+			if unit_is_idle_for_queue(units, index) && units.order_count[index] > 0 {
+				_ = dequeue_next_order(game, index)
+			}
 			continue
 		}
 
@@ -67,12 +76,63 @@ attack_movement :: proc(game: ^Game) {
 			continue
 		}
 
-		destination := units.position[target_index]
+		target_pos := units.position[target_index]
 		existing, has_existing := unit_path_destination(units, index)
-		if !unit_has_path(units, index) || !has_existing || !cells_equal(existing, destination) {
+		in_range_dest := has_existing && distance_squared(existing, target_pos) <= ATTACK_RANGE_SQUARED
+		if !unit_has_path(units, index) || !in_range_dest {
+			destination := find_surround_cell(game, index, target_index)
 			_ = issue_move_path(game, index, destination)
 		}
 	}
+}
+
+@(private)
+find_surround_cell :: proc(game: ^Game, unit_idx, target_idx: int) -> Grid_Pos {
+	units := &game.units
+	target_pos := units.position[target_idx]
+	best := target_pos
+	best_dist := i32(0x7FFFFFFF)
+	found := false
+	for dy := -i32(ATTACK_RANGE); dy <= i32(ATTACK_RANGE); dy += 1 {
+		for dx := -i32(ATTACK_RANGE); dx <= i32(ATTACK_RANGE); dx += 1 {
+			if dx == 0 && dy == 0 {
+				continue
+			}
+			if dx * dx + dy * dy > ATTACK_RANGE_SQUARED {
+				continue
+			}
+			cand := Grid_Pos{x = target_pos.x + dx, y = target_pos.y + dy}
+			if !grid_is_walkable(&game.grid, cand) || cell_reserved_by_ally(units, unit_idx, cand) {
+				continue
+			}
+			d := distance_squared(units.position[unit_idx], cand)
+			if !found || d < best_dist {
+				best_dist = d
+				best = cand
+				found = true
+			}
+		}
+	}
+	return best
+}
+
+@(private)
+cell_reserved_by_ally :: proc(units: ^Units, self_idx: int, cell: Grid_Pos) -> bool {
+	team := units.team[self_idx]
+	for i in 0..<MAX_UNITS {
+		if i == self_idx || !units.alive[i] {
+			continue
+		}
+		if cells_equal(units.position[i], cell) {
+			return true
+		}
+		if units.team[i] == team {
+			if dest, ok := unit_path_destination(units, i); ok && cells_equal(dest, cell) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 combat_tick :: proc(game: ^Game) {

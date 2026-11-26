@@ -297,6 +297,13 @@ update_camera_grip :: proc() {
 }
 
 follow_player :: proc() {
+	if app.game.units.selected_count > 0 {
+		if c, ok := g.selection_centroid(&app.game.units); ok {
+			app.camera_target = world_to_3d(c)
+			app.camera_target.y = CAMERA_TARGET_HEIGHT
+			return
+		}
+	}
 	index, ok := g.game_player_index(&app.game)
 	if !ok {
 		return

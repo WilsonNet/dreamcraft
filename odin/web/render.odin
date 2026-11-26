@@ -177,6 +177,8 @@ draw_unit :: proc(index: int) {
 	color := rgba(70, 125, 235)
 	if units.team[index] == .Enemy {
 		color = rgba(225, 70, 70)
+	} else if units.team[index] == .Neutral {
+		color = rgba(70, 220, 160)
 	}
 	fill_rect(center.x - 2, center.y - 6, 4, 5, color)
 	if units.selected[index] {
