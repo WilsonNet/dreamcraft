@@ -39,6 +39,9 @@ odin build tools/mesh_cli -out:bin/dreamcraft-mesh-dev -o:speed
 echo "== headless script test =="
 ./bin/headless-dev --script tests/smoke.jsonl >/dev/null
 
+echo "== level 1 playthrough (army attack-moves along the road to the goal) =="
+./bin/headless-dev --script tests/level1_playthrough.jsonl >/dev/null
+
 echo "== replay test =="
 ./bin/headless-dev --replay tests/replay.jsonl >/dev/null
 RECORD="${TMPDIR:-/tmp}/dreamcraft-record.jsonl"

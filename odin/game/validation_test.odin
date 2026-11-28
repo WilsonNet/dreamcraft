@@ -29,7 +29,7 @@ validator_catches_bad_path :: proc(t: ^testing.T) {
 	game_init(game)
 	index, _ := game_player_index(game)
 	current, _ := cell_index(game.units.position[index])
-	far, _ := cell_index(Grid_Pos{GRID_W - 1, GRID_H - 1})
+	far, _ := cell_index(GOAL_POS)
 	game.units.path_len[index] = 2
 	game.units.path_index[index] = 0
 	game.units.path[index][0] = u16(current)
@@ -44,7 +44,7 @@ validator_catches_blocked_path_cell :: proc(t: ^testing.T) {
 	game_init(game)
 	index, _ := game_player_index(game)
 	start, _ := cell_index(game.units.position[index])
-	tree_index, _ := cell_index(Grid_Pos{8, 20})
+	tree_index, _ := cell_index(Grid_Pos{14, 20})
 	game.units.path_len[index] = 2
 	game.units.path_index[index] = 0
 	game.units.path[index][0] = u16(start)

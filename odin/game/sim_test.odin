@@ -58,7 +58,7 @@ move_command_rejects_wall_and_capacity :: proc(t: ^testing.T) {
 	game := new(Game)
 	defer free(game)
 	game_init(game)
-	testing.expect(t, !game_issue_move(game, Grid_Pos{8, 20}), "tree cell must be rejected")
+	testing.expect(t, !game_issue_move(game, Grid_Pos{14, 20}), "tree cell must be rejected")
 	testing.expect(t, !game_issue_move(game, Grid_Pos{-1, 0}), "out of bounds must be rejected")
 	testing.expect(t, !game_issue_move(game, Grid_Pos{GOAL_X, GRID_H}), "out of bounds must be rejected")
 	testing.expect_value(t, game.commands.count, 0)
@@ -150,10 +150,10 @@ player_reaches_goal_and_completes_level :: proc(t: ^testing.T) {
 	defer free(game)
 	game_init(game)
 	destroy_all_team(game, .Enemy)
-	testing.expect(t, sim_move_player(game, Grid_Pos{77, 25}, 3000))
+	testing.expect(t, sim_move_player(game, GOAL_POS, 6000))
 	testing.expect(t, game.level_complete)
 	position, _ := game_player_position(game)
-	testing.expect_value(t, position, Grid_Pos{77, 25})
+	testing.expect_value(t, position, GOAL_POS)
 }
 
 @(test)
@@ -262,7 +262,7 @@ blocked_move_click_does_not_stop_or_snap_unit :: proc(t: ^testing.T) {
 	before := game.units.world[player]
 
 	// Tree cell: the order is rejected and must not disturb the current order.
-	testing.expect(t, !game_issue_move(game, Grid_Pos{8, 20}))
+	testing.expect(t, !game_issue_move(game, Grid_Pos{14, 20}))
 	testing.expect_value(t, game.commands.rejected, u32(1))
 	sim_tick(game)
 	after := game.units.world[player]
@@ -279,7 +279,7 @@ reordering_past_obstacles_never_jumps :: proc(t: ^testing.T) {
 	player, ok := game_player_index(game)
 	testing.expect(t, ok)
 
-	testing.expect(t, game_issue_move(game, Grid_Pos{12, 22}))
+	testing.expect(t, game_issue_move(game, Grid_Pos{10, 22}))
 	previous := game.units.world[player]
 	max_step := Fp(0)
 	reorders := 0

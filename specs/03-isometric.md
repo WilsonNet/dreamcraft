@@ -2,7 +2,7 @@
 
 ## World Mapping
 
-The simulation stays on the orthogonal 80×50 grid. The native client maps it
+The simulation stays on the orthogonal 128×80 grid. The native client maps it
 to a 3D world with Y up:
 
 ```
@@ -42,10 +42,10 @@ rectangles. Health bars use the same projection above the model head.
 
 ## 3D World
 
-- Ground (`ground_tex.odin`, `ground.vs`/`ground.fs`): `1280×800` procedural
+- Ground (`ground_tex.odin`, `ground.vs`/`ground.fs`): `2048×1280` procedural
   painterly albedo texture with grass washes, mossy understory around obstacles,
   obstacle-aware 75-segment Catmull-Rom dirt trail connecting start → waypoints →
-  goal, sandstone goal mosaic, and wildflowers, paired with an `80×50` fog state
+  goal, sandstone goal mosaic, and wildflowers, paired with an `128×80` fog state
   texture sampled via bilinear FBM mist and world-edge fade.
 - Contact shadows (`ground_shadow.odin`): elliptical soft shadow model drawn on
   ground for units and trees.

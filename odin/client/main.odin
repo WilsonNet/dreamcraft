@@ -122,6 +122,7 @@ main :: proc() {
 		return
 	}
 	init_world_assets()
+	hot_keep_state()
 	if edit_id, edit_ok := find_editor_arg(os.args); edit_ok {
 		if edit_id == "" {
 			editor_open_picker()
@@ -138,7 +139,7 @@ main :: proc() {
 	if bench {
 		run_bench(bench_frames)
 	} else {
-		for !rl.WindowShouldClose() {
+		for !rl.WindowShouldClose() && !hot_reload_pending() {
 			step_client_frame()
 		}
 	}

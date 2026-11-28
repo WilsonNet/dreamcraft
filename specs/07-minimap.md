@@ -138,7 +138,7 @@ System `handle_minimap_click` recenters the main camera when left-clicking insid
 
 ## Odin Implementation
 
-The Odin client renders the minimap into a single 80×50 `rl.Texture2D`:
+The Odin client renders the minimap into a single 128×80 `rl.Texture2D`:
 
 - One RGBA pixel per grid cell.
 - Pixel colors derive from obstacle bitset, fog state, goal zone, waypoints,

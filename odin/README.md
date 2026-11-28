@@ -116,7 +116,7 @@ Endpoints:
 | GET | `/health` | `{"ok":true}` |
 | GET | `/state` | tick, positions, fog %, hash, validation |
 | GET | `/units` | unit list |
-| GET | `/fog` | 80×50 ASCII map |
+| GET | `/fog` | 128×80 ASCII map |
 | GET | `/screenshot` | PNG (client only) |
 | GET | `/camera` | live camera, zoom, focus, cursor & grip state (client only) |
 | POST | `/command` | execute JSON command |
@@ -206,7 +206,7 @@ Unit references use `{index, generation}` handles:
 
 | Limit | Value |
 |-------|-------|
-| Grid | 80 × 50 |
+| Grid | 128 × 80 |
 | Units | 256 |
 | Path length | 512 cells |
 | Commands queued | 128 |
@@ -214,7 +214,7 @@ Unit references use `{index, generation}` handles:
 | Fog vision | 6 cells |
 | Unit HP | 100 (`Luk Soldier`), 500 + 5 armor + 4 HP/s regen (`Liiroy, the Bold`) |
 | Attack | 15 dmg / 60 ticks (`Luk Soldier`), 35 dmg / 40 ticks (`Liiroy`), 3 cells |
-| Move speed | 150 (`Luk Soldier`), 180 (`Liiroy, the Bold`) |
+| Move speed | 105 (`Luk Soldier`), 120 (`Liiroy, the Bold`) |
 | Campaign aggro delay | 240 ticks (4.0 s grace + discovery banner, instant on hit) |
 
 ## Determinism
@@ -249,7 +249,7 @@ Allowed allocations outside hot paths:
 - units with team color, label, health bars, selection ring
 - path gizmo for selected units
 - HUD: status, minimap, `[M] Move` / `[A] Attack` / `[P] Patrol` / `[S] Stop` card, pause menu
-- minimap: 80×50 RGBA texture scaled to 200×125 with click/drag scrub and clipped isometric camera frame
+- minimap: 128×80 RGBA texture scaled to 200×125 with click/drag scrub and clipped isometric camera frame
 
 Screenshot endpoint returns PNG bytes directly from memory via `ExportImageToMemory` (no temp file).
 

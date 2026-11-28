@@ -43,7 +43,7 @@ capacity arrays.
 - [x] Procedural Mamluk melee unit modelled, rigged and skinned in Odin (`odin/client/art/`)
 - [x] Kinetic-chain idle/walk/attack clips with S-wave cape/sash/plume, turn banking, and stop-settle cushion
 - [x] Age of Empires × Toriyama world proportions: towering procedural pines & oaks, mossy boulders, stone waypoints, double-crescent slash VFX
-- [x] Painterly terrain (`1280×800`), obstacle-aware Catmull-Rom trail, bilinear mist fog, and full-res watercolour post-process (no GLB assets)
+- [x] Painterly terrain (`2048×1280`), obstacle-aware Catmull-Rom trail, bilinear mist fog, and full-res watercolour post-process (no GLB assets)
 - [x] Web client keeps the lightweight 2:1 canvas view
 - [x] Camera follow mode with manual override (`F`), Dota/SC2 Camera Grip (`MMB` / `Space+Drag`), fixed pitch-compensated edge scroll, smooth wheel zoom, and minimap drag + viewport frame
 - [x] Move/attack re-orders keep mid-cell position (no teleport/rollback)
@@ -51,7 +51,7 @@ capacity arrays.
 - [x] Headless runner: file polling, JSONL scripts, `--ticks`
 - [x] Replay files: `--record`, `--replay`, hash verification
 - [x] StarCraft-style `Attack_Move` (`A` / Attack button) and fixed 1-click `Patrol` (`P` / Patrol button) with enemy auto-acquisition along the route and automatic leg resumption after combat
-- [x] Campaign hero **`Liiroy, the Bold`** (`Unit_Kind.Hero`: `500 HP`, `5` armor, `35` dmg, `40`-tick cooldown, `180` speed, `+4 HP/s` regen, `HERO_SCALE = 0.84`, royal-cobalt & gilded trim, gold aura ring & health bar) replaces the regular player **Luk Soldier** (`Unit_Kind.Melee`) in campaign mode
+- [x] Campaign hero **`Liiroy, the Bold`** (`Unit_Kind.Hero`: `500 HP`, `5` armor, `35` dmg, `40`-tick cooldown, `120` speed, `+4 HP/s` regen, `HERO_SCALE = 0.84`, royal-cobalt & gilded trim, gold aura ring & health bar) replaces the regular player **Luk Soldier** (`Unit_Kind.Melee`) in campaign mode
 - [x] First-quest multi-unit rescue & escalating enemy squads: `5` stranded `.Neutral` **Luk Soldiers** (`Squad 1` near WP1, `Squad 2` near WP3) rally to `.Player` when approached (`RESCUE_RADIUS = 5`, `RESCUE_CHAIN_RADIUS = 6`) with tutorial banners and emerald rings, facing `10` enemies across `3` escalating squads (`2`, `3`, `5`) with `SQUAD_ALERT_RADIUS = 4` shared discovery/retaliation
 - [x] StarCraft-style group selection, control groups (`1..0`), and modifier toolkit (`selection_groups.odin`, `hud_groups.odin`): `Shift` add/remove toggle & box-add & Shift-queued orders (`MAX_UNIT_ORDERS = 8`), `Ctrl+Click` / double-click on-screen type selection, `Ctrl+Shift+Click` HUD card filtering, `Ctrl+1..0` assign, `Shift+1..0` add, `Alt+1..0` steal, `Alt+Shift+1..0` steal+add, double-tap `1..0` center camera, `Tab`/`Shift+Tab` subgroup cycling, `F2` select all army, plus multi-unit formation spreading (`commands.odin`) and melee combat surrounding (`combat_sim.odin`)
 - [x] Event-based campaign discovery aggro delay (`ENEMY_AGGRO_DELAY_TICKS = 240` / `4.0 s`): newly spotted enemy Luk Soldiers pause and show a flavored warning banner & `! SPOTTED` countdown ring until the timer expires or they take damage
@@ -89,17 +89,17 @@ capacity arrays.
 ### Completed Features (original Rust/Bevy prototype)
 
 #### Tutorial Level 1: "Through the Woods"
-- [x] Grid-based level (80x50 cells, 32px per cell)
+- [x] Grid-based level (originally 80x50; now 128x80 cells, 32px per cell)
 - [x] Blue player unit (circle with "M" label) with right-click movement
 - [x] Red enemy unit (circle with "M" label) at (50, 25) - hidden in fog
 - [x] Team/race semantics clarified: available races are `Basic`, `Akana`, `Gorg`; Level 1 uses `Basic` for both teams; color indicates team, `M` indicates Melee type
-- [x] Tree clusters (30 clusters, 132 obstacle cells)
+- [x] Tree clusters (30 clusters, 132 obstacle cells; replaced by the forest road, see "Level 1 redesign")
 - [x] Golden goal zone on the right side
 - [x] A* pathfinding (Rust BinaryHeap prototype; Odin allocation-free version is primary)
 - [x] Path visualization with gizmos
 - [x] WASD/Arrow camera controls (speed: 400)
 - [x] Tutorial UI overlay (HUD)
-- [x] Level complete detection (player reaches grid_x >= 77)
+- [x] Level complete detection (player reaches grid_x >= `GOAL_X` = 125)
 - [x] Context menu suppressed (right-click doesn't open browser menu)
 - [x] Fog of War system (StarCraft-style, 3-state)
   - [x] Unexplored (black) - never seen by player
@@ -109,7 +109,7 @@ capacity arrays.
   - [x] Dynamic fog update every frame
   - [x] Fog entities fade when area becomes visible
 - [x] Waypoint system
-  - [x] 8 waypoints guiding player through fog
+  - [x] 10 waypoints along the forest road guiding the player through fog
   - [x] Golden waypoint markers for current target
   - [x] Faded markers for future/reached waypoints
   - [x] Large area reveal (10-cell radius) when reaching waypoint
@@ -206,10 +206,24 @@ capacity arrays.
 
 #### Waypoints for Level 1
 ```
-(10,25) -> (20,25) -> (30,25) -> (40,23) -> (50,25) -> (60,25) -> (70,25) -> (77,25)
-Player starts at (2,25). Goal zone at x >= 77.
-(40,20) is a tree; Odin uses (40,23).
+(12,25) -> (20,25) -> (33,13) -> (56,14) -> (43,52) -> (62,72) -> (76,64) -> (90,23) -> (114,26) -> (125,41)
+Player starts at (2,25). Goal zone at x >= 125 (GOAL_POS = (125,41), where the road enters the goal glade).
 ```
+
+#### Level 1 redesign: the forest road (`odin/game/level.odin`)
+The original map (80x50, straight line along row 25, hero at 5.6 cells/s) took ~14 s to cross and
+felt cramped. Level 1 is now a 128x80 grid of dense woods with a winding road:
+- `ROUTE_KNOTS` (20 knots) is the road centre line, shared with the client trail painter.
+  Cells within ~2.5-3.3 cells of the polyline (integer-only ragged edge) are walkable, plus
+  `LEVEL_CLEARINGS` (start camp, two rescue clearings, three enemy glades, sentry post, goal glade).
+  Everything else is forest (8486 obstacle cells), so the march follows the road.
+- Route: ~220 path steps; ~60 s of pure walking for the hero (was ~14 s), ~3-4 min with fights.
+- Speeds lowered to a marching pace: `BASE_SPEED` 105 (3.3 cells/s), `HERO_SPEED` 120 (3.75 cells/s);
+  both are multiples of 15 so the Q16.16 per-tick step stays exact.
+- 13 enemies in 4 squads (Forward Scouts 2, Forty-Blades Ambush 3, Road Sentries 3, Eastern Warband 5).
+- `tests/level1_playthrough.jsonl` attack-moves the army along the road to the goal (run by `test.sh`).
+- Client: trees come from the obstacle grid, culled to a camera cell box (`visible_cell_box`), so the
+  dense forest draws only what is on screen; the ground bake uses a per-cell tree distance field.
 
 ### Architecture
 
@@ -283,8 +297,8 @@ bevy-docs/           # Bevy engine reference (gitignored)
 
 ## Resource Definitions
 
-### Tree Clusters (30 total, 132 obstacle cells)
-Clusters are distributed across the 80x50 grid to create:
+### Tree Clusters (historical: 30 total, 132 obstacle cells on the 80x50 grid; now the forest road)
+Clusters were distributed across the 80x50 grid to create:
 - Navigation obstacles requiring pathfinding
 - Visual variety (low-poly trunk + leaf cones)
 - Strategic chokepoints

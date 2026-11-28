@@ -41,7 +41,7 @@ DreamCraft takes place in **Al-Dor**, a frontier realm where three mythic and hi
 - **Role in Level 1**: Cut off from his caravan escort on the western edge of the **Whispering March** (`grid (2, 25)`), Liiroy must bear the Emir's Astrolabe Seal along the winding dirt trail through thirty dense pine-and-oak groves (`132` tree obstacle cells), rallying stranded Emirate **Vanguard Survivors** (`3` Luk Soldiers near Stone 1) and **Bridge Watch** (`2` Luk Soldiers near Stone 3), kindling the **Eight Octagonal Waypoint Stones** (`waypoints 0..7`, with Stone 3 shifted to `(40, 23)` around an elder oak root), and breaking three escalating Forty-Blades ambush bands (`2`, `3`, and `5` enemy Luk Soldiers) to reach the **Golden Banner Sanctuary** at the eastern pass (`grid x >= 77`).
 - **Panoply & Stats**:
   - Heroic `5.36`-head athletic silhouette (`HERO_SCALE = 0.84`, 26-bone rig) clad in royal cobalt-and-gold silk, gilded *khud* helm with white plume, round brass-rimmed *daraq* shield, and star-inlaid shamshir.
-  - `500 HP`, `35` melee damage, `5` lamellar armor, `40`-tick (`0.67 s`) attack cadence, `180` movement speed, and `+4 HP/s` heroic resolve regeneration.
+  - `500 HP`, `35` melee damage, `5` lamellar armor, `40`-tick (`0.67 s`) attack cadence, `120` movement speed, and `+4 HP/s` heroic resolve regeneration.
 
 ### 3.2 Frontier Ambushers: **Luk Soldiers** (`Unit_Kind.Melee`)
 - **Title & Origin**: Veteran deserters of Captain Luk's border garrison who joined the **Forty-Blades** brigand brotherhood, holding the central clearing of the Whispering March (`grid (50, 25)`).
@@ -49,7 +49,7 @@ DreamCraft takes place in **Al-Dor**, a frontier realm where three mythic and hi
   - Even among the rogue Forty-Blades, ancient desert-and-chivalric custom demands a challenge before steel is crossed. When a Luk Soldier first sights Liiroy through the forest mist (`VISION_RADIUS = 6` cells), he sounds a brass horn warning — triggering the **Enemy Spotted** chronicle banner (*"A Luk Soldier spots Liiroy, the Bold!"* / *"Steel rings in the mist - Luk Soldier prepares to charge!"*) and a `4.0 s` golden-amber countdown ring (`! SPOTTED`) before charging. If struck first (`hp < hp_max`), the truce breaks immediately.
 - **Panoply & Stats**:
   - Standard Mamluk infantry rig (`WARRIOR_SCALE = 0.74`) in crimson-and-iron cloth with curved shamshir and round shield.
-  - `100 HP`, `15` melee damage, `0` armor, `60`-tick (`1.0 s`) attack cooldown, `150` movement speed.
+  - `100 HP`, `15` melee damage, `0` armor, `60`-tick (`1.0 s`) attack cooldown, `105` movement speed.
 
 ---
 

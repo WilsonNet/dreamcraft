@@ -26,10 +26,38 @@ tree_cell_placement :: proc(cell: g.Grid_Pos) -> (pos: rl.Vector3, h: u32, scale
 	return
 }
 
+// Cell box around the camera that holds everything on screen (plus tree height), so the dense
+// forest only draws the trees in view.
+@(private)
+Cell_Box :: struct {
+	x0, y0, x1, y1: i32,
+}
+
+@(private)
+visible_cell_box :: proc() -> Cell_Box {
+	w := f32(max(rl.GetRenderWidth(), 1))
+	h := f32(max(rl.GetRenderHeight(), 1))
+	fovy := app.camera.fovy
+	across := fovy * (w / h)
+	deep := fovy / camera_pitch_sin()
+	r := 0.5 * f32(math.sqrt(f64(across * across + deep * deep))) + 3
+	c := app.camera.target
+	cx := c.x + f32(g.GRID_W) * 0.5
+	cy := c.z + f32(g.GRID_H) * 0.5
+	return Cell_Box{
+		x0 = clamp(i32(cx - r), 0, g.GRID_W - 1),
+		y0 = clamp(i32(cy - r), 0, g.GRID_H - 1),
+		x1 = clamp(i32(cx + r), 0, g.GRID_W - 1),
+		y1 = clamp(i32(cy + r), 0, g.GRID_H - 1),
+	}
+}
+
 draw_tree_shadows_3d :: proc() {
-	for cluster in g.TREE_CLUSTERS {
-		for cell in cluster {
-			if cell.x < 0 || cell.y < 0 {
+	box := visible_cell_box()
+	for y in box.y0..=box.y1 {
+		for x in box.x0..=box.x1 {
+			cell := g.Grid_Pos{x, y}
+			if !g.grid_is_blocked(&app.game.grid, cell) {
 				continue
 			}
 			state := g.fog_state(&app.game.fog, cell)
@@ -49,9 +77,11 @@ draw_trees_3d :: proc() {
 	if !app.env.ready {
 		return
 	}
-	for cluster in g.TREE_CLUSTERS {
-		for cell in cluster {
-			if cell.x < 0 || cell.y < 0 {
+	box := visible_cell_box()
+	for y in box.y0..=box.y1 {
+		for x in box.x0..=box.x1 {
+			cell := g.Grid_Pos{x, y}
+			if !g.grid_is_blocked(&app.game.grid, cell) {
 				continue
 			}
 			state := g.fog_state(&app.game.fog, cell)
@@ -112,7 +142,20 @@ draw_goal_3d :: proc() {
 		return
 	}
 	x := f32(g.GOAL_X) - f32(g.GRID_W) * 0.5 + 0.65
-	ys := [6]f32{8.5, 15.5, 22.5, 28.5, 35.5, 42.5}
+	// two banners flank the road where it leaves the woods into the goal glade
+	y_min, y_max := i32(-1), i32(-1)
+	for y in 0..<i32(g.GRID_H) {
+		if g.grid_is_walkable(&app.game.grid, {g.GOAL_X, y}) {
+			if y_min < 0 {
+				y_min = y
+			}
+			y_max = y
+		}
+	}
+	if y_min < 0 {
+		return
+	}
+	ys := [2]f32{f32(y_min) + 0.5, f32(y_max) + 0.5}
 	for gy in ys {
 		cell := g.Grid_Pos{x = g.GOAL_X, y = i32(gy)}
 		state := g.fog_state(&app.game.fog, cell)

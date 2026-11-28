@@ -6,8 +6,8 @@
 
 | Type | Name | Team | Speed | HP | Attack Range | Damage | Cooldown | Role |
 |------|------|------|-------|-----|--------------|--------|----------|------|
-| Hero (`Unit_Kind.Hero`) | **Liiroy, the Bold** | Player (Campaign) | 180 (+20%) | 500 (5 arm, +4 HP/s) | 3.0 cells | 35 | 40 ticks (0.67 s) | Campaign hero champion (royal cobalt & gold) |
-| Melee (`Unit_Kind.Melee`) | **Luk Soldier** | Enemy / Skirmish Spawn | 150 | 100 | 3.0 cells | 15 | 60 ticks (1.0 s) | Standard frontline foot soldier |
+| Hero (`Unit_Kind.Hero`) | **Liiroy, the Bold** | Player (Campaign) | 120 (+14%) | 500 (5 arm, +4 HP/s) | 3.0 cells | 35 | 40 ticks (0.67 s) | Campaign hero champion (royal cobalt & gold) |
+| Melee (`Unit_Kind.Melee`) | **Luk Soldier** | Enemy / Skirmish Spawn | 105 | 100 | 3.0 cells | 15 | 60 ticks (1.0 s) | Standard frontline foot soldier |
 
 ### Planned Units
 
@@ -20,7 +20,7 @@
 ## Current Implementation (Tutorial Level 1)
 
 - **Player Unit**: Blue animated 3D knight (idle/walk/attack)
-  - Speed: 150.0 (world units/sec)
+  - Speed: 105.0 (world units/sec)
   - Vision range: 6 cells (radius)
   - Controlled via right-click movement
   - Right-click on enemy = attack
@@ -28,7 +28,7 @@
   - Combat: 15 damage, 3-cell range, 1s cooldown
     
 - **Enemy Unit**: Red animated 3D knight (idle/walk/attack)
-  - Speed: 150.0 (world units/sec)
+  - Speed: 105.0 (world units/sec)
   - Same race as player (melee unit)
   - Hidden in fog until revealed
   - Health: 100 HP with health bar above unit
@@ -239,7 +239,7 @@ The Odin port uses these current values (Campaign Tutorial Level 1):
 
 | Stat | **Liiroy, the Bold** (`.Hero`) | **Luk Soldier** (`.Melee`) |
 |------|--------------------------------|----------------------------|
-| Move speed | `180` world units/s (`HERO_SPEED`, `5.625` cells/s) | `150` world units/s (`BASE_SPEED`, `4.6875` cells/s) |
+| Move speed | `120` world units/s (`HERO_SPEED`, `3.75` cells/s) | `105` world units/s (`BASE_SPEED`, `3.28` cells/s) |
 | Max HP | `500` (`HERO_MAX_HP`) | `100` (`MAX_HP`) |
 | Armor | `5` (`HERO_ARMOR`, min 1 dmg taken) | `0` (`BASE_ARMOR`) |
 | Passive regen | `+2 HP` / `30` ticks (`+4 HP/s`) | `0` |

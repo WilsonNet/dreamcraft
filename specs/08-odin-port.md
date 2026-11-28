@@ -90,7 +90,7 @@ Two binaries stay separate so manual play never interrupts development:
 | `ATTACK_DAMAGE` | 15 (Luk Soldier) |
 | `ATTACK_RANGE` | 3 cells |
 | `ATTACK_COOLDOWN_TICKS` | 60 (Luk Soldier) |
-| `HERO_SPEED` | 180 (`Liiroy, the Bold`) |
+| `HERO_SPEED` | 120 (`Liiroy, the Bold`) |
 | `HERO_MAX_HP` | 500 (`Liiroy, the Bold`) |
 | `HERO_ARMOR` | 5 (`Liiroy, the Bold`, min 1 dmg taken) |
 | `HERO_ATTACK_DAMAGE` | 35 (`Liiroy, the Bold`) |
@@ -185,7 +185,7 @@ Properties:
 ### Movement
 
 - Q16.16 fixed point (`Fp = i32`, 16 fractional bits).
-- Speed 150 world units/s = 5120 Q16.16 units/tick.
+- Speed 105 world units/s = 3584 Q16.16 units/tick (hero 120 = 4096).
 - Cell centers are fixed world positions.
 - Each tick moves along the path with progress in cells; diagonal segments
   use `FP_SQRT2` (92682).
@@ -318,7 +318,7 @@ Replacement endpoints (`control/http.odin`):
 | GET | `/health` | `{"ok":true}` |
 | GET | `/state` | tick, player/enemy, fog %, hash, valid, validation |
 | GET | `/units` | array of units with team/pos/hp/state/path/target |
-| GET | `/fog` | ASCII 80×50 map (`P E # w W G .`) |
+| GET | `/fog` | ASCII 128×80 map (`P E # w W G .`) |
 | GET | `/screenshot` | PNG of the live client (501 in headless) |
 | GET | `/camera` | live camera, zoom, focus, cursor & grip state (501 in headless) |
 | POST | `/command` | execute a command, return result |
@@ -399,8 +399,8 @@ Layers:
 ## Native 3D Renderer
 
 - Orthographic `Camera3D`: 45° yaw, ~30° pitch, ortho height 20 (`DEFAULT_ZOOM = 0.55`).
-- Ground (`ground_tex.odin`, `ground.{vs,fs}`): `1280×800` procedural albedo
-  texture with obstacle-aware Catmull-Rom trail + `80×50` fog texture rendered
+- Ground (`ground_tex.odin`, `ground.{vs,fs}`): `2048×1280` procedural albedo
+  texture with obstacle-aware Catmull-Rom trail + `128×80` fog texture rendered
   with bilinear FBM mist and world-edge fade.
 - Forest & props (`client/art/`): AoE-proportioned procedural pine & oak trees
   (`2.65–3.45` world units), mossy boulders, ferns, stone waypoints, banners.

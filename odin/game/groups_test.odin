@@ -36,7 +36,7 @@ group_move_spreads_formation_without_stacking :: proc(t: ^testing.T) {
 
 	testing.expect(t, sim_move_player(game, Grid_Pos{20, 25}, 1000))
 	testing.expect_value(t, unit_select_all_player(&game.units), 4)
-	testing.expect(t, game_issue_move(game, Grid_Pos{28, 25}))
+	testing.expect(t, game_issue_move(game, Grid_Pos{28, 21}))
 	sim_run(game, 500)
 
 	positions: [4]Grid_Pos
@@ -67,11 +67,11 @@ group_combat_4v2_and_squad_aggro :: proc(t: ^testing.T) {
 	testing.expect(t, sim_move_player(game, Grid_Pos{20, 25}, 1000))
 	testing.expect_value(t, unit_select_all_player(&game.units), 4)
 
-	// Attack-move past Enemy Group 1 (2 enemies at x=33) to (37, 25).
-	testing.expect(t, game_issue_attack_move(game, Grid_Pos{37, 25}))
-	sim_run(game, 900)
+	// Attack-move along the road through Enemy Group 1 (2 scouts in the northern glade) to (59, 24).
+	testing.expect(t, game_issue_attack_move(game, Grid_Pos{59, 24}))
+	sim_run(game, 2400)
 
-	// Enemy Group 1 should be defeated (10 -> 8 enemies) while all 4 player units survive or fight.
+	// Enemy Group 1 should be defeated (13 -> 11 enemies) while all 4 player units survive or fight.
 	testing.expect_value(t, unit_team_count(&game.units, .Enemy), len(ENEMY_SQUAD_SPAWNS) - 2)
 	testing.expect(t, unit_team_count(&game.units, .Player) >= 3)
 	testing.expect(t, game.discovery_announced)
@@ -147,7 +147,7 @@ shift_queued_orders_execute_in_sequence :: proc(t: ^testing.T) {
 	testing.expect_value(t, game.units.state[player], Unit_State.Idle)
 
 	// Unqueued move clears pending queued orders.
-	testing.expect(t, game_issue_move(game, Grid_Pos{12, 28}, false))
+	testing.expect(t, game_issue_move(game, Grid_Pos{13, 28}, false))
 	testing.expect(t, game_issue_move(game, Grid_Pos{15, 28}, true))
 	sim_tick(game)
 	testing.expect_value(t, game.units.order_count[player], u8(1))

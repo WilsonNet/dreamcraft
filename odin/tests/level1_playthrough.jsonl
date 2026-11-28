@@ -1,0 +1,44 @@
+{"cmd": "reset"}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 20, "y": 25}
+{"cmd": "run", "ticks": 500}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 33, "y": 13}
+{"cmd": "run", "ticks": 500}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 56, "y": 14}
+{"cmd": "run", "ticks": 1400}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 59, "y": 27}
+{"cmd": "run", "ticks": 500}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 43, "y": 52}
+{"cmd": "run", "ticks": 1200}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 62, "y": 72}
+{"cmd": "run", "ticks": 900}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 76, "y": 64}
+{"cmd": "run", "ticks": 1500}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 84, "y": 52}
+{"cmd": "run", "ticks": 700}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 83, "y": 42}
+{"cmd": "run", "ticks": 1500}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 90, "y": 23}
+{"cmd": "run", "ticks": 800}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 103, "y": 15}
+{"cmd": "run", "ticks": 700}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 114, "y": 26}
+{"cmd": "run", "ticks": 2200}
+{"cmd": "select_all"}
+{"cmd": "attack_move", "x": 125, "y": 41}
+{"cmd": "run", "ticks": 900}
+{"cmd":"verify","verify":{"type":"level_complete"}}
+{"cmd":"verify","verify":{"type":"rescued_count","value":5}}
+{"cmd":"verify","verify":{"type":"enemy_count","value":0}}
+{"cmd":"verify","verify":{"type":"valid"}}

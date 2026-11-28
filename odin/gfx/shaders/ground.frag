@@ -27,7 +27,7 @@ void main() {
 	vec2 wp = v_world.xz;
 	float mist_a = fbm(wp * 0.55 + vec2(t * 0.025, -t * 0.018));
 	float mist_b = fbm(wp * 1.15 + vec2(-t * 0.018, t * 0.022) + 7.3);
-	vec2 mist_disp = (vec2(mist_a, mist_b) - 0.5) * vec2(1.4 / 80.0, 1.4 / 50.0);
+	vec2 mist_disp = (vec2(mist_a, mist_b) - 0.5) * vec2(1.4 / 128.0, 1.4 / 80.0);
 	float fog_raw = texture(texture1, clamp(v_uv + mist_disp, 0.002, 0.998)).r;
 	float edge_band = 4.0 * fog_raw * (1.0 - fog_raw);
 	float fog_val = clamp(fog_raw + (mist_a - 0.5) * 0.14 * edge_band, 0.0, 1.0);

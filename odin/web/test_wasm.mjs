@@ -45,11 +45,11 @@ let s = state();
 assert.equal(s.valid, true);
 assert.deepEqual(s.player_grid, [2, 25]);
 assert.equal(s.game_over, false);
-assert.equal(fog().length, 80 * 50 + 50);
+assert.equal(fog().length, 128 * 80 + 80);
 assert.match(fog(), /P/);
 
 assert.equal(exports_.web_move(10, 25), 1);
-exports_.web_run(140);
+exports_.web_run(200);
 s = state();
 assert.deepEqual(s.player_grid, [10, 25]);
 assert.equal(s.valid, true);
@@ -66,8 +66,8 @@ assert.ok(after > before, `reorder snapped back: ${before} -> ${after}`);
 assert.equal(state().valid, true);
 
 assert.equal(exports_.web_reset(), 1);
-assert.equal(exports_.web_kill(50, 25), 1);
-assert.equal(exports_.web_teleport(77, 25), 1);
+assert.equal(exports_.web_kill(76, 64), 1);
+assert.equal(exports_.web_teleport(125, 41), 1);
 exports_.web_run(1);
 s = state();
 assert.equal(s.level_complete, true);

@@ -27,11 +27,15 @@ bit_grid_set_test_clear :: proc(t: ^testing.T) {
 grid_level_obstacle_count :: proc(t: ^testing.T) {
 	grid: Grid
 	grid_init_level(&grid)
-	testing.expect_value(t, int(grid.obstacle_count), 132)
-	testing.expect_value(t, bit_grid_count(&grid.obstacles), 132)
+	testing.expect_value(t, int(grid.obstacle_count), 8486)
+	testing.expect_value(t, bit_grid_count(&grid.obstacles), 8486)
 	testing.expect(t, !grid_is_blocked(&grid, START_POS))
 	testing.expect(t, !grid_is_blocked(&grid, ENEMY_START_POS))
-	testing.expect(t, grid_is_blocked(&grid, Grid_Pos{8, 20}))
+	testing.expect(t, grid_is_blocked(&grid, Grid_Pos{14, 20})) // woods north-east of the start camp
+	testing.expect(t, !grid_is_blocked(&grid, GOAL_POS))
+	for k in ROUTE_KNOTS {
+		testing.expect(t, !grid_is_blocked(&grid, k), "road knots must be walkable")
+	}
 }
 
 @(test)

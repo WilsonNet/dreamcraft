@@ -9,12 +9,8 @@ import g "../game"
 GROUND_TEX_SCALE :: 16
 GROUND_TEX_W :: g.GRID_W * GROUND_TEX_SCALE
 GROUND_TEX_H :: g.GRID_H * GROUND_TEX_SCALE
-TRAIL_SEGMENTS :: 75
-
-@(private)
-Cluster_Bounds :: struct {
-	min_x, max_x, min_y, max_y: f32,
-}
+TRAIL_SPAN_STEPS :: 8 // Catmull-Rom samples per road knot span
+TRAIL_SEGMENTS :: (len(g.ROUTE_KNOTS) - 1) * TRAIL_SPAN_STEPS
 
 init_ground :: proc() {
 	app.ground_shader = load_ground_shader()
@@ -115,13 +111,10 @@ load_ground_shader :: proc() -> rl.Shader {
 
 @(private)
 build_trail_polyline :: proc() -> [TRAIL_SEGMENTS + 1][2]f32 {
-	knots := [18][2]f32{
-		{2.5, 25.5}, {10.5, 25.5}, {16.8, 24.4},
-		{20.5, 25.5}, {25.8, 22.6}, {30.5, 25.5},
-		{35.8, 28.4}, {40.5, 23.5}, {45.0, 22.6},
-		{48.8, 22.5}, {50.7, 25.4}, {53.5, 25.7},
-		{60.5, 25.5}, {63.0, 28.5}, {66.0, 25.6},
-		{68.8, 22.5}, {70.7, 25.4}, {77.5, 25.5},
+	// the road the game carves (level.odin), through cell centres
+	knots: [len(g.ROUTE_KNOTS)][2]f32
+	for k, ki in g.ROUTE_KNOTS {
+		knots[ki] = {f32(k.x) + 0.5, f32(k.y) + 0.5}
 	}
 	pts: [TRAIL_SEGMENTS + 1][2]f32
 	spans := f32(len(knots) - 1)
@@ -145,42 +138,47 @@ catmull_rom_2d :: proc(p0, p1, p2, p3: [2]f32, t: f32) -> [2]f32 {
 	return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3)
 }
 
+// Per cell: distance from the cell centre to the nearest forest cell centre (capped), used to
+// bound the per-pixel search in nearest_tree_dist.
 @(private)
-build_cluster_bounds :: proc() -> [len(g.TREE_CLUSTERS)]Cluster_Bounds {
-	bounds: [len(g.TREE_CLUSTERS)]Cluster_Bounds
-	for cluster, ci in g.TREE_CLUSTERS {
-		b := Cluster_Bounds{min_x = 999, max_x = -999, min_y = 999, max_y = -999}
-		for cell in cluster {
-			if cell.x < 0 || cell.y < 0 {
-				continue
+build_tree_field :: proc() -> []f32 {
+	field := make([]f32, g.GRID_CELLS)
+	R :: 4
+	for y in 0..<i32(g.GRID_H) {
+		for x in 0..<i32(g.GRID_W) {
+			best := i32(R * R + 1)
+			for dy in i32(-R)..=R {
+				for dx in i32(-R)..=R {
+					d2 := dx * dx + dy * dy
+					if d2 < best && g.grid_is_blocked(&app.game.grid, {x + dx, y + dy}) {
+						best = d2
+					}
+				}
 			}
-			cx := f32(cell.x) + 0.5
-			cy := f32(cell.y) + 0.5
-			b.min_x = min(b.min_x, cx)
-			b.max_x = max(b.max_x, cx)
-			b.min_y = min(b.min_y, cy)
-			b.max_y = max(b.max_y, cy)
+			field[y * g.GRID_W + x] = f32(math.sqrt(f64(best)))
 		}
-		bounds[ci] = b
 	}
-	return bounds
+	return field
 }
 
+// Distance (in cells, capped at 8) from a ground point to the nearest tree (forest cell centre).
 @(private)
-nearest_tree_dist :: proc(gx, gy: f32, bounds: []Cluster_Bounds) -> f32 {
+nearest_tree_dist :: proc(gx, gy: f32, field: []f32) -> f32 {
+	cx := clamp(i32(gx), 0, g.GRID_W - 1)
+	cy := clamp(i32(gy), 0, g.GRID_H - 1)
+	reach := field[cy * g.GRID_W + cx] + 0.75
+	if reach > 4.0 {
+		return 8.0
+	}
+	r := i32(math.ceil(reach))
 	best_d2 := f32(64.0)
-	PAD :: f32(3.4)
-	for ci in 0..<len(g.TREE_CLUSTERS) {
-		b := bounds[ci]
-		if gx < b.min_x - PAD || gx > b.max_x + PAD || gy < b.min_y - PAD || gy > b.max_y + PAD {
-			continue
-		}
-		for cell in g.TREE_CLUSTERS[ci] {
-			if cell.x < 0 || cell.y < 0 {
+	for y in cy - r..=cy + r {
+		for x in cx - r..=cx + r {
+			if !g.grid_is_blocked(&app.game.grid, {x, y}) {
 				continue
 			}
-			dx := gx - (f32(cell.x) + 0.5)
-			dy := gy - (f32(cell.y) + 0.5)
+			dx := gx - (f32(x) + 0.5)
+			dy := gy - (f32(y) + 0.5)
 			best_d2 = min(best_d2, dx * dx + dy * dy)
 		}
 	}
@@ -189,14 +187,11 @@ nearest_tree_dist :: proc(gx, gy: f32, bounds: []Cluster_Bounds) -> f32 {
 
 @(private)
 nearest_trail_dist :: proc(gx, gy: f32, trail: [][2]f32) -> f32 {
-	if gy < 17.5 || gy > 33.5 {
-		return 10.0
-	}
 	best_d2 := f32(64.0)
 	for i in 0..<TRAIL_SEGMENTS {
 		a := trail[i]
 		b := trail[i + 1]
-		if gx < min(a.x, b.x) - 3.0 || gx > max(a.x, b.x) + 3.0 {
+		if gx < min(a.x, b.x) - 3.0 || gx > max(a.x, b.x) + 3.0 || gy < min(a.y, b.y) - 3.0 || gy > max(a.y, b.y) + 3.0 {
 			continue
 		}
 		best_d2 = min(best_d2, seg_dist_sq(gx, gy, a.x, a.y, b.x, b.y))
@@ -220,20 +215,21 @@ seg_dist_sq :: proc(px, py, ax, ay, bx, by: f32) -> f32 {
 
 @(private)
 bake_ground_albedo :: proc(pixels: []rl.Color, trail: [][2]f32) {
-	bounds := build_cluster_bounds()
+	field := build_tree_field()
+	defer delete(field)
 	for py in 0..<GROUND_TEX_H {
 		gy := (f32(py) + 0.5) / f32(GROUND_TEX_SCALE)
 		row := py * GROUND_TEX_W
 		for px in 0..<GROUND_TEX_W {
 			gx := (f32(px) + 0.5) / f32(GROUND_TEX_SCALE)
-			pixels[row + px] = ground_albedo_pixel(gx, gy, trail, bounds[:])
+			pixels[row + px] = ground_albedo_pixel(gx, gy, trail, field)
 		}
 	}
 }
 
 @(private)
-ground_albedo_pixel :: proc(gx, gy: f32, trail: [][2]f32, bounds: []Cluster_Bounds) -> rl.Color {
-	d_tree := nearest_tree_dist(gx, gy, bounds)
+ground_albedo_pixel :: proc(gx, gy: f32, trail: [][2]f32, field: []f32) -> rl.Color {
+	d_tree := nearest_tree_dist(gx, gy, field)
 	d_trail := nearest_trail_dist(gx, gy, trail)
 	col := meadow_color(gx, gy)
 	col = apply_forest_floor(col, gx, gy, d_tree)

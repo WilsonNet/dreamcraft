@@ -59,7 +59,7 @@ fragment float4 fs_main(VOut in [[stage_in]], constant U& u [[buffer(0)]],
 	float mist_a = fbm(wp * 0.55 + float2(t * 0.025, -t * 0.018));
 	float mist_b = fbm(wp * 1.15 + float2(-t * 0.018, t * 0.022) + 7.3);
 
-	float2 mist_disp = (float2(mist_a, mist_b) - 0.5) * float2(1.4 / 80.0, 1.4 / 50.0);
+	float2 mist_disp = (float2(mist_a, mist_b) - 0.5) * float2(1.4 / 128.0, 1.4 / 80.0);
 	float fog_raw = texture1.sample(s1, clamp(in.uv + mist_disp, 0.002, 0.998)).r;
 	float edge_band = 4.0 * fog_raw * (1.0 - fog_raw);
 	float fog_val = clamp(fog_raw + (mist_a - 0.5) * 0.14 * edge_band, 0.0, 1.0);

@@ -167,7 +167,7 @@ Endpoints:
 | GET | `/health` | liveness |
 | GET | `/state` | tick, player/enemy, `player_units`, `enemy_units`, `neutral_units`, `rescued_count`, discovery_announced, enemy_aggro_ticks, fog %, hash, valid, validation |
 | GET | `/units` | unit list with name, hero, team (`player`/`enemy`/`neutral`), position, HP, damage, armor, state, path, target, `groups`, `queued_orders`, discovered, aggro_ticks |
-| GET | `/fog` | 80×50 ASCII map |
+| GET | `/fog` | 128×80 ASCII map |
 | GET | `/screenshot` | live PNG (client only) |
 | GET | `/camera` | live camera, zoom, focus, cursor, `app_mode`, `editor_model`, `help_open`, edge-pan & grip state (client only) |
 | POST | `/command` | execute a JSON command (plus client `reload_models`, `open_picker`, `open_editor`, `close_editor`, `pause_menu`, `toggle_help`, `open_help`, `close_help`) |

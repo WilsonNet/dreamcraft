@@ -7,7 +7,7 @@ SPIR-V for Vulkan (`*.vert` / `*.frag` GLSL 450, compiled with `glslc` to the co
 | Program | Files | Used for |
 |---------|-------|----------|
 | default | `default.*` | raylib's default shader: `texture0 * colDiffuse * vertex colour` (immediate shapes, default-material meshes, 2D quads) |
-| ground | `ground.*` | terrain: `1280×800` painted albedo + `80×50` fog state texture, FBM mist edges, goal shimmer, world-border fade |
+| ground | `ground.*` | terrain: `2048×1280` painted albedo + `128×80` fog state texture, FBM mist edges, goal shimmer, world-border fade |
 | unit | `unit.*` | painterly units and props (`u_tint`, `u_fog_vis`); vertex colour = albedo + baked AO, UV = `(metalness, glow)` |
 | watercolor | `watercolor.*` (+ `default.vert`) | full-resolution post pass: edge pooling, paper grain, bloom, split tone, shared grade with the HUD, contact shadow under the console, vignette |
 

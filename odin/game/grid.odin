@@ -59,22 +59,6 @@ grid_reset :: proc(grid: ^Grid) {
 	grid^ = {}
 }
 
-grid_init_level :: proc(grid: ^Grid) {
-	grid_reset(grid)
-	for cluster in TREE_CLUSTERS {
-		for cell in cluster {
-			if cell.x < 0 || cell.y < 0 {
-				continue
-			}
-			assert(in_bounds(cell), "tree cluster cell out of bounds")
-			index, ok := cell_index(cell)
-			assert(ok)
-			bit_grid_set(&grid.obstacles, index)
-		}
-	}
-	grid.obstacle_count = u16(bit_grid_count(&grid.obstacles))
-}
-
 grid_block :: proc(grid: ^Grid, p: Grid_Pos) {
 	index, ok := cell_index(p)
 	assert(ok, "grid_block out of bounds")

@@ -1,7 +1,7 @@
 {"cmd":"reset"}
 {"cmd":"status"}
 {"cmd":"goto","x":10,"y":25}
-{"cmd":"run","ticks":140}
+{"cmd":"run","ticks":200}
 {"cmd":"verify","verify":{"type":"player_at","x":10,"y":25}}
 {"cmd":"verify","verify":{"type":"valid"}}
 {"cmd":"clear_enemies"}
@@ -19,9 +19,9 @@
 {"cmd":"select_all"}
 {"cmd":"group_assign","value":0}
 {"cmd":"verify","verify":{"type":"group_count","x":0,"value":4}}
-{"cmd":"attack_move","x":37,"y":25}
-{"cmd":"run","ticks":900}
-{"cmd":"verify","verify":{"type":"enemy_count","value":8}}
+{"cmd":"attack_move","x":59,"y":24}
+{"cmd":"run","ticks":2400}
+{"cmd":"verify","verify":{"type":"enemy_count","value":11}}
 {"cmd":"verify","verify":{"type":"valid"}}
 {"cmd":"reset"}
 {"cmd":"verify","verify":{"type":"valid"}}

@@ -41,6 +41,29 @@ The client renders with SDL3 GPU (Metal on macOS, Vulkan on Linux) through `odin
 raylib-compatible layer (`specs/11-renderer-port.md`). Requires SDL3 (`brew install sdl3`).
 Shaders live in `odin/gfx/shaders` as MSL and SPIR-V: change both, rebuild the `.spv` with
 `glslc`. `--bench=N` measures uncapped frame time; `-define:GFX_TRACE=true` adds replay timings.
+On Linux: `pacman -S sdl3 shaderc` (Vulkan); verified building and running on Arch + Hyprland.
+
+## Hot Reload & Hidden Dev Window (Linux / Hyprland)
+
+- The dev client runs under vinland-ui's `vui-hot` as a "classic loop" (`client/hot.odin`): on each
+  saved change it rebuilds (~27 s at `-o:speed`), closes the window, and reopens it with the kept
+  simulation (`app.game`) and zoom, so the hero, tick, fog and quest progress survive. A normal
+  `odin build` runs no hot code. A change to `Game`'s layout (e.g. `GRID_W`) migrates by field;
+  send `{"cmd":"reset"}` after such a reload.
+  ```bash
+  cd odin
+  ../../vinland-ui/tools/gpu-guard.sh --limit 150 --warmup 50 -- \
+    ../../vinland-ui/build/vui-hot client -collection:vinland=../../vinland-ui -o:speed \
+    -define:DREAMCRAFT_DEV=true --out build/hot -- --control=7778
+  ```
+  Keep `--warmup` longer than the first build, or the guard counts the game itself as growth.
+- Hyprland routes every `DEV - DreamCraft…` window to the hidden `special:dreamcraft` workspace
+  (`~/.config/hypr/hyprland.lua`, rule `dreamcraft-dev-workspace`), so agent runs never steal focus
+  or cover a game. Drive it through the control API (`/screenshot`, `/state`); show it with
+  `hyprctl dispatch 'hl.dsp.workspace.toggle_special("dreamcraft")'`. The stable `bin/dreamcraft`
+  opens normally.
+- VRAM: the client needs ~180 MB; the laptop's 2 GB carveout often has 1.6-1.8 GB in use by the
+  desktop. Always run GPU clients under `gpu-guard.sh`; reloads do not leak (measured +16 MB peak).
 
 ## Development Commands
 
@@ -213,14 +236,14 @@ responsibility per file (`snapshot.odin`, `http.odin`, `input.odin`, etc.).
 
 ## Core Gameplay (Tutorial Level 1)
 
-- 80×50 grid, 32 world units per cell
-- Campaign hero **Liiroy, the Bold** (`Unit_Kind.Hero`) at (2,25), enemy **Luk Soldier** (`Unit_Kind.Melee`) at (50,25)
-- 132 tree obstacle cells across 30 clusters
+- 128×80 grid, 32 world units per cell; dense woods with a winding road (`game/level.odin`: `ROUTE_KNOTS`, `LEVEL_CLEARINGS`)
+- Campaign hero **Liiroy, the Bold** (`Unit_Kind.Hero`) at (2,25), 13 enemy **Luk Soldiers** (`Unit_Kind.Melee`) in 4 squads along the road
+- 8486 forest obstacle cells: everything off the road and its clearings
 - A* 8-direction movement, no corner cutting through two blocked sides
 - 3-state fog: unexplored / explored / visible
-- 8 waypoints; waypoint 3 moved to (40,23) because (40,20) is a tree
-- Goal at grid x ≥ 77
-- Stats: `Luk Soldier` 100 HP / 15 dmg / 0 armor / 60-tick cooldown / 150 speed; `Liiroy, the Bold` 500 HP / 35 dmg / 5 armor / 40-tick cooldown / 180 speed / +4 HP/s regen / range 3 cells
+- 10 waypoints on the road (`WAYPOINT_START`)
+- Goal at grid x ≥ 125 (`GOAL_POS` = (125,41))
+- Stats: `Luk Soldier` 100 HP / 15 dmg / 0 armor / 60-tick cooldown / 105 speed; `Liiroy, the Bold` 500 HP / 35 dmg / 5 armor / 40-tick cooldown / 120 speed / +4 HP/s regen / range 3 cells
 - Campaign event aggro: newly discovered enemies wait `ENEMY_AGGRO_DELAY_TICKS` (240 ticks / 4.0 s) with a flavored discovery announcement before charging, unless attacked first (`hp < hp_max`), then chase within 6-cell vision and attack on cooldown
 - Patrol (`P` / 1-click) loops A↔B cleanly and engages enemies within 6-cell vision before resuming the patrol leg
 - Attack-Move (`A`) marches to destination while auto-acquiring enemies within 6-cell vision, resuming to destination once clear

@@ -108,7 +108,7 @@ path_is_deterministic :: proc(t: ^testing.T) {
 	out_a: [MAX_PATH]u16
 	out_b: [MAX_PATH]u16
 	start := Grid_Pos{2, 25}
-	goal := Grid_Pos{77, 25}
+	goal := GOAL_POS
 	len_a, result_a := find_path(&pf, &grid, start, goal, out_a[:])
 	len_b, result_b := find_path(&pf, &grid, start, goal, out_b[:])
 	testing.expect_value(t, result_a, Path_Result.Found)
@@ -127,9 +127,9 @@ path_level_is_solvable :: proc(t: ^testing.T) {
 	pf: Pathfinder
 	pathfinder_reset(&pf)
 	out: [MAX_PATH]u16
-	length, result := find_path(&pf, &grid, START_POS, Grid_Pos{77, 25}, out[:])
+	length, result := find_path(&pf, &grid, START_POS, GOAL_POS, out[:])
 	testing.expect_value(t, result, Path_Result.Found)
-	testing.expect(t, path_is_valid(&grid, START_POS, out[:length], Grid_Pos{77, 25}))
+	testing.expect(t, path_is_valid(&grid, START_POS, out[:length], GOAL_POS))
 }
 
 @(test)
